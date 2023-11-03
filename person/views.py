@@ -47,13 +47,12 @@ class PersonViewSet(viewsets.ModelViewSet):
                 identityCardInfoId=identity_card_info,
                 photoId=photo,
                 residentInfoId=resident_info,
-                departmentId=department_data
+                departmentId=request.data.get('departmentId')
             )
 
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 class GenderViewSet(viewsets.ModelViewSet):
     queryset = Gender.objects.all()
@@ -70,7 +69,7 @@ class FamilyStatusViewSet(viewsets.ModelViewSet):
 class RelativeViewSet(viewsets.ModelViewSet):
     queryset = Relative.objects.all()
     serializer_class = RelativeSerializer
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, )
 
 
 class FamilyCompositionViewSet(viewsets.ModelViewSet):

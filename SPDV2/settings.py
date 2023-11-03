@@ -50,9 +50,16 @@ INSTALLED_APPS = [
     'person',
     'education',
     'decree',
-
+    'corsheaders',
 
 ]
+
+# Set the CORS settings
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",  # Example: Allow requests from this origin
+]
+
+CORS_ALLOW_CREDENTIALS = True
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -62,6 +69,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
 ]
 
 ROOT_URLCONF = 'SPDV2.urls'

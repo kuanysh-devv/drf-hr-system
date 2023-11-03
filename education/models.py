@@ -38,3 +38,14 @@ class Attestation(models.Model):
 
     def __str__(self):
         return str(self.personId) + ' ' + self.attResult
+
+
+class AcademicDegree(models.Model):
+    academicPlace = models.CharField(max_length=255)
+    academicDegree = models.CharField(max_length=255)
+    academicDiplomaNumber = models.CharField(max_length=255)
+    academicDiplomaDate = models.DateField()
+    personId = models.ForeignKey(Person, on_delete=models.PROTECT)
+
+    def __str__(self):
+        return str(self.personId) + ' ' + self.academicDegree

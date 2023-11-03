@@ -1,8 +1,8 @@
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 
-from .models import Education, Course, Attestation
-from .serializers import EducationSerializer, CourseSerializer, AttestationSerializer
+from .models import Education, Course, Attestation, AcademicDegree
+from .serializers import EducationSerializer, CourseSerializer, AttestationSerializer, AcademicDegreeSerializer
 
 
 class EducationViewSet(viewsets.ModelViewSet):
@@ -20,4 +20,10 @@ class CourseViewSet(viewsets.ModelViewSet):
 class AttestationViewSet(viewsets.ModelViewSet):
     queryset = Attestation.objects.all()
     serializer_class = AttestationSerializer
+    permission_classes = (IsAuthenticated,)
+
+
+class AcademicDegreeViewSet(viewsets.ModelViewSet):
+    queryset = AcademicDegree.objects.all()
+    serializer_class = AcademicDegreeSerializer
     permission_classes = (IsAuthenticated,)
