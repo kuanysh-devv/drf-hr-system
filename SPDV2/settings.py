@@ -131,7 +131,7 @@ USE_I18N = True
 
 USE_TZ = True
 
-AUTH_USER_MODEL = 'person.CustomUser'
+AUTH_USER_MODEL = 'person.CustomUser'  # Use the correct app name and model name
 
 
 # Static files (CSS, JavaScript, Images)
@@ -157,6 +157,20 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     )
+}
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'DEBUG',
+    },
 }
 
 

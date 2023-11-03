@@ -1,6 +1,5 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
-
 from birth_info.models import BirthInfo
 from identity_card_info.models import IdentityCardInfo
 from location.models import Department
