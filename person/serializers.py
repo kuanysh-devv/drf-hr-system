@@ -1,13 +1,43 @@
 from rest_framework import serializers
 
+from birth_info.models import BirthInfo
+from birth_info.serializers import BirthInfoSerializer
+from identity_card_info.models import IdentityCardInfo
+from identity_card_info.serializers import IdentityCardInfoSerializer
+from location.models import Department
+from photo.models import Photo
+from photo.serializers import PhotoSerializer
+from resident_info.models import ResidentInfo
+from resident_info.serializers import ResidentInfoSerializer
 from .models import Person, Relative, FamilyComposition, FamilyStatus, Gender, ClassCategory, Autobiography, Reward, \
     LanguageSkill, SportSkill
 
+from rest_framework import serializers
+from .models import Person, BirthInfo, IdentityCardInfo, Photo, ResidentInfo
+
 
 class PersonSerializer(serializers.ModelSerializer):
+    # Nested serializers for related models
+    birthInfoId = BirthInfoSerializer()
+    identityCardInfoId = IdentityCardInfoSerializer()
+    photoId = PhotoSerializer()
+    residentInfoId = ResidentInfoSerializer()
+
+    # Department field is changed to accept just the department_id (pk)
+    departmentId = serializers.PrimaryKeyRelatedField(queryset=Department.objects.all(), required=True)
+
     class Meta:
         model = Person
         fields = "__all__"
+
+    def create(self, validated_data):
+        department_id = validated_data.pop('departmentId')  # Remove department_id from validated_data
+        department = Department.objects.get(pk=department_id)  # Retrieve the Department instance
+
+        # Create the Person instance with the retrieved Department
+        person = Person.objects.create(departmentId=department, **validated_data)
+
+        return person
 
 
 class RelativeSerializer(serializers.ModelSerializer):

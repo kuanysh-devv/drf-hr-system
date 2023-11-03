@@ -7,3 +7,4 @@ class BirthInfoSerializer(serializers.ModelSerializer):
     class Meta:
         model = BirthInfo
         fields = "__all__"
+
