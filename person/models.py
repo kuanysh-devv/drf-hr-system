@@ -1,3 +1,4 @@
+from django.contrib.auth.models import AbstractUser
 from django.db import models
 
 from birth_info.models import BirthInfo
@@ -106,3 +107,5 @@ class SportSkill(models.Model):
         return str(self.personId) + ' ' + str(self.sportType)
 
 
+class CustomUser(AbstractUser):
+    person_id = models.ForeignKey(Person, on_delete=models.SET_NULL, null=True)
