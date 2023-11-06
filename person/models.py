@@ -13,6 +13,7 @@ class Person(models.Model):
     nationality = models.CharField(max_length=255)
     familyStatus = models.ForeignKey('FamilyStatus', on_delete=models.CASCADE)
     departmentId = models.ForeignKey(Department, on_delete=models.CASCADE)
+    role = models.CharField(max_length=255, default='User')
 
     def __str__(self):
         return self.iin
@@ -100,3 +101,24 @@ class SportSkill(models.Model):
 
 class CustomUser(AbstractUser):
     person_id = models.ForeignKey(Person, on_delete=models.SET_NULL, null=True)
+
+    def save(self, *args, **kwargs):
+        if self.is_superuser and self.is_staff:
+            self.person_id.role = 'Admin'
+            self.person_id.save()
+
+        elif self.is_superuser:
+            self.person_id.role = 'Admin'
+            self.person_id.save()
+
+        elif self.is_staff:
+            self.person_id.role = 'Moderator'
+            self.person_id.save()
+
+        else:
+            # Set a default role for other users if needed
+            self.person_id.role = 'User'
+            self.person_id.save()
+
+        self.person_id.save()
+        super().save(*args, **kwargs)
