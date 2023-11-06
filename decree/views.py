@@ -2,8 +2,8 @@ from django.shortcuts import render
 from rest_framework import generics, viewsets
 from rest_framework.permissions import IsAuthenticated
 
-from .models import DecreeList, SpecCheck, SickLeave
-from .serializers import DecreeListSerializer, SpecCheckSerializer, SickLeaveSerializer
+from .models import DecreeList, SpecCheck, SickLeave, Investigation
+from .serializers import DecreeListSerializer, SpecCheckSerializer, SickLeaveSerializer, InvestigationSerializer
 
 
 class DecreeListViewSet(viewsets.ModelViewSet):
@@ -21,4 +21,10 @@ class SpecCheckViewSet(viewsets.ModelViewSet):
 class SickLeaveViewSet(viewsets.ModelViewSet):
     queryset = SickLeave.objects.all()
     serializer_class = SickLeaveSerializer
+    permission_classes = (IsAuthenticated,)
+
+
+class InvestigationViewSet(viewsets.ModelViewSet):
+    queryset = Investigation.objects.all()
+    serializer_class = InvestigationSerializer
     permission_classes = (IsAuthenticated,)

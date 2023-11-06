@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import SpecCheck, SickLeave, DecreeList
+from .models import SpecCheck, SickLeave, DecreeList, Investigation
 
 
 class DecreeListSerializer(serializers.ModelSerializer):
@@ -18,4 +18,10 @@ class SpecCheckSerializer(serializers.ModelSerializer):
 class SickLeaveSerializer(serializers.ModelSerializer):
     class Meta:
         model = SickLeave
+        fields = "__all__"
+
+
+class InvestigationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Investigation
         fields = "__all__"

@@ -62,8 +62,8 @@ class ClassCategory(models.Model):
 
 
 class Autobiography(models.Model):
-    autobiographyText = models.CharField(max_length=2096)
-    autobiographyImage = models.TextField()
+    autobiographyText = models.CharField(max_length=2096, null=True)
+    autobiographyImage = models.TextField(null=True)
     personId = models.ForeignKey('Person', on_delete=models.CASCADE, default=1)
 
     def __str__(self):

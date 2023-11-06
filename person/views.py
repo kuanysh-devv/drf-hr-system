@@ -3,8 +3,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from birth_info.serializers import BirthInfoSerializer
-from education.serializers import CourseSerializer, AcademicDegreeSerializer, EducationSerializer
+from decree.serializers import SpecCheckSerializer, SickLeaveSerializer, InvestigationSerializer, DecreeListSerializer
+from education.serializers import CourseSerializer, AcademicDegreeSerializer, EducationSerializer, AttestationSerializer
 from identity_card_info.serializers import IdentityCardInfoSerializer
+from military_rank.serializers import RankInfoSerializer
 from photo.serializers import PhotoSerializer
 from position.serializers import WorkingHistorySerializer, PositionInfoSerializer
 from resident_info.serializers import ResidentInfoSerializer
@@ -154,6 +156,96 @@ class PersonViewSet(viewsets.ModelViewSet):
                 else:
                     return Response(working_history_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+            spec_check_data = request.data.get('SpecCheckInfo')
+            spec_checks_data = spec_check_data.get('specChecks')
+            for spec_check in spec_checks_data:
+                spec_check_serializer = SpecCheckSerializer(data=spec_check)
+                if spec_check_serializer.is_valid():
+                    spec_check_serializer.save(personId=person)
+                    print("spec check done")
+                else:
+                    return Response(spec_check_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            attestation_data = request.data.get('AttestationInfo')
+            attestations = attestation_data.get('attestations')
+            for att in attestations:
+                attestation_serializer = AttestationSerializer(data=att)
+                if attestation_serializer.is_valid():
+                    attestation_serializer.save(personId=person)
+                    print("attestations done")
+                else:
+                    return Response(attestation_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            rank_info_data = request.data.get('RankInfo')
+            ranks = rank_info_data.get('ranks')
+            for rank in ranks:
+                rank_serializer = RankInfoSerializer(data=rank)
+                if rank_serializer.is_valid():
+                    rank_serializer.save(personId=person)
+                    print("ranks done")
+                else:
+                    return Response(rank_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            class_category_data = request.data.get('ClassCategoriesInfo')
+            categories = class_category_data.get('classCategories')
+            for cat in categories:
+                category_serializer = ClassCategorySerializer(data=cat)
+                if category_serializer.is_valid():
+                    category_serializer.save(personId=person)
+                    print("classCategories done")
+                else:
+                    return Response(category_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            autobiography_data = request.data.get('AutobiographyInfo')
+            autos = autobiography_data.get('autobiographies')
+            for auto in autos:
+                auto_serializer = AutobiographySerializer(data=auto)
+                if auto_serializer.is_valid():
+                    auto_serializer.save(personId=person)
+                    print("autobiographies done")
+                else:
+                    return Response(auto_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            rewards_data = request.data.get('RewardsInfo')
+            rewards = rewards_data.get('rewards')
+            for rew in rewards:
+                rewards_serializer = RewardSerializer(data=rew)
+                if rewards_serializer.is_valid():
+                    rewards_serializer.save(personId=person)
+                    print("rewards done")
+                else:
+                    return Response(rewards_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            sick_leaves_data = request.data.get('SickLeavesInfo')
+            sick_leaves = sick_leaves_data.get('sickLeaves')
+            for sick in sick_leaves:
+                sick_leaves_serializer = SickLeaveSerializer(data=sick)
+                if sick_leaves_serializer.is_valid():
+                    sick_leaves_serializer.save(personId=person)
+                    print("sickLeaves done")
+                else:
+                    return Response(sick_leaves_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            investigations_data = request.data.get('InvestigationsInfo')
+            investigations = investigations_data.get('investigations')
+            for inv in investigations:
+                inv_serializer = InvestigationSerializer(data=inv)
+                if inv_serializer.is_valid():
+                    inv_serializer.save(personId=person)
+                    print("investigations done")
+                else:
+                    return Response(inv_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            decrees_data = request.data.get('DecreeListInfo')
+            decrees = decrees_data.get('decrees')
+            for dec in decrees:
+                dec_serializer = DecreeListSerializer(data=dec)
+                if dec_serializer.is_valid():
+                    dec_serializer.save(personId=person)
+                    print("decrees done")
+                else:
+                    return Response(dec_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -162,6 +254,7 @@ class PersonViewSet(viewsets.ModelViewSet):
         instance = self.get_object()
         instance.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 class GenderViewSet(viewsets.ModelViewSet):
     queryset = Gender.objects.all()

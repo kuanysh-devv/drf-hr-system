@@ -13,10 +13,10 @@ class MilitaryRank(models.Model):
 
 
 class RankInfo(models.Model):
-    militaryRank = models.ForeignKey('MilitaryRank', on_delete=models.PROTECT)
+    militaryRank = models.ForeignKey('MilitaryRank', on_delete=models.CASCADE)
     receivedType = models.CharField(max_length=255)
     receivedDate = models.DateField()
-    personId = models.ForeignKey(Person, on_delete=models.PROTECT, default=1)
+    personId = models.ForeignKey(Person, on_delete=models.CASCADE, default=1)
 
     def __str__(self):
         return str(self.id)
