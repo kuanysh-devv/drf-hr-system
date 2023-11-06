@@ -5,6 +5,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from birth_info.views import *
 from decree.views import *
 from education.views import *
+from filter import views
 from identity_card_info.views import *
 from location.views import *
 from military_rank.views import *
@@ -47,6 +48,7 @@ router.register(r'residentinfo', ResidentInfoViewSet)
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/v1/', include(router.urls)),
+    path('api/v1/filter/', views.filter_data, name='filter_data'),
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/token/verify/', TokenVerifyView.as_view(), name='token_verify'),

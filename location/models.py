@@ -10,7 +10,7 @@ class Location(models.Model):
 
 class Department(models.Model):
     DepartmentName = models.CharField(max_length=255)
-    Location = models.ForeignKey('Location', on_delete=models.PROTECT)
+    Location = models.ForeignKey('Location', on_delete=models.CASCADE)
 
     def __str__(self):
         return str(self.id)
