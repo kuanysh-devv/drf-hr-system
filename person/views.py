@@ -2,16 +2,11 @@ from rest_framework import viewsets, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from birth_info.models import BirthInfo
 from birth_info.serializers import BirthInfoSerializer
 from education.serializers import CourseSerializer, AcademicDegreeSerializer, EducationSerializer
-from identity_card_info.models import IdentityCardInfo
 from identity_card_info.serializers import IdentityCardInfoSerializer
-from location.models import Department
-from photo.models import Photo
 from photo.serializers import PhotoSerializer
 from position.serializers import WorkingHistorySerializer, PositionInfoSerializer
-from resident_info.models import ResidentInfo
 from resident_info.serializers import ResidentInfoSerializer
 from .models import Person, Gender, FamilyStatus, Relative, FamilyComposition, ClassCategory, Autobiography, Reward, \
     LanguageSkill, SportSkill
@@ -163,6 +158,10 @@ class PersonViewSet(viewsets.ModelViewSet):
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 class GenderViewSet(viewsets.ModelViewSet):
     queryset = Gender.objects.all()
