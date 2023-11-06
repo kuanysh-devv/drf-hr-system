@@ -3,23 +3,21 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from birth_info.models import BirthInfo
+from birth_info.serializers import BirthInfoSerializer
 from education.serializers import CourseSerializer, AcademicDegreeSerializer, EducationSerializer
 from identity_card_info.models import IdentityCardInfo
+from identity_card_info.serializers import IdentityCardInfoSerializer
 from location.models import Department
 from photo.models import Photo
+from photo.serializers import PhotoSerializer
 from position.serializers import WorkingHistorySerializer, PositionInfoSerializer
 from resident_info.models import ResidentInfo
+from resident_info.serializers import ResidentInfoSerializer
 from .models import Person, Gender, FamilyStatus, Relative, FamilyComposition, ClassCategory, Autobiography, Reward, \
     LanguageSkill, SportSkill
 from .serializers import PersonSerializer, GenderSerializer, FamilyStatusSerializer, RelativeSerializer, \
     FamilyCompositionSerializer, ClassCategorySerializer, AutobiographySerializer, RewardSerializer, \
     LanguageSkillSerializer, SportSkillSerializer
-from .forms import PersonForm
-from birth_info.forms import BirthInfoForm
-from identity_card_info.forms import IdentityCardInfoForm
-from photo.forms import PhotoForm
-from resident_info.forms import ResidentInfoForm
-from location.forms import DepartmentForm
 
 
 class PersonViewSet(viewsets.ModelViewSet):
@@ -33,27 +31,47 @@ class PersonViewSet(viewsets.ModelViewSet):
         if serializer.is_valid():
             # Create the Person instance
             person_instance_data = request.data.get('Person')
-            birth_info_data = person_instance_data.get('birthInfoId')
-            identity_card_info_data = person_instance_data.get('identityCardInfoId')
-            photo_data = person_instance_data.get('photoId')
-            resident_info_data = person_instance_data.get('residentInfoId')
-            department_data = person_instance_data.get('departmentId')
 
-            birth_info = BirthInfo.objects.create(**birth_info_data)
-            identity_card_info = IdentityCardInfo.objects.create(**identity_card_info_data)
-            photo = Photo.objects.create(**photo_data)
-            resident_info = ResidentInfo.objects.create(**resident_info_data)
+            department_data = person_instance_data.get('departmentId')
 
             # Link the related instances to the person instance
             person = serializer.save(
-                birthInfoId=birth_info,
-                identityCardInfoId=identity_card_info,
-                photoId=photo,
-                residentInfoId=resident_info,
-                departmentId=person_instance_data.get('departmentId')
+                departmentId=department_data
             )
 
             # Handle the related objects
+
+            birth_info_data = request.data.get('BirthInfo')
+            birth_info_serializer = BirthInfoSerializer(data=birth_info_data)
+            if birth_info_serializer.is_valid():
+                birth_info_serializer.save(personId=person)
+                print("BirthInfo done")
+            else:
+                return Response(birth_info_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            identity_card_info_data = request.data.get('IdentityCardInfo')
+            identity_card_info_serializer = IdentityCardInfoSerializer(data=identity_card_info_data)
+            if identity_card_info_serializer.is_valid():
+                identity_card_info_serializer.save(personId=person)
+                print("IdentityCardInfo done")
+            else:
+                return Response(identity_card_info_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            photo_data = request.data.get('Photo')
+            photo_serializer = PhotoSerializer(data=photo_data)
+            if photo_serializer.is_valid():
+                photo_serializer.save(personId=person)
+                print("Photo done")
+            else:
+                return Response(photo_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            resident_info_data = request.data.get('ResidentInfo')
+            resident_info_serializer = ResidentInfoSerializer(data=resident_info_data)
+            if resident_info_serializer.is_valid():
+                resident_info_serializer.save(personId=person)
+                print("ResidentInfo done")
+            else:
+                return Response(resident_info_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
             # PositionInfo
             position_info_data = request.data.get('PositionInfo')

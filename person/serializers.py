@@ -1,28 +1,13 @@
 from rest_framework import serializers
-
-from birth_info.models import BirthInfo
-from birth_info.serializers import BirthInfoSerializer
-from identity_card_info.models import IdentityCardInfo
-from identity_card_info.serializers import IdentityCardInfoSerializer
 from location.models import Department
-from photo.models import Photo
-from photo.serializers import PhotoSerializer
-from resident_info.models import ResidentInfo
-from resident_info.serializers import ResidentInfoSerializer
 from .models import Person, Relative, FamilyComposition, FamilyStatus, Gender, ClassCategory, Autobiography, Reward, \
     LanguageSkill, SportSkill
 
 from rest_framework import serializers
-from .models import Person, BirthInfo, IdentityCardInfo, Photo, ResidentInfo
+from .models import Person
 
 
 class PersonSerializer(serializers.ModelSerializer):
-    # Nested serializers for related models
-    birthInfoId = BirthInfoSerializer()
-    identityCardInfoId = IdentityCardInfoSerializer()
-    photoId = PhotoSerializer()
-    residentInfoId = ResidentInfoSerializer()
-
     # Department field is changed to accept just the department_id (pk)
     departmentId = serializers.PrimaryKeyRelatedField(queryset=Department.objects.all(), required=True)
 

@@ -1,10 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
-from birth_info.models import BirthInfo
-from identity_card_info.models import IdentityCardInfo
 from location.models import Department
-from photo.models import Photo
-from resident_info.models import ResidentInfo
 
 
 class Person(models.Model):
@@ -16,10 +12,6 @@ class Person(models.Model):
     gender = models.ForeignKey('Gender', on_delete=models.CASCADE)
     nationality = models.CharField(max_length=255)
     familyStatus = models.ForeignKey('FamilyStatus', on_delete=models.CASCADE)
-    birthInfoId = models.ForeignKey(BirthInfo, on_delete=models.CASCADE)
-    identityCardInfoId = models.ForeignKey(IdentityCardInfo, on_delete=models.CASCADE)
-    residentInfoId = models.ForeignKey(ResidentInfo, on_delete=models.CASCADE)
-    photoId = models.ForeignKey(Photo, on_delete=models.CASCADE)
     departmentId = models.ForeignKey(Department, on_delete=models.CASCADE)
 
     def __str__(self):
