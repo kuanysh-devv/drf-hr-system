@@ -13,14 +13,14 @@ class Person(models.Model):
     surname = models.CharField(max_length=255)
     firstName = models.CharField(max_length=255)
     patronymic = models.CharField(max_length=255)
-    gender = models.ForeignKey('Gender', on_delete=models.PROTECT)
+    gender = models.ForeignKey('Gender', on_delete=models.CASCADE)
     nationality = models.CharField(max_length=255)
-    familyStatus = models.ForeignKey('FamilyStatus', on_delete=models.PROTECT)
-    birthInfoId = models.ForeignKey(BirthInfo, on_delete=models.PROTECT)
-    identityCardInfoId = models.ForeignKey(IdentityCardInfo, on_delete=models.PROTECT)
-    residentInfoId = models.ForeignKey(ResidentInfo, on_delete=models.PROTECT)
-    photoId = models.ForeignKey(Photo, on_delete=models.PROTECT)
-    departmentId = models.ForeignKey(Department, on_delete=models.PROTECT)
+    familyStatus = models.ForeignKey('FamilyStatus', on_delete=models.CASCADE)
+    birthInfoId = models.ForeignKey(BirthInfo, on_delete=models.CASCADE)
+    identityCardInfoId = models.ForeignKey(IdentityCardInfo, on_delete=models.CASCADE)
+    residentInfoId = models.ForeignKey(ResidentInfo, on_delete=models.CASCADE)
+    photoId = models.ForeignKey(Photo, on_delete=models.CASCADE)
+    departmentId = models.ForeignKey(Department, on_delete=models.CASCADE)
 
     def __str__(self):
         return self.iin
@@ -55,7 +55,7 @@ class FamilyComposition(models.Model):
     relIin = models.CharField(max_length=12)
     relBirthDate = models.DateField()
     relJobPlace = models.CharField(max_length=255)
-    personId = models.ForeignKey('Person', on_delete=models.PROTECT)
+    personId = models.ForeignKey('Person', on_delete=models.CASCADE, default=1)
 
     def __str__(self):
         return str(self.relativeTypeId)
@@ -63,7 +63,7 @@ class FamilyComposition(models.Model):
 
 class ClassCategory(models.Model):
     categoryType = models.CharField(max_length=255)
-    personId = models.ForeignKey('Person', on_delete=models.PROTECT)
+    personId = models.ForeignKey('Person', on_delete=models.CASCADE, default=1)
 
     def __str__(self):
         return self.categoryType
@@ -72,7 +72,7 @@ class ClassCategory(models.Model):
 class Autobiography(models.Model):
     autobiographyText = models.CharField(max_length=2096)
     autobiographyImage = models.TextField()
-    personId = models.ForeignKey('Person', on_delete=models.PROTECT)
+    personId = models.ForeignKey('Person', on_delete=models.CASCADE, default=1)
 
     def __str__(self):
         return str(self.personId) + 's autobiography'
@@ -82,7 +82,7 @@ class Reward(models.Model):
     rewardType = models.CharField(max_length=255)
     rewardDocNumber = models.CharField(max_length=255)
     rewardDate = models.DateField()
-    personId = models.ForeignKey('Person', on_delete=models.PROTECT)
+    personId = models.ForeignKey('Person', on_delete=models.CASCADE, default=1)
 
     def __str__(self):
         return str(self.personId) + ' ' + str(self.rewardType)
@@ -91,7 +91,7 @@ class Reward(models.Model):
 class LanguageSkill(models.Model):
     langName = models.CharField(max_length=255)
     skillLvl = models.CharField(max_length=255)
-    personId = models.ForeignKey('Person', on_delete=models.PROTECT)
+    personId = models.ForeignKey('Person', on_delete=models.CASCADE, default=1)
 
     def __str__(self):
         return str(self.personId) + ' ' + str(self.langName)
@@ -100,7 +100,7 @@ class LanguageSkill(models.Model):
 class SportSkill(models.Model):
     sportType = models.CharField(max_length=255)
     sportSkillLvl = models.CharField(max_length=255)
-    personId = models.ForeignKey('Person', on_delete=models.PROTECT)
+    personId = models.ForeignKey('Person', on_delete=models.CASCADE, default=1)
 
     def __str__(self):
         return str(self.personId) + ' ' + str(self.sportType)

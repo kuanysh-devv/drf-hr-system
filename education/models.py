@@ -10,7 +10,7 @@ class Education(models.Model):
     educationDateOut = models.DateField()
     speciality = models.CharField(max_length=255)
     diplomaNumber = models.CharField(max_length=255)
-    personId = models.ForeignKey(Person, on_delete=models.PROTECT)
+    personId = models.ForeignKey(Person, on_delete=models.CASCADE, default=1)
 
     def __str__(self):
         return str(self.personId) + ' ' + self.educationType
@@ -23,7 +23,7 @@ class Course(models.Model):
     startDate = models.DateField()
     endDate = models.DateField()
     documentType = models.CharField(max_length=255)
-    personId = models.ForeignKey(Person, on_delete=models.PROTECT)
+    personId = models.ForeignKey(Person, on_delete=models.CASCADE, default=1)
 
     def __str__(self):
         return str(self.personId) + ' ' + self.courseName
@@ -34,7 +34,7 @@ class Attestation(models.Model):
     lastAttDate = models.DateField()
     nextAttDateMin = models.DateField()
     nextAttDateMax = models.DateField()
-    personId = models.ForeignKey(Person, on_delete=models.PROTECT)
+    personId = models.ForeignKey(Person, on_delete=models.CASCADE, default=1)
 
     def __str__(self):
         return str(self.personId) + ' ' + self.attResult
@@ -45,7 +45,7 @@ class AcademicDegree(models.Model):
     academicDegree = models.CharField(max_length=255)
     academicDiplomaNumber = models.CharField(max_length=255)
     academicDiplomaDate = models.DateField()
-    personId = models.ForeignKey(Person, on_delete=models.PROTECT)
+    personId = models.ForeignKey(Person, on_delete=models.CASCADE, default=1)
 
     def __str__(self):
         return str(self.personId) + ' ' + self.academicDegree
