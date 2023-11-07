@@ -1,5 +1,5 @@
 from django.contrib.auth.models import AbstractUser
-from django.db import models
+from django.db import models, IntegrityError
 from location.models import Department
 
 
@@ -103,22 +103,24 @@ class CustomUser(AbstractUser):
     person_id = models.ForeignKey(Person, on_delete=models.SET_NULL, null=True)
 
     def save(self, *args, **kwargs):
-        if self.is_superuser and self.is_staff:
-            self.person_id.role = 'Admin'
-            self.person_id.save()
+        try:
+            if self.person_id:
+                if self.is_superuser and self.is_staff:
+                    self.person_id.role = 'Admin'
+                    self.person_id.save()
+                elif self.is_superuser:
+                    self.person_id.role = 'Admin'
+                    self.person_id.save()
+                elif self.is_staff:
+                    self.person_id.role = 'Moderator'
+                    self.person_id.save()
+                else:
+                    # Set a default role for other users if needed
+                    self.person_id.role = 'User'
+                    self.person_id.save()
+        except IntegrityError:
+            # Handle the IntegrityError that occurs when a Person instance doesn't exist.
+            # You can create a Person instance here if needed.
+            pass
 
-        elif self.is_superuser:
-            self.person_id.role = 'Admin'
-            self.person_id.save()
-
-        elif self.is_staff:
-            self.person_id.role = 'Moderator'
-            self.person_id.save()
-
-        else:
-            # Set a default role for other users if needed
-            self.person_id.role = 'User'
-            self.person_id.save()
-
-        self.person_id.save()
         super().save(*args, **kwargs)
