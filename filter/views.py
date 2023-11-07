@@ -20,12 +20,10 @@ def filter_data(request):
 
     for field_param in fields_param:
         parts = field_param.split(':')
-        print("0")
         if len(parts) == 3:
             model_name, field_name, value = parts
 
             if "Date" in field_name or "date" in field_name:
-                print("1")
                 try:
                     start_date_str, end_date_str = value.split('_')
                     start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
@@ -35,16 +33,20 @@ def filter_data(request):
                         field_lookup = f"{model_name.lower()}__{field_name}__exact"
                         filter_condition = Q(**{field_lookup: start_date})
                     else:
-                        print("2")
                         # Otherwise, it's a date range filter
                         field_lookup = f"{model_name.lower()}__{field_name}__range"
                         filter_condition = Q(**{field_lookup: [start_date, end_date]})
                     filter_conditions &= filter_condition
                 except ValueError:
+
+                    start_date_str = value
+                    start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+                    field_lookup = f"{model_name.lower()}__{field_name}__exact"
+                    filter_condition = Q(**{field_lookup: start_date})
+                    filter_conditions &= filter_condition
                     continue  # Skip invalid date formats
 
             else:
-                print("3")
                 # For non-date fields, use an exact match
                 field_lookup = f"{model_name.lower()}__{field_name}__exact"
                 filter_condition = Q(**{field_lookup: value})
