@@ -4,11 +4,11 @@ from django.http import JsonResponse
 from django.db.models import Q
 from person.models import Person, FamilyComposition
 
-
 # views.py
 from django.http import JsonResponse
 from django.db.models import Q
 from person.models import Person
+
 
 def filter_data(request):
     fields_param = request.GET.getlist("fields")
@@ -31,4 +31,3 @@ def filter_data(request):
     result = [model_to_dict(p) for p in filtered_persons]
 
     return JsonResponse(result, safe=False)
-
