@@ -2,13 +2,18 @@ from rest_framework import viewsets, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from birth_info.models import BirthInfo
 from birth_info.serializers import BirthInfoSerializer
 from decree.serializers import SpecCheckSerializer, SickLeaveSerializer, InvestigationSerializer, DecreeListSerializer
 from education.serializers import CourseSerializer, AcademicDegreeSerializer, EducationSerializer, AttestationSerializer
+from identity_card_info.models import IdentityCardInfo
 from identity_card_info.serializers import IdentityCardInfoSerializer
 from military_rank.serializers import RankInfoSerializer
+from photo.models import Photo
 from photo.serializers import PhotoSerializer
+from position.models import PositionInfo
 from position.serializers import WorkingHistorySerializer, PositionInfoSerializer
+from resident_info.models import ResidentInfo
 from resident_info.serializers import ResidentInfoSerializer
 from .models import Person, Gender, FamilyStatus, Relative, FamilyComposition, ClassCategory, Autobiography, Reward, \
     LanguageSkill, SportSkill
@@ -21,6 +26,45 @@ class PersonViewSet(viewsets.ModelViewSet):
     queryset = Person.objects.all()
     serializer_class = PersonSerializer
     permission_classes = (IsAuthenticated,)
+
+    def retrieve(self, request, *args, **kwargs):
+        person = self.get_object()
+
+        # Serialize the person data
+        person_serializer = PersonSerializer(person)
+
+        birth_info_object = BirthInfo.objects.get(personId=person.id)
+        birth_info_serializer = BirthInfoSerializer(birth_info_object)
+
+        identity_card_info_object = IdentityCardInfo.objects.get(personId=person.id)
+        identity_card_info_serializer = IdentityCardInfoSerializer(identity_card_info_object)
+
+        photo_object = Photo.objects.get(personId=person.id)
+        photo_serializer = PhotoSerializer(photo_object)
+
+        resident_info_object = ResidentInfo.objects.get(personId=person.id)
+        resident_info_serializer = ResidentInfoSerializer(resident_info_object)
+
+        position_info_object = PositionInfo.objects.get(personId=person.id)
+        position_info_serializer = PositionInfoSerializer(position_info_object)
+
+        family_composition_object = FamilyComposition.objects.get(personId=person.id)
+        family_composition_serializer = FamilyCompositionSerializer(family_composition_object)
+
+        # Create a dictionary with the serialized data
+        data = {
+            'Person': person_serializer.data,
+            'BirthInfo': birth_info_serializer.data,
+            'IdentityCardInfo': identity_card_info_serializer.data,
+            'Photo': photo_serializer.data,
+            'ResidentInfo': resident_info_serializer.data,
+            'PositionInfo': position_info_serializer.data,
+            'FamilyComposition': family_composition_serializer.data
+
+            # Add more data for other related objects
+        }
+
+        return Response(data)
 
     def create(self, request, *args, **kwargs):
         # Deserialize the request data using the PersonSerializer
