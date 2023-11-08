@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.urls import path, include
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView, TokenVerifyView
 
+from docx_generator.views import *
 from birth_info.views import *
 from decree.views import *
 from education.views import *
@@ -52,4 +53,5 @@ urlpatterns = [
     path('api/v1/login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/v1/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/v1/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
+    path('generate_work_reference/<int:person_id>/', generate_work_reference, name='generate_work_reference'),
 ]

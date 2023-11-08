@@ -1,0 +1,96 @@
+import imghdr
+from datetime import datetime
+
+from PIL import Image
+from django.views.decorators.csrf import csrf_exempt
+from docx import Document
+from docx.shared import Pt, Inches
+from io import BytesIO
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
+
+from education.serializers import EducationSerializer, AcademicDegreeSerializer
+from person.models import Person
+from photo.models import Photo
+from position.models import PositionInfo, Position
+from birth_info.models import BirthInfo
+from education.models import Education, AcademicDegree
+import base64
+
+
+@csrf_exempt
+def generate_work_reference(request, person_id):
+    # Fetch the necessary data
+    person = get_object_or_404(Person, pk=person_id)
+    position_info = PositionInfo.objects.get(personId=person)
+
+    birth_info = BirthInfo.objects.get(personId=person)
+    birth_date = str(birth_info.birth_date)
+    birth_date_format = datetime.strptime(birth_date, '%Y-%m-%d')
+    formatted_date = birth_date_format.strftime('%d.%m.%Y')
+
+    education_objects = Education.objects.filter(personId=person.id)
+    education_data = EducationSerializer(education_objects, many=True).data
+    first_education = education_data[0]
+    date_edu_string = first_education['educationDateOut']  # Assuming 'first_education' is an OrderedDict
+    date_obj = datetime.strptime(date_edu_string, '%Y-%m-%d')
+
+    academic_degrees_objects = AcademicDegree.objects.filter(personId=person.id)
+    academic_degrees_data = AcademicDegreeSerializer(academic_degrees_objects, many=True).data
+    first_academic_degree = academic_degrees_data[0]
+    date_academ_string = first_academic_degree['academicDiplomaDate']
+    date_academ_obj = datetime.strptime(date_academ_string, '%Y-%m-%d')
+
+    positions = Position.objects.get(pk=position_info.id)
+
+    persons_photo = Photo.objects.get(personId=person)
+    photo_base64 = persons_photo.photoBinary  # Replace with your photo field
+    photo_binary = base64.b64decode(photo_base64)
+
+    # Load the Word document template
+    template_path = 'docx_generator/static/templates/spravka_template.docx'  # Update with the path to your template
+    document = Document(template_path)
+
+    # Define a function to replace placeholders in the document
+    def replace_placeholder(placeholder, replacement):
+        for paragraph1 in document.paragraphs:
+            if placeholder in paragraph1.text:
+                for run1 in paragraph1.runs:
+                    if placeholder in run1.text:
+                        run1.text = run1.text.replace(placeholder, replacement)
+                        run1.font.size = Pt(12)  # Adjust the font size if needed
+
+    # Replace placeholders with actual data
+    replace_placeholder('${name}', f"{person.firstName}")
+    replace_placeholder('${surname}', f"{person.surname}")
+    replace_placeholder('${patronymic}', f"{person.patronymic}")
+    replace_placeholder('${nationality}', f"{person.nationality}")
+    replace_placeholder('${position}', positions.positionTitle)
+    replace_placeholder('${iin}', person.iin)
+    replace_placeholder('${birth_date}', str(formatted_date))
+    replace_placeholder('${region}', birth_info.region)
+    replace_placeholder('${city}', birth_info.city)
+    if len(education_data) == 0:
+        replace_placeholder('${education}', "Не имеет")
+    else:
+        replace_placeholder('${education}',
+                            f"окончил(а) {first_education['educationPlace']} в {date_obj.year} году на специальность {first_education['speciality']}")
+    # Create a BytesIO object to save the modified document
+
+    if len(academic_degrees_data) == 0:
+        replace_placeholder('${academicdegree}', "Не имеет")
+    else:
+        replace_placeholder('${academicdegree}',
+                            f"получил(а) {first_academic_degree['academicDegree']} в {first_academic_degree['academicPlace']} в {date_academ_obj.year} году")
+    # Create a BytesIO object to save the modified document
+
+    doc_stream = BytesIO()
+    document.save(doc_stream)
+    doc_stream.seek(0)
+
+    # Prepare the HTTP response with the modified document
+    response = HttpResponse(doc_stream.read(),
+                            content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+    response['Content-Disposition'] = f'attachment; filename=work_reference.docx'
+
+    return response
