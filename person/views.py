@@ -4,14 +4,17 @@ from rest_framework.response import Response
 
 from birth_info.models import BirthInfo
 from birth_info.serializers import BirthInfoSerializer
+from decree.models import SpecCheck, SickLeave, Investigation, DecreeList
 from decree.serializers import SpecCheckSerializer, SickLeaveSerializer, InvestigationSerializer, DecreeListSerializer
+from education.models import Education, AcademicDegree, Course, Attestation
 from education.serializers import CourseSerializer, AcademicDegreeSerializer, EducationSerializer, AttestationSerializer
 from identity_card_info.models import IdentityCardInfo
 from identity_card_info.serializers import IdentityCardInfoSerializer
+from military_rank.models import RankInfo
 from military_rank.serializers import RankInfoSerializer
 from photo.models import Photo
 from photo.serializers import PhotoSerializer
-from position.models import PositionInfo
+from position.models import PositionInfo, WorkingHistory
 from position.serializers import WorkingHistorySerializer, PositionInfoSerializer
 from resident_info.models import ResidentInfo
 from resident_info.serializers import ResidentInfoSerializer
@@ -48,8 +51,53 @@ class PersonViewSet(viewsets.ModelViewSet):
         position_info_object = PositionInfo.objects.get(personId=person.id)
         position_info_serializer = PositionInfoSerializer(position_info_object)
 
-        family_composition_object = FamilyComposition.objects.get(personId=person.id)
-        family_composition_serializer = FamilyCompositionSerializer(family_composition_object)
+        family_composition_objects = FamilyComposition.objects.filter(personId=person.id)
+        family_composition_data = FamilyCompositionSerializer(family_composition_objects, many=True).data
+
+        education_objects = Education.objects.filter(personId=person.id)
+        education_data = EducationSerializer(education_objects, many=True).data
+
+        language_skill_objects = LanguageSkill.objects.filter(personId=person.id)
+        language_skill_data = LanguageSkillSerializer(language_skill_objects, many=True).data
+
+        academic_degree_objects = AcademicDegree.objects.filter(personId=person.id)
+        academic_degree_data = AcademicDegreeSerializer(academic_degree_objects, many=True).data
+
+        course_objects = Course.objects.filter(personId=person.id)
+        course_data = CourseSerializer(course_objects, many=True).data
+
+        sport_skill_objects = SportSkill.objects.filter(personId=person.id)
+        sport_skill_data = SportSkillSerializer(sport_skill_objects, many=True).data
+
+        working_history_objects = WorkingHistory.objects.filter(personId=person.id)
+        working_history_data = WorkingHistorySerializer(working_history_objects, many=True).data
+
+        spec_check_objects = SpecCheck.objects.filter(personId=person.id)
+        spec_check_data = SpecCheckSerializer(spec_check_objects, many=True).data
+
+        attestation_objects = Attestation.objects.filter(personId=person.id)
+        attestation_data = AttestationSerializer(attestation_objects, many=True).data
+
+        rank_info_objects = RankInfo.objects.filter(personId=person.id)
+        rank_info_data = RankInfoSerializer(rank_info_objects, many=True).data
+
+        class_categories_objects = ClassCategory.objects.filter(personId=person.id)
+        class_categories_data = ClassCategorySerializer(class_categories_objects, many=True).data
+
+        autobiography_objects = Autobiography.objects.filter(personId=person.id)
+        autobiography_data = AutobiographySerializer(autobiography_objects, many=True).data
+
+        rewards_objects = Reward.objects.filter(personId=person.id)
+        rewards_data = RewardSerializer(rewards_objects, many=True).data
+
+        sick_leaves_objects = SickLeave.objects.filter(personId=person.id)
+        sick_leaves_data = SickLeaveSerializer(sick_leaves_objects, many=True).data
+
+        investigation_objects = Investigation.objects.filter(personId=person.id)
+        investigation_data = InvestigationSerializer(investigation_objects, many=True).data
+
+        decree_list_objects = DecreeList.objects.filter(personId=person.id)
+        decree_list_data = DecreeListSerializer(decree_list_objects, many=True).data
 
         # Create a dictionary with the serialized data
         data = {
@@ -59,8 +107,22 @@ class PersonViewSet(viewsets.ModelViewSet):
             'Photo': photo_serializer.data,
             'ResidentInfo': resident_info_serializer.data,
             'PositionInfo': position_info_serializer.data,
-            'FamilyComposition': family_composition_serializer.data
-
+            'FamilyComposition': {'relatives': family_composition_data},
+            'Education': {'educations': education_data},
+            'LanguageSkill': {'languageSkills': language_skill_data},
+            'AcademicDegree': {'academicDegrees': academic_degree_data},
+            'Course': {'courses': course_data},
+            'SportSkill': {'sportSkills': sport_skill_data},
+            'WorkingHistory': {'workingHistories': working_history_data},
+            'SpecCheckInfo': {'specChecks': spec_check_data},
+            'AttestationInfo': {'attestations': attestation_data},
+            'RankInfo': {'ranks': rank_info_data},
+            'ClassCategoriesInfo': {'classCategories': class_categories_data},
+            'AutobiographyInfo': {'autobiographies': autobiography_data},
+            'RewardsInfo': {'rewards': rewards_data},
+            'SickLeavesInfo': {'sickLeaves': sick_leaves_data},
+            'InvestigationsInfo': {'investigations': investigation_data},
+            'DecreeListInfo': {'decrees': decree_list_data}
             # Add more data for other related objects
         }
 
