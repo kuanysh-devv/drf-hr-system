@@ -10,6 +10,7 @@ from person.models import Person, FamilyComposition
 from django.http import JsonResponse
 from django.db.models import Q
 from person.models import Person
+from person.serializers import PersonSerializer
 
 
 def filter_data(request):
@@ -53,6 +54,6 @@ def filter_data(request):
                 filter_conditions &= filter_condition
 
     filtered_persons = filtered_persons.filter(filter_conditions)
-    result = [model_to_dict(p) for p in filtered_persons]
+    result = [PersonSerializer(instance=p).data for p in filtered_persons]
 
     return JsonResponse(result, safe=False)
