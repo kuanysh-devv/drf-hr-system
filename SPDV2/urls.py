@@ -16,6 +16,8 @@ from position.views import *
 from resident_info.views import *
 from rest_framework import routers
 
+from working_history.views import WorkingHistoryViewSet
+
 router = routers.DefaultRouter()
 router.register(r'birth-info', BirthInfoViewSet)
 router.register(r'decree-list', DecreeListViewSet)

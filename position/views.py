@@ -1,8 +1,8 @@
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 
-from .models import Position, PositionInfo, WorkingHistory
-from .serializers import PositionSerializer, PositionInfoSerializer, WorkingHistorySerializer
+from .models import Position, PositionInfo
+from .serializers import PositionSerializer, PositionInfoSerializer
 
 
 class PositionViewSet(viewsets.ModelViewSet):
@@ -17,7 +17,3 @@ class PositionInfoViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated,)
 
 
-class WorkingHistoryViewSet(viewsets.ModelViewSet):
-    queryset = WorkingHistory.objects.all()
-    serializer_class = WorkingHistorySerializer
-    permission_classes = (IsAuthenticated,)

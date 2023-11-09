@@ -10,14 +10,17 @@ from education.models import Education, AcademicDegree, Course, Attestation
 from education.serializers import CourseSerializer, AcademicDegreeSerializer, EducationSerializer, AttestationSerializer
 from identity_card_info.models import IdentityCardInfo
 from identity_card_info.serializers import IdentityCardInfoSerializer
-from military_rank.models import RankInfo
+from military_rank.models import RankInfo, MilitaryRank
 from military_rank.serializers import RankInfoSerializer
 from photo.models import Photo
 from photo.serializers import PhotoSerializer
-from position.models import PositionInfo, WorkingHistory
-from position.serializers import WorkingHistorySerializer, PositionInfoSerializer
+from position.models import PositionInfo, Position
+
+from position.serializers import PositionInfoSerializer
 from resident_info.models import ResidentInfo
 from resident_info.serializers import ResidentInfoSerializer
+from working_history.models import WorkingHistory
+from working_history.serializers import WorkingHistorySerializer
 from .models import Person, Gender, FamilyStatus, Relative, FamilyComposition, ClassCategory, Autobiography, Reward, \
     LanguageSkill, SportSkill
 from .serializers import PersonSerializer, GenderSerializer, FamilyStatusSerializer, RelativeSerializer, \
@@ -48,8 +51,7 @@ class PersonViewSet(viewsets.ModelViewSet):
         resident_info_object = ResidentInfo.objects.get(personId=person.id)
         resident_info_serializer = ResidentInfoSerializer(resident_info_object)
 
-        position_info_object = PositionInfo.objects.get(personId=person.id)
-        position_info_serializer = PositionInfoSerializer(position_info_object)
+        position_info_serializer = PositionInfoSerializer(person.positionInfo)
 
         family_composition_objects = FamilyComposition.objects.filter(personId=person.id)
         family_composition_data = FamilyCompositionSerializer(family_composition_objects, many=True).data
@@ -78,8 +80,7 @@ class PersonViewSet(viewsets.ModelViewSet):
         attestation_objects = Attestation.objects.filter(personId=person.id)
         attestation_data = AttestationSerializer(attestation_objects, many=True).data
 
-        rank_info_objects = RankInfo.objects.filter(personId=person.id)
-        rank_info_data = RankInfoSerializer(rank_info_objects, many=True).data
+        rank_info_data = RankInfoSerializer(person.rankInfo).data
 
         class_categories_objects = ClassCategory.objects.filter(personId=person.id)
         class_categories_data = ClassCategorySerializer(class_categories_objects, many=True).data
@@ -130,19 +131,34 @@ class PersonViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         # Deserialize the request data using the PersonSerializer
-        serializer = PersonSerializer(data=request.data.get('Person'))
-        if serializer.is_valid():
+        posSerializer = PositionInfoSerializer(data=request.data.get('PositionInfo'))
+        rankSerializer = RankInfoSerializer(data=request.data.get('RankInfo'))
+        if posSerializer.is_valid() and rankSerializer.is_valid():
             # Create the Person instance
-            person_instance_data = request.data.get('Person')
+            positionInfoData = request.data.get('PositionInfo')
+            positionId = positionInfoData.get('position')
+            positionInstance = Position.objects.get(pk=positionId)
 
-            department_data = person_instance_data.get('departmentId')
+            rankInfoData = request.data.get('RankInfo')
+            rankId = rankInfoData.get('militaryRank')
+            rankInstance = MilitaryRank.objects.get(pk=rankId)
 
-            # Link the related instances to the person instance
-            person = serializer.save(
-                departmentId=department_data
-            )
+            posinfo = posSerializer.save(position=positionInstance)
+            rankInfo = rankSerializer.save(militaryRank=rankInstance)
 
-            # Handle the related objects
+            person_data = request.data.get('Person')
+            genderId = person_data.get('gender')
+            genderInstance = Gender.objects.get(pk=genderId)
+            familyStatusId = person_data.get('familyStatus')
+            familyStatusInstance = FamilyStatus.objects.get(pk=familyStatusId)
+
+            person_serializer = PersonSerializer(data=person_data)
+
+            if person_serializer.is_valid():
+                person = person_serializer.save(positionInfo=posinfo, rankInfo=rankInfo, gender=genderInstance,
+                                                familyStatus=familyStatusInstance)
+            else:
+                return Response(person_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
             birth_info_data = request.data.get('BirthInfo')
             birth_info_serializer = BirthInfoSerializer(data=birth_info_data)
@@ -175,15 +191,6 @@ class PersonViewSet(viewsets.ModelViewSet):
                 print("ResidentInfo done")
             else:
                 return Response(resident_info_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-            # PositionInfo
-            position_info_data = request.data.get('PositionInfo')
-            position_info_serializer = PositionInfoSerializer(data=position_info_data)
-            if position_info_serializer.is_valid():
-                position_info_serializer.save(personId=person)
-                print("positioninfo done")
-            else:
-                return Response(position_info_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
             # FamilyComposition
             family_composition_data = request.data.get('FamilyComposition')
@@ -282,16 +289,6 @@ class PersonViewSet(viewsets.ModelViewSet):
                 else:
                     return Response(attestation_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-            rank_info_data = request.data.get('RankInfo')
-            ranks = rank_info_data.get('ranks')
-            for rank in ranks:
-                rank_serializer = RankInfoSerializer(data=rank)
-                if rank_serializer.is_valid():
-                    rank_serializer.save(personId=person)
-                    print("ranks done")
-                else:
-                    return Response(rank_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
             class_category_data = request.data.get('ClassCategoriesInfo')
             categories = class_category_data.get('classCategories')
             for cat in categories:
@@ -352,9 +349,9 @@ class PersonViewSet(viewsets.ModelViewSet):
                 else:
                     return Response(dec_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(posSerializer.data, status=status.HTTP_201_CREATED)
 
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(posSerializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()

@@ -4,6 +4,8 @@ from django.db.models.signals import post_save, pre_save, pre_delete
 from django.dispatch import receiver
 import logging
 
+from position.models import PositionInfo
+from working_history.models import WorkingHistory
 from .models import Person
 
 logger = logging.getLogger()
@@ -14,6 +16,10 @@ def person_pre_delete(sender, instance, **kwargs):
     try:
         user = get_user_model().objects.get(person_id=instance)
         user.delete()
+
+        instance.positionInfo.delete()
+        instance.rankInfo.delete()
+
     except get_user_model().DoesNotExist:
         pass  # User doesn't exist, no need to delete
 
@@ -27,3 +33,15 @@ def person_post_save(sender, instance, created, **kwargs):
         User = get_user_model()
         user = User.objects.create_user(username=username, password=hashed_password, person_id=instance)
         user.save()
+
+        posinfo_instance = instance.positionInfo
+
+        WorkingHistory.objects.create(
+                positionName=str(posinfo_instance.position.positionTitle),
+                startDate=posinfo_instance.receivedDate,
+                personId=instance,
+                department=posinfo_instance.department.DepartmentName,
+                organizationName="АФМ",
+                organizationAddress="Бейбітшілік 10"
+                # Add other fields from PositionInfo as needed
+        )

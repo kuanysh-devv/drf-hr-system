@@ -51,7 +51,9 @@ INSTALLED_APPS = [
     'education',
     'decree',
     'corsheaders',
-
+    'docx_generator',
+    'filter',
+    'working_history'
 ]
 
 # Set the CORS settings

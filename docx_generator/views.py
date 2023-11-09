@@ -10,10 +10,12 @@ from django.shortcuts import get_object_or_404
 from education.serializers import EducationSerializer, AcademicDegreeSerializer
 from person.models import Person
 from photo.models import Photo
-from position.models import PositionInfo, Position, WorkingHistory
+from position.models import PositionInfo
 from birth_info.models import BirthInfo
 from education.models import Education, AcademicDegree
 import base64
+
+from working_history.models import WorkingHistory
 
 
 @csrf_exempt

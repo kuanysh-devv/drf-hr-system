@@ -1,6 +1,10 @@
 from rest_framework import serializers
 from location.models import Department
 from location.serializers import DepartmentSerializer
+from military_rank.models import RankInfo
+from military_rank.serializers import RankInfoSerializer
+from position.models import PositionInfo
+from position.serializers import PositionInfoSerializer
 from .models import Person, Relative, FamilyComposition, FamilyStatus, Gender, ClassCategory, Autobiography, Reward, \
     LanguageSkill, SportSkill
 
@@ -10,12 +14,27 @@ from .models import Person
 
 class PersonSerializer(serializers.ModelSerializer):
     gender = serializers.SerializerMethodField()
-    department = serializers.SerializerMethodField()
     familyStatus = serializers.SerializerMethodField()
+    positionInfo = serializers.SerializerMethodField()
+    rankInfo = serializers.SerializerMethodField()
 
     class Meta:
         model = Person
         fields = "__all__"
+
+    @staticmethod
+    def get_positionInfo(obj):
+        positionInfo = obj.positionInfo
+        if positionInfo:
+            return PositionInfoSerializer(positionInfo).data
+        return None
+
+    @staticmethod
+    def get_rankInfo(obj):
+        rankInfo = obj.rankInfo
+        if rankInfo:
+            return RankInfoSerializer(rankInfo).data
+        return None
 
     @staticmethod
     def get_familyStatus(obj):
@@ -25,27 +44,11 @@ class PersonSerializer(serializers.ModelSerializer):
         return None
 
     @staticmethod
-    def get_department(obj):
-        department = obj.department
-        if department:
-            return DepartmentSerializer(department).data
-        return None
-
-    @staticmethod
     def get_gender(obj):
         gender = obj.gender
         if gender:
             return GenderSerializer(gender).data
         return None
-
-    def create(self, validated_data):
-        department_id = validated_data.pop('departmentId')  # Remove department_id from validated_data
-        department = Department.objects.get(pk=department_id)  # Retrieve the Department instance
-
-        # Create the Person instance with the retrieved Department
-        person = Person.objects.create(departmentId=department, **validated_data)
-
-        return person
 
 
 class RelativeSerializer(serializers.ModelSerializer):
@@ -55,17 +58,17 @@ class RelativeSerializer(serializers.ModelSerializer):
 
 
 class FamilyCompositionSerializer(serializers.ModelSerializer):
-    relativeTypeId = serializers.SerializerMethodField()
+    relativeType = serializers.SerializerMethodField()
 
     class Meta:
         model = FamilyComposition
         fields = "__all__"
 
     @staticmethod
-    def get_relativeTypeId(obj):
-        relativeTypeId = obj.relativeTypeId
-        if relativeTypeId:
-            return RelativeSerializer(relativeTypeId).data
+    def get_relativeType(obj):
+        relativeType = obj.relativeType
+        if relativeType:
+            return RelativeSerializer(relativeType).data
         return None
 
 

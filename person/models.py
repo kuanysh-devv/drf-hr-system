@@ -1,6 +1,8 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models, IntegrityError
-from location.models import Department
+
+from military_rank.models import RankInfo
+from position.models import PositionInfo
 
 
 class Person(models.Model):
@@ -12,7 +14,8 @@ class Person(models.Model):
     gender = models.ForeignKey('Gender', on_delete=models.CASCADE)
     nationality = models.CharField(max_length=255)
     familyStatus = models.ForeignKey('FamilyStatus', on_delete=models.CASCADE)
-    department = models.ForeignKey(Department, on_delete=models.CASCADE)
+    positionInfo = models.ForeignKey(PositionInfo, on_delete=models.CASCADE)
+    rankInfo = models.ForeignKey(RankInfo, on_delete=models.CASCADE)
     role = models.CharField(max_length=255, default='User')
 
     def __str__(self):
@@ -51,7 +54,7 @@ class FamilyComposition(models.Model):
     personId = models.ForeignKey('Person', on_delete=models.CASCADE, default=1)
 
     def __str__(self):
-        return str(self.relativeTypeId)
+        return str(self.relativeType)
 
 
 class ClassCategory(models.Model):
