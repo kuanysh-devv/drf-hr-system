@@ -191,18 +191,20 @@ class PersonViewSet(viewsets.ModelViewSet):
                 print("ResidentInfo done")
             else:
                 return Response(resident_info_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+            print("1")
             # FamilyComposition
             family_composition_data = request.data.get('FamilyComposition')
             relatives_data = family_composition_data.get('relatives')
             for relative_data in relatives_data:
                 relative_serializer = FamilyCompositionSerializer(data=relative_data)
+                relatiiveTypeId = relative_data.get('relativeType')
+                relativeType = Relative.objects.get(pk=relatiiveTypeId)
                 if relative_serializer.is_valid():
-                    relative_serializer.save(personId=person)
+                    relative_serializer.save(personId=person, relativeType=relativeType)
                     print("family_composition done")
                 else:
                     return Response(relative_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+            print("2")
             # Education
             education_data = request.data.get('Education')
             educations_data = education_data.get('educations')
