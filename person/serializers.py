@@ -55,9 +55,18 @@ class RelativeSerializer(serializers.ModelSerializer):
 
 
 class FamilyCompositionSerializer(serializers.ModelSerializer):
+    relativeTypeId = serializers.SerializerMethodField()
+
     class Meta:
         model = FamilyComposition
         fields = "__all__"
+
+    @staticmethod
+    def get_relativeTypeId(obj):
+        relativeTypeId = obj.relativeTypeId
+        if relativeTypeId:
+            return RelativeSerializer(relativeTypeId).data
+        return None
 
 
 class FamilyStatusSerializer(serializers.ModelSerializer):

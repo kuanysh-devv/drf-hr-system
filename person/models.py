@@ -41,7 +41,7 @@ class Relative(models.Model):
 
 
 class FamilyComposition(models.Model):
-    relativeTypeId = models.ForeignKey('Relative', on_delete=models.PROTECT)
+    relativeType = models.ForeignKey('Relative', on_delete=models.PROTECT)
     relName = models.CharField(max_length=255)
     relSurname = models.CharField(max_length=255)
     relPatronymic = models.CharField(max_length=255)
