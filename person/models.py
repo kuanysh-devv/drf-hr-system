@@ -12,7 +12,7 @@ class Person(models.Model):
     gender = models.ForeignKey('Gender', on_delete=models.CASCADE)
     nationality = models.CharField(max_length=255)
     familyStatus = models.ForeignKey('FamilyStatus', on_delete=models.CASCADE)
-    departmentId = models.ForeignKey(Department, on_delete=models.CASCADE)
+    department = models.ForeignKey(Department, on_delete=models.CASCADE)
     role = models.CharField(max_length=255, default='User')
 
     def __str__(self):
