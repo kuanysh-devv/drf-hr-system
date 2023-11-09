@@ -27,7 +27,7 @@ class PositionInfo(models.Model):
 class WorkingHistory(models.Model):
     positionName = models.CharField(max_length=255)
     startDate = models.DateField()
-    endDate = models.DateField()
+    endDate = models.DateField(null=True)
     department = models.CharField(max_length=255, null=True)
     organizationName = models.CharField(max_length=255)
     organizationAddress = models.CharField(max_length=492, null=True)

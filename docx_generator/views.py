@@ -39,7 +39,6 @@ def generate_work_reference(request, person_id):
     date_academ_string = first_academic_degree['academicDiplomaDate']
     date_academ_obj = datetime.strptime(date_academ_string, '%Y-%m-%d')
 
-    positions = Position.objects.get(pk=position_info.id)
 
     persons_photo = Photo.objects.get(personId=person)
     photo_base64 = persons_photo.photoBinary  # Replace with your photo field
@@ -63,7 +62,7 @@ def generate_work_reference(request, person_id):
     replace_placeholder('${surname}', f"{person.surname}")
     replace_placeholder('${patronymic}', f"{person.patronymic}")
     replace_placeholder('${nationality}', f"{person.nationality}")
-    replace_placeholder('${position}', positions.positionTitle)
+    replace_placeholder('${position}', position_info.position.positionTitle)
     replace_placeholder('${iin}', person.iin)
     replace_placeholder('${birth_date}', str(formatted_date))
     replace_placeholder('${region}', birth_info.region)
@@ -123,8 +122,6 @@ def generate_work_reference(request, person_id):
                 run.bold = True
                 # Iterate through all the cells in the table to add borders
 
-
-
     for entry in education_history:
         date_in = entry.educationDateIn.strftime('%d.%m.%Y')
         date_out = entry.educationDateOut.strftime('%d.%m.%Y')
@@ -135,10 +132,16 @@ def generate_work_reference(request, person_id):
     # Populate the table with work history and education data
     for entry in work_history:
         date_in = entry.startDate.strftime('%d.%m.%Y')
-        date_out = entry.endDate.strftime('%d.%m.%Y')
-        place = f"{entry.organizationName}, {entry.organizationAddress}"
-        table.add_row().cells[0].text = f"{date_in} - {date_out}"
-        table.rows[-1].cells[1].text = place
+        date_out = None
+        if entry.endDate:
+            date_out = entry.endDate.strftime('%d.%m.%Y')
+        place = f"{entry.organizationName}, должность: {entry.positionName}"
+        if date_out is None:
+            table.add_row().cells[0].text = f"{date_in} - по настоящее время"
+            table.rows[-1].cells[1].text = place
+        else:
+            table.add_row().cells[0].text = f"{date_in} - {date_out}"
+            table.rows[-1].cells[1].text = place
 
     for row in table.rows:
         for cell in row.cells:
