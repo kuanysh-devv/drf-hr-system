@@ -1,10 +1,8 @@
-import imghdr
 from datetime import datetime
-
-from PIL import Image
 from django.views.decorators.csrf import csrf_exempt
 from docx import Document
-from docx.shared import Pt, Inches
+from docx.enum.table import WD_ALIGN_VERTICAL, WD_CELL_VERTICAL_ALIGNMENT
+from docx.shared import Pt
 from io import BytesIO
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
@@ -12,7 +10,7 @@ from django.shortcuts import get_object_or_404
 from education.serializers import EducationSerializer, AcademicDegreeSerializer
 from person.models import Person
 from photo.models import Photo
-from position.models import PositionInfo, Position
+from position.models import PositionInfo, Position, WorkingHistory
 from birth_info.models import BirthInfo
 from education.models import Education, AcademicDegree
 import base64
@@ -83,6 +81,70 @@ def generate_work_reference(request, person_id):
         replace_placeholder('${academicdegree}',
                             f"получил(а) {first_academic_degree['academicDegree']} в {first_academic_degree['academicPlace']} в {date_academ_obj.year} году")
     # Create a BytesIO object to save the modified document
+
+    work_history = WorkingHistory.objects.filter(personId=person).order_by('startDate')
+    education_history = Education.objects.filter(personId=person).order_by('educationDateIn')
+
+    # Create a new section in the document after a specific keyword
+    keyword = "ДЕЯТЕЛЬНОСТЬ"  # Replace with the keyword you want to use
+    for paragraph in document.paragraphs:
+        if keyword in paragraph.text:
+            section = paragraph._element
+            break
+
+    # Create a table with 2 columns for work history and education
+    num_columns = 2
+    table = document.add_table(rows=1, cols=num_columns)
+    table.style = 'Table Grid'
+    table.autofit = False
+    table.allow_autofit = False
+
+    # Define the column widths (adjust these as needed)
+    table.columns[0].width = Pt(50)  # Date in and Date out
+    table.columns[1].width = Pt(250)  # Place of education and work
+
+    # Add a header row to the table
+    table.rows[0].cells[0].text = "Дата"
+    table.rows[0].cells[1].text = "Место деятельности и специальность"
+
+    # Iterate through all the cells in the header row
+    for cell in table.rows[0].cells:
+        cell.paragraphs[0].paragraph_format.alignment = WD_ALIGN_VERTICAL.CENTER
+
+        # Adjust the paragraph spacing to add padding (adjust the values as needed)
+        paragraph = cell.paragraphs[0]
+        paragraph.paragraph_format.space_before = Pt(6)  # Add space before text
+        paragraph.paragraph_format.space_after = Pt(6)
+
+        for paragraph in cell.paragraphs:
+            for run in paragraph.runs:
+                run.font.name = 'Times New Roman'
+                run.font.size = Pt(12)
+                run.bold = True
+                # Iterate through all the cells in the table to add borders
+
+
+
+    for entry in education_history:
+        date_in = entry.educationDateIn.strftime('%d.%m.%Y')
+        date_out = entry.educationDateOut.strftime('%d.%m.%Y')
+        place = f"{entry.educationPlace}, Speciality: {entry.speciality}"
+        table.add_row().cells[0].text = f"{date_in} - {date_out}"
+        table.rows[-1].cells[1].text = place
+
+    # Populate the table with work history and education data
+    for entry in work_history:
+        date_in = entry.startDate.strftime('%d.%m.%Y')
+        date_out = entry.endDate.strftime('%d.%m.%Y')
+        place = f"{entry.organizationName}, {entry.organizationAddress}"
+        table.add_row().cells[0].text = f"{date_in} - {date_out}"
+        table.rows[-1].cells[1].text = place
+
+    for row in table.rows:
+        for cell in row.cells:
+            for paragraph in cell.paragraphs:
+                paragraph.paragraph_format.space_before = Pt(6)  # Add space before text
+                paragraph.paragraph_format.space_after = Pt(6)
 
     doc_stream = BytesIO()
     document.save(doc_stream)
