@@ -16,6 +16,7 @@ from education.models import Education, AcademicDegree, Course, Attestation
 from education.serializers import CourseSerializer, AcademicDegreeSerializer, EducationSerializer, AttestationSerializer
 from identity_card_info.models import IdentityCardInfo
 from identity_card_info.serializers import IdentityCardInfoSerializer
+from location.models import Department
 from military_rank.models import RankInfo, MilitaryRank
 from military_rank.serializers import RankInfoSerializer
 from photo.models import Photo
@@ -32,6 +33,20 @@ from .models import Person, Gender, FamilyStatus, Relative, FamilyComposition, C
 from .serializers import PersonSerializer, GenderSerializer, FamilyStatusSerializer, RelativeSerializer, \
     FamilyCompositionSerializer, ClassCategorySerializer, AutobiographySerializer, RewardSerializer, \
     LanguageSkillSerializer, SportSkillSerializer
+
+
+@csrf_exempt
+def departments_persons(request, *args, **kwargs):
+    try:
+        department_id = request.GET.get('department_id')
+        department = Department.objects.get(pk=department_id)
+        persons = Person.objects.filter(positionInfo__department=department)
+
+        serializer = PersonSerializer(persons, many=True)
+
+        return JsonResponse({'persons': serializer.data})
+    except Department.DoesNotExist:
+        return JsonResponse({'error': 'Department not found'}, status=404)
 
 
 class PersonViewSet(viewsets.ModelViewSet):
