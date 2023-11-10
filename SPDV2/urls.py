@@ -55,5 +55,6 @@ urlpatterns = [
     path('api/v1/login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/v1/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/v1/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
+    path('api/v1/change_password/', change_password, name='change_password'),
     path('generate_work_reference/<int:person_id>/', generate_work_reference, name='generate_work_reference'),
 ]

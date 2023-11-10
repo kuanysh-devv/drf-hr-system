@@ -1,3 +1,9 @@
+import json
+
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_protect, csrf_exempt
+from django.views.decorators.http import require_POST
 from rest_framework import viewsets, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -22,7 +28,7 @@ from resident_info.serializers import ResidentInfoSerializer
 from working_history.models import WorkingHistory
 from working_history.serializers import WorkingHistorySerializer
 from .models import Person, Gender, FamilyStatus, Relative, FamilyComposition, ClassCategory, Autobiography, Reward, \
-    LanguageSkill, SportSkill
+    LanguageSkill, SportSkill, CustomUser
 from .serializers import PersonSerializer, GenderSerializer, FamilyStatusSerializer, RelativeSerializer, \
     FamilyCompositionSerializer, ClassCategorySerializer, AutobiographySerializer, RewardSerializer, \
     LanguageSkillSerializer, SportSkillSerializer
@@ -413,3 +419,36 @@ class SportSkillViewSet(viewsets.ModelViewSet):
     queryset = SportSkill.objects.all()
     serializer_class = SportSkillSerializer
     permission_classes = (IsAuthenticated,)
+
+
+@csrf_exempt
+def change_password(request):
+    if request.method == 'POST':
+        try:
+            # Parse JSON data from the request body
+            data = json.loads(request.body.decode('utf-8'))
+
+            person_id = data.get('personId')
+            print(person_id)
+            current_password = data.get('current_password')
+            new_password = data.get('new_password')
+            repeat_password = data.get('repeat_password')
+            Person_instance = Person.objects.get(pk=person_id)
+            # Assuming CustomUser model has a field named 'person_id'
+            user = CustomUser.objects.get(person_id_id=Person_instance)
+            print(user)
+            if user.check_password(current_password):
+                if new_password == repeat_password:
+                    user.set_password(new_password)
+                    user.save()
+                    return JsonResponse({'message': 'Password changed successfully'})
+                else:
+                    return JsonResponse({'error': 'New password and repeat password do not match'}, status=400)
+            else:
+                return JsonResponse({'error': 'Current password is incorrect'}, status=400)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON data in the request body'}, status=400)
+        except CustomUser.DoesNotExist:
+            return JsonResponse({'error': 'User not found'}, status=404)
+    else:
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
