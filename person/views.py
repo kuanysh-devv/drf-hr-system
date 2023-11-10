@@ -66,13 +66,8 @@ class PersonViewSet(viewsets.ModelViewSet):
         identity_card_info_object = IdentityCardInfo.objects.get(personId=person.id)
         identity_card_info_serializer = IdentityCardInfoSerializer(identity_card_info_object)
 
-        photo_object = Photo.objects.get(personId=person.id)
-        photo_serializer = PhotoSerializer(photo_object)
-
         resident_info_object = ResidentInfo.objects.get(personId=person.id)
         resident_info_serializer = ResidentInfoSerializer(resident_info_object)
-
-        position_info_serializer = PositionInfoSerializer(person.positionInfo)
 
         family_composition_objects = FamilyComposition.objects.filter(personId=person.id)
         family_composition_data = FamilyCompositionSerializer(family_composition_objects, many=True).data
@@ -101,8 +96,6 @@ class PersonViewSet(viewsets.ModelViewSet):
         attestation_objects = Attestation.objects.filter(personId=person.id)
         attestation_data = AttestationSerializer(attestation_objects, many=True).data
 
-        rank_info_data = RankInfoSerializer(person.rankInfo).data
-
         class_categories_objects = ClassCategory.objects.filter(personId=person.id)
         class_categories_data = ClassCategorySerializer(class_categories_objects, many=True).data
 
@@ -126,9 +119,7 @@ class PersonViewSet(viewsets.ModelViewSet):
             'Person': person_serializer.data,
             'BirthInfo': birth_info_serializer.data,
             'IdentityCardInfo': identity_card_info_serializer.data,
-            'Photo': photo_serializer.data,
             'ResidentInfo': resident_info_serializer.data,
-            'PositionInfo': position_info_serializer.data,
             'FamilyComposition': {'relatives': family_composition_data},
             'Education': {'educations': education_data},
             'LanguageSkill': {'languageSkills': language_skill_data},
@@ -138,7 +129,6 @@ class PersonViewSet(viewsets.ModelViewSet):
             'WorkingHistory': {'workingHistories': working_history_data},
             'SpecCheckInfo': {'specChecks': spec_check_data},
             'AttestationInfo': {'attestations': attestation_data},
-            'RankInfo': {'ranks': rank_info_data},
             'ClassCategoriesInfo': {'classCategories': class_categories_data},
             'AutobiographyInfo': {'autobiographies': autobiography_data},
             'RewardsInfo': {'rewards': rewards_data},

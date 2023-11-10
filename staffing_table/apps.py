@@ -1,9 +1,9 @@
 from django.apps import AppConfig
 
 
-class PositionConfig(AppConfig):
+class StaffingTableConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'position'
+    name = 'staffing_table'
 
     def ready(self):
-        import position.signals
+        import staffing_table.signals

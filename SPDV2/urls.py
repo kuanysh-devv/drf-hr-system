@@ -16,6 +16,7 @@ from position.views import *
 from resident_info.views import *
 from rest_framework import routers
 
+from staffing_table.views import StaffingTableViewSet, getStaffingTable
 from working_history.views import WorkingHistoryViewSet
 
 router = routers.DefaultRouter()
@@ -47,6 +48,7 @@ router.register(r'position', PositionViewSet)
 router.register(r'position-info', PositionInfoViewSet)
 router.register(r'working-history', WorkingHistoryViewSet)
 router.register(r'residentinfo', ResidentInfoViewSet)
+router.register(r'staffing-table', StaffingTableViewSet)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -58,4 +60,5 @@ urlpatterns = [
     path('api/v1/change_password/', change_password, name='change_password'),
     path('generate_work_reference/<int:person_id>/', generate_work_reference, name='generate_work_reference'),
     path('api/v1/persons_by_department/', departments_persons, name='persons_by_department'),
+    path('api/v1/staffing_table/', getStaffingTable, name='staffing_table'),
 ]

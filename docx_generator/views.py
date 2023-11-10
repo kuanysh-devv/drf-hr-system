@@ -22,8 +22,6 @@ from working_history.models import WorkingHistory
 def generate_work_reference(request, person_id):
     # Fetch the necessary data
     person = get_object_or_404(Person, pk=person_id)
-    position_info = PositionInfo.objects.get(personId=person)
-
     birth_info = BirthInfo.objects.get(personId=person)
     birth_date = str(birth_info.birth_date)
     birth_date_format = datetime.strptime(birth_date, '%Y-%m-%d')
@@ -64,7 +62,7 @@ def generate_work_reference(request, person_id):
     replace_placeholder('${surname}', f"{person.surname}")
     replace_placeholder('${patronymic}', f"{person.patronymic}")
     replace_placeholder('${nationality}', f"{person.nationality}")
-    replace_placeholder('${position}', position_info.position.positionTitle)
+    replace_placeholder('${position}', person.positionInfo.position.positionTitle)
     replace_placeholder('${iin}', person.iin)
     replace_placeholder('${birth_date}', str(formatted_date))
     replace_placeholder('${region}', birth_info.region)

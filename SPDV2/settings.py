@@ -53,7 +53,8 @@ INSTALLED_APPS = [
     'corsheaders',
     'docx_generator',
     'filter',
-    'working_history'
+    'working_history',
+    'staffing_table'
 ]
 
 # Set the CORS settings

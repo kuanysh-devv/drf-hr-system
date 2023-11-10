@@ -13,4 +13,4 @@ class Department(models.Model):
     Location = models.ForeignKey('Location', on_delete=models.CASCADE)
 
     def __str__(self):
-        return str(self.id)
+        return str(self.DepartmentName)

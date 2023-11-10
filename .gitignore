@@ -119,3 +119,14 @@ resident_info/migrations/0007_*.py
 resident_info/migrations/0008_*.py
 resident_info/migrations/0009_*.py
 resident_info/migrations/0010_*.py
+
+working_history/migrations/0001_*.py
+working_history/migrations/0002_*.py
+working_history/migrations/0003_*.py
+working_history/migrations/0004_*.py
+working_history/migrations/0005_*.py
+working_history/migrations/0006_*.py
+working_history/migrations/0007_*.py
+working_history/migrations/0008_*.py
+working_history/migrations/0009_*.py
+working_history/migrations/0010_*.py

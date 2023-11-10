@@ -3,6 +3,8 @@ from location.models import Department
 from location.serializers import DepartmentSerializer
 from military_rank.models import RankInfo
 from military_rank.serializers import RankInfoSerializer
+from photo.models import Photo
+from photo.serializers import PhotoSerializer
 from position.models import PositionInfo
 from position.serializers import PositionInfoSerializer
 from .models import Person, Relative, FamilyComposition, FamilyStatus, Gender, ClassCategory, Autobiography, Reward, \
@@ -17,10 +19,18 @@ class PersonSerializer(serializers.ModelSerializer):
     familyStatus = serializers.SerializerMethodField()
     positionInfo = serializers.SerializerMethodField()
     rankInfo = serializers.SerializerMethodField()
+    photo = serializers.SerializerMethodField()
 
     class Meta:
         model = Person
         fields = "__all__"
+
+    @staticmethod
+    def get_photo(obj):
+        photo = Photo.objects.get(personId=obj)
+        if photo:
+            return PhotoSerializer(photo).data
+        return None
 
     @staticmethod
     def get_positionInfo(obj):
