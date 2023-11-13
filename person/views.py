@@ -59,13 +59,13 @@ class PersonViewSet(viewsets.ModelViewSet):
     def update_family_status(self, request, pk=None):
         try:
             person = self.get_object()
-            family_status_id = request.data.get('family_status_id')
+            family_status_name = request.data.get('statusName')
 
             # Check if family_status_id is provided
-            if family_status_id is None:
+            if family_status_name is None:
                 return Response({'error': 'family_status is required'}, status=status.HTTP_400_BAD_REQUEST)
 
-            family_status = FamilyStatus.objects.get(pk=family_status_id)
+            family_status = FamilyStatus.objects.get(statusName=family_status_name)
 
             # Update the person's familyStatus
             person.familyStatus = family_status
@@ -87,11 +87,11 @@ class PersonViewSet(viewsets.ModelViewSet):
         """
         try:
             person = self.get_object()
-            gender_id = request.data.get('gender_id')
+            gender_name = request.data.get('genderName')
 
             # Validate and get the Gender instance
             try:
-                gender_instance = Gender.objects.get(pk=gender_id)
+                gender_instance = Gender.objects.get(genderName=gender_name)
             except Gender.DoesNotExist:
                 return Response({'error': 'Gender not found'}, status=status.HTTP_404_NOT_FOUND)
 
