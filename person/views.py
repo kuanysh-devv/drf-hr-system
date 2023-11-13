@@ -5,6 +5,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_protect, csrf_exempt
 from django.views.decorators.http import require_POST
 from rest_framework import viewsets, status
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -53,6 +54,57 @@ class PersonViewSet(viewsets.ModelViewSet):
     queryset = Person.objects.all()
     serializer_class = PersonSerializer
     permission_classes = (IsAuthenticated,)
+
+    @action(detail=True, methods=['PATCH'])
+    def update_family_status(self, request, pk=None):
+        try:
+            person = self.get_object()
+            family_status_id = request.data.get('family_status_id')
+
+            # Check if family_status_id is provided
+            if family_status_id is None:
+                return Response({'error': 'family_status is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+            family_status = FamilyStatus.objects.get(pk=family_status_id)
+
+            # Update the person's familyStatus
+            person.familyStatus = family_status
+            person.save()
+
+            serializer = PersonSerializer(person)
+            return Response(serializer.data)
+        except Person.DoesNotExist:
+            return Response({'error': 'Person not found'}, status=status.HTTP_404_NOT_FOUND)
+        except FamilyStatus.DoesNotExist:
+            return Response({'error': 'Family status not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=True, methods=['patch'])
+    def update_gender(self, request, pk=None):
+        """
+        Update the gender of a person.
+        """
+        try:
+            person = self.get_object()
+            gender_id = request.data.get('gender_id')
+
+            # Validate and get the Gender instance
+            try:
+                gender_instance = Gender.objects.get(pk=gender_id)
+            except Gender.DoesNotExist:
+                return Response({'error': 'Gender not found'}, status=status.HTTP_404_NOT_FOUND)
+
+            # Update the gender field
+            person.gender = gender_instance
+            person.save()
+
+            # Serialize the updated person
+            serializer = PersonSerializer(person)
+            return Response(serializer.data)
+
+        except Person.DoesNotExist:
+            return Response({'error': 'Person not found'}, status=status.HTTP_404_NOT_FOUND)
 
     def retrieve(self, request, *args, **kwargs):
         person = self.get_object()
