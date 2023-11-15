@@ -31,18 +31,18 @@ def filter_data(request):
                     end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
                     if start_date == end_date:
                         # If the start_date and end_date are the same, it's an exact date match
-                        field_lookup = f"{model_name.lower()}__{field_name}__exact"
+                        field_lookup = f"{model_name}__{field_name}__exact"
                         filter_condition = Q(**{field_lookup: start_date})
                     else:
                         # Otherwise, it's a date range filter
-                        field_lookup = f"{model_name.lower()}__{field_name}__range"
+                        field_lookup = f"{model_name}__{field_name}__range"
                         filter_condition = Q(**{field_lookup: [start_date, end_date]})
                     filter_conditions &= filter_condition
                 except ValueError:
 
                     start_date_str = value
                     start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
-                    field_lookup = f"{model_name.lower()}__{field_name}__exact"
+                    field_lookup = f"{model_name}__{field_name}__exact"
                     filter_condition = Q(**{field_lookup: start_date})
                     filter_conditions &= filter_condition
                     continue  # Skip invalid date formats
