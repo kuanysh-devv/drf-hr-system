@@ -53,6 +53,38 @@ def filter_data(request):
                 filter_condition = Q(**{field_lookup: value})
                 filter_conditions &= filter_condition
 
+        elif len(parts) == 2:
+            field_name, value = parts
+
+            if "Date" in field_name or "date" in field_name:
+                try:
+                    start_date_str, end_date_str = value.split('_')
+                    start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+                    end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+                    if start_date == end_date:
+                        # If the start_date and end_date are the same, it's an exact date match
+                        field_lookup = f"{field_name}__exact"
+                        filter_condition = Q(**{field_lookup: start_date})
+                    else:
+                        # Otherwise, it's a date range filter
+                        field_lookup = f"{field_name}__range"
+                        filter_condition = Q(**{field_lookup: [start_date, end_date]})
+                    filter_conditions &= filter_condition
+                except ValueError:
+
+                    start_date_str = value
+                    start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+                    field_lookup = f"{field_name}__exact"
+                    filter_condition = Q(**{field_lookup: start_date})
+                    filter_conditions &= filter_condition
+                    continue  # Skip invalid date formats
+
+            else:
+                # For non-date fields, use an exact match
+                field_lookup = f"{field_name}__exact"
+                filter_condition = Q(**{field_lookup: value})
+                filter_conditions &= filter_condition
+
     filtered_persons = filtered_persons.filter(filter_conditions)
     result = [PersonSerializer(instance=p).data for p in filtered_persons]
 
