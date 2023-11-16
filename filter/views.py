@@ -20,7 +20,7 @@ def filter_data(request):
     filter_conditions = Q()
 
     for field_param in fields_param:
-        parts = field_param.split(':')
+        parts = field_param.split('=')
         if len(parts) == 3:
             model_name, field_name, value = parts
 
