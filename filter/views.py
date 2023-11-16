@@ -22,7 +22,9 @@ def filter_data(request):
         parts = key.split(':')
         if len(parts) == 2:
             model_name, field_name = parts
-
+            if value == '':
+                # If the value is empty, skip filtering for this field
+                continue
             if "Date" in field_name or "date" in field_name:
                 try:
                     start_date_str, end_date_str = value.split('_')
@@ -54,6 +56,10 @@ def filter_data(request):
 
         elif len(parts) == 1:
             field_name = parts[0]
+
+            if value == '':
+                # If the value is empty, skip filtering for this field
+                continue
 
             if "Date" in field_name or "date" in field_name:
                 try:
