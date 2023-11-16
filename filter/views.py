@@ -14,15 +14,14 @@ from person.serializers import PersonSerializer
 
 
 def filter_data(request):
-    fields_param = request.GET.getlist("fields")
 
     filtered_persons = Person.objects.all()
     filter_conditions = Q()
 
-    for field_param in fields_param:
-        parts = field_param.split('=')
-        if len(parts) == 3:
-            model_name, field_name, value = parts
+    for key, value in request.GET.items():
+        parts = key.split(':')
+        if len(parts) == 2:
+            model_name, field_name = parts
 
             if "Date" in field_name or "date" in field_name:
                 try:
@@ -53,8 +52,8 @@ def filter_data(request):
                 filter_condition = Q(**{field_lookup: value})
                 filter_conditions &= filter_condition
 
-        elif len(parts) == 2:
-            field_name, value = parts
+        elif len(parts) == 1:
+            field_name = parts[0]
 
             if "Date" in field_name or "date" in field_name:
                 try:
