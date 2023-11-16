@@ -48,7 +48,7 @@ def filter_data(request):
 
             else:
                 # For non-date fields, use an exact match
-                field_lookup = f"{model_name.lower()}__{field_name}__exact"
+                field_lookup = f"{model_name}__{field_name}__exact"
                 filter_condition = Q(**{field_lookup: value})
                 filter_conditions &= filter_condition
 
