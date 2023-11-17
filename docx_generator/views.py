@@ -13,8 +13,8 @@ from photo.models import Photo
 from position.models import PositionInfo
 from birth_info.models import BirthInfo
 from education.models import Education, AcademicDegree
-import base64
-
+import base64, io
+from docx.shared import Inches
 from working_history.models import WorkingHistory
 
 
@@ -39,45 +39,52 @@ def generate_work_reference(request, person_id):
     date_academ_string = first_academic_degree['academicDiplomaDate']
     date_academ_obj = datetime.strptime(date_academ_string, '%Y-%m-%d')
 
-
     persons_photo = Photo.objects.get(personId=person)
-    photo_base64 = persons_photo.photoBinary  # Replace with your photo field
+    photo_base64 = persons_photo.photoBinary
+
+    # Replace with your photo field
     photo_binary = base64.b64decode(photo_base64)
+    image = io.BytesIO(photo_binary)
 
     # Load the Word document template
     template_path = 'docx_generator/static/templates/spravka_template.docx'  # Update with the path to your template
     document = Document(template_path)
+    tables = document.tables
+    p2 = tables[0].rows[0].cells[2].add_paragraph()
+    r2 = p2.add_run()
+    r2.add_picture(image, width=Inches(1.2))
 
     # Define a function to replace placeholders in the document
     def replace_placeholder(placeholder, replacement):
-        for paragraph1 in document.paragraphs:
+        for paragraph1 in tables[0].rows[0].cells[0].paragraphs:
             if placeholder in paragraph1.text:
                 for run1 in paragraph1.runs:
+                    print(run1.text)
                     if placeholder in run1.text:
                         run1.text = run1.text.replace(placeholder, replacement)
                         run1.font.size = Pt(12)  # Adjust the font size if needed
 
     # Replace placeholders with actual data
-    replace_placeholder('${name}', f"{person.firstName}")
-    replace_placeholder('${surname}', f"{person.surname}")
-    replace_placeholder('${patronymic}', f"{person.patronymic}")
-    replace_placeholder('${nationality}', f"{person.nationality}")
-    replace_placeholder('${position}', person.positionInfo.position.positionTitle)
-    replace_placeholder('${iin}', person.iin)
-    replace_placeholder('${birth_date}', str(formatted_date))
-    replace_placeholder('${region}', birth_info.region)
-    replace_placeholder('${city}', birth_info.city)
+    replace_placeholder('Name', f"{person.firstName}")
+    replace_placeholder('surname', f"{person.surname}")
+    replace_placeholder('patronymic', f"{person.patronymic}")
+    replace_placeholder('nationality', f"{person.nationality}")
+    replace_placeholder('position', person.positionInfo.position.positionTitle)
+    replace_placeholder('iin', person.iin)
+    replace_placeholder('birth_date', str(formatted_date))
+    replace_placeholder('region', birth_info.region)
+    replace_placeholder('city', birth_info.city)
     if len(education_data) == 0:
-        replace_placeholder('${education}', "Не имеет")
+        replace_placeholder('education', "Не имеет")
     else:
-        replace_placeholder('${education}',
+        replace_placeholder('education',
                             f"окончил(а) {first_education['educationPlace']} в {date_obj.year} году на специальность {first_education['speciality']}")
     # Create a BytesIO object to save the modified document
 
     if len(academic_degrees_data) == 0:
-        replace_placeholder('${academicdegree}', "Не имеет")
+        replace_placeholder('academicdegree', "Не имеет")
     else:
-        replace_placeholder('${academicdegree}',
+        replace_placeholder('academicdegree',
                             f"получил(а) {first_academic_degree['academicDegree']} в {first_academic_degree['academicPlace']} в {date_academ_obj.year} году")
     # Create a BytesIO object to save the modified document
 
@@ -99,8 +106,8 @@ def generate_work_reference(request, person_id):
     table.allow_autofit = False
 
     # Define the column widths (adjust these as needed)
-    table.columns[0].width = Pt(50)  # Date in and Date out
-    table.columns[1].width = Pt(250)  # Place of education and work
+    table.columns[0].width = Inches(2)  # Date in and Date out
+    table.columns[1].width = Inches(3)  # Place of education and work
 
     # Add a header row to the table
     table.rows[0].cells[0].text = "Дата"

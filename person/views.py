@@ -39,7 +39,7 @@ from .serializers import PersonSerializer, GenderSerializer, FamilyStatusSeriali
 @csrf_exempt
 def departments_persons(request, *args, **kwargs):
     try:
-        department_id = request.GET.get('department_id')
+        department_id = request.GET.items('department_id')
         department = Department.objects.get(pk=department_id)
         persons = Person.objects.filter(positionInfo__department=department)
 
@@ -199,8 +199,8 @@ class PersonViewSet(viewsets.ModelViewSet):
         if posSerializer.is_valid() and rankSerializer.is_valid():
             # Create the Person instance
             positionInfoData = request.data.get('PositionInfo')
-            positionId = positionInfoData.get('position')
-            positionInstance = Position.objects.get(pk=positionId)
+            positionName = positionInfoData.get('position')
+            positionInstance = Position.objects.get(positionTitle=positionName)
 
             rankInfoData = request.data.get('RankInfo')
             rankId = rankInfoData.get('militaryRank')

@@ -61,4 +61,6 @@ urlpatterns = [
     path('generate_work_reference/<int:person_id>/', generate_work_reference, name='generate_work_reference'),
     path('api/v1/persons_by_department/', departments_persons, name='persons_by_department'),
     path('api/v1/staffing_table/', getStaffingTable, name='staffing_table'),
+    path('api/v1/location_departments/<str:location_name>/', departments_by_location, name='departments_by_location'),
+    path('api/v1/positions_departments/<int:department_id>/', positions_by_department, name='positions_by_department'),
 ]

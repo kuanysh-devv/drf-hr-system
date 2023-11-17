@@ -130,3 +130,14 @@ working_history/migrations/0007_*.py
 working_history/migrations/0008_*.py
 working_history/migrations/0009_*.py
 working_history/migrations/0010_*.py
+
+staffing_table/migrations/0001_*.py
+staffing_table/migrations/0002_*.py
+staffing_table/migrations/0003_*.py
+staffing_table/migrations/0004_*.py
+staffing_table/migrations/0005_*.py
+staffing_table/migrations/0006_*.py
+staffing_table/migrations/0007_*.py
+staffing_table/migrations/0008_*.py
+staffing_table/migrations/0009_*.py
+staffing_table/migrations/0010_*.py
