@@ -202,18 +202,21 @@ class PersonViewSet(viewsets.ModelViewSet):
             positionName = positionInfoData.get('position')
             positionInstance = Position.objects.get(positionTitle=positionName)
 
-            rankInfoData = request.data.get('RankInfo')
-            rankId = rankInfoData.get('militaryRank')
-            rankInstance = MilitaryRank.objects.get(pk=rankId)
+            departmentName = positionInfoData.get('department')
+            departmentInstance = Department.objects.get(DepartmentName=departmentName)
 
-            posinfo = posSerializer.save(position=positionInstance)
+            rankInfoData = request.data.get('RankInfo')
+            rankName = rankInfoData.get('militaryRank')
+            rankInstance = MilitaryRank.objects.get(rankTitle=rankName)
+
+            posinfo = posSerializer.save(position=positionInstance, department=departmentInstance)
             rankInfo = rankSerializer.save(militaryRank=rankInstance)
 
             person_data = request.data.get('Person')
-            genderId = person_data.get('gender')
-            genderInstance = Gender.objects.get(pk=genderId)
-            familyStatusId = person_data.get('familyStatus')
-            familyStatusInstance = FamilyStatus.objects.get(pk=familyStatusId)
+            genderName = person_data.get('gender')
+            genderInstance = Gender.objects.get(genderName=genderName)
+            familyStatusName = person_data.get('familyStatus')
+            familyStatusInstance = FamilyStatus.objects.get(statusName=familyStatusName)
 
             person_serializer = PersonSerializer(data=person_data)
 
@@ -260,8 +263,8 @@ class PersonViewSet(viewsets.ModelViewSet):
             relatives_data = family_composition_data.get('relatives')
             for relative_data in relatives_data:
                 relative_serializer = FamilyCompositionSerializer(data=relative_data)
-                relatiiveTypeId = relative_data.get('relativeType')
-                relativeType = Relative.objects.get(pk=relatiiveTypeId)
+                relativeTypeName = relative_data.get('relativeType')
+                relativeType = Relative.objects.get(relativeName=relativeTypeName)
                 if relative_serializer.is_valid():
                     relative_serializer.save(personId=person, relativeType=relativeType)
                     print("family_composition done")

@@ -19,5 +19,5 @@ class PositionInfo(models.Model):
     receivedDate = models.DateField()
 
     def __str__(self):
-        return str(self.position)
+        return str(self.position) + str(self.id)
 

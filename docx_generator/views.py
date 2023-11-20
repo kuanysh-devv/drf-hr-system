@@ -59,7 +59,6 @@ def generate_work_reference(request, person_id):
         for paragraph1 in tables[0].rows[0].cells[0].paragraphs:
             if placeholder in paragraph1.text:
                 for run1 in paragraph1.runs:
-                    print(run1.text)
                     if placeholder in run1.text:
                         run1.text = run1.text.replace(placeholder, replacement)
                         run1.font.size = Pt(12)  # Adjust the font size if needed
