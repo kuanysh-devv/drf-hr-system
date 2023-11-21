@@ -29,6 +29,7 @@ def filter_data(request):
     rewardTypeGlobal = None
     decreeTypeGlobal = None
     decreeSubTypeGlobal = None
+    investigationDecreeTypeGlobal = None
 
     for key, value in request.GET.items():
         parts = key.split(':')
@@ -195,7 +196,6 @@ def filter_data(request):
                         field_lookup = f"{model_name}__{field_name}__icontains"
                         filter_condition = Q(**{field_lookup: value})
                         filter_conditions &= filter_condition
-
                 elif model_name == 'residentinfo':
                     if field_name == 'resCity':
                         field_lookup = f"{model_name}__{field_name}__icontains"
@@ -335,13 +335,6 @@ def filter_data(request):
                         field_lookup = f"{model_name}__{field_name}__icontains"
                         filter_condition = Q(**{field_lookup: value})
                         filter_conditions &= filter_condition
-
-
-
-
-
-
-
 
         elif len(parts) == 1:
             field_name = parts[0]
@@ -591,7 +584,8 @@ def filter_data(request):
                         return HttpResponseServerError("LanguageSkill {} does not exist.".format(value))
                 if filtered_field == 'skillLvl':
                     try:
-                        languageSkillInstance = LanguageSkill.objects.get(personId=p, langName__icontains=langNameGlobal)
+                        languageSkillInstance = LanguageSkill.objects.get(personId=p,
+                                                                          langName__icontains=langNameGlobal)
                         person_data[filtered_field] = languageSkillInstance.skillLvl
                     except LanguageSkill.DoesNotExist:
                         return HttpResponseServerError("LanguageSkill {} does not exist.".format(value))
@@ -850,7 +844,7 @@ def filter_data(request):
                         try:
                             RankInstance = MilitaryRank.objects.get(rankTitle__icontains=value)
                             MultipleRankInfoInstance = RankInfo.objects.filter(person=p,
-                                                                           militaryRank=RankInstance).order_by(
+                                                                               militaryRank=RankInstance).order_by(
                                 '-id')
                             last_rank_instance = MultipleRankInfoInstance.first()
                             person_data[filtered_field] = last_rank_instance.militaryRank.rankTitle
@@ -881,10 +875,11 @@ def filter_data(request):
                     except RankInfo.DoesNotExist:
                         return HttpResponseServerError("RankInfo {} does not exist.".format(value))
             elif filtered_fields_model == 'reward':
-                if filtered_field == 'rewardType': #required
+                if filtered_field == 'rewardType':  # required
                     rewardTypeGlobal = value
                     try:
-                        MultipleRewardInstance = Reward.objects.filter(personId=p, rewardType__icontains=value).order_by(
+                        MultipleRewardInstance = Reward.objects.filter(personId=p,
+                                                                       rewardType__icontains=value).order_by(
                             '-id')
                         last_reward_instance = MultipleRewardInstance.first()
                         person_data[filtered_field] = last_reward_instance.rewardType
@@ -892,7 +887,8 @@ def filter_data(request):
                         return HttpResponseServerError("Reward {} does not exist.".format(value))
                 if filtered_field == 'rewardDocNumber':
                     try:
-                        MultipleRewardInstance = Reward.objects.filter(personId=p, rewardType__icontains=rewardTypeGlobal).order_by(
+                        MultipleRewardInstance = Reward.objects.filter(personId=p,
+                                                                       rewardType__icontains=rewardTypeGlobal).order_by(
                             '-id')
                         last_reward_instance = MultipleRewardInstance.first()
                         person_data[filtered_field] = last_reward_instance.rewardDocNumber
@@ -900,7 +896,8 @@ def filter_data(request):
                         return HttpResponseServerError("Reward {} does not exist.".format(value))
                 if filtered_field == 'rewardDate':
                     try:
-                        MultipleRewardInstance = Reward.objects.filter(personId=p, rewardType__icontains=rewardTypeGlobal).order_by(
+                        MultipleRewardInstance = Reward.objects.filter(personId=p,
+                                                                       rewardType__icontains=rewardTypeGlobal).order_by(
                             '-id')
                         last_reward_instance = MultipleRewardInstance.first()
                         person_data[filtered_field] = last_reward_instance.rewardDate
@@ -909,7 +906,8 @@ def filter_data(request):
             elif filtered_fields_model == 'sickleave':
                 if filtered_field == 'sickDocNumber':
                     try:
-                        MultipleSickLeavesInstance = SickLeave.objects.filter(personId=p, sickDocNumber__icontains=value).order_by(
+                        MultipleSickLeavesInstance = SickLeave.objects.filter(personId=p,
+                                                                              sickDocNumber__icontains=value).order_by(
                             '-id')
                         last_sick_instance = MultipleSickLeavesInstance.first()
                         person_data[filtered_field] = last_sick_instance.sickDocNumber
@@ -917,7 +915,8 @@ def filter_data(request):
                         return HttpResponseServerError("SickLeave {} does not exist.".format(value))
                 if filtered_field == 'sickDocDate':
                     try:
-                        MultipleSickLeavesInstance = SickLeave.objects.filter(personId=p, sickDocDate__icontains=value).order_by(
+                        MultipleSickLeavesInstance = SickLeave.objects.filter(personId=p,
+                                                                              sickDocDate__icontains=value).order_by(
                             '-id')
                         last_sick_instance = MultipleSickLeavesInstance.first()
                         person_data[filtered_field] = last_sick_instance.sickDocDate
@@ -925,8 +924,10 @@ def filter_data(request):
                         return HttpResponseServerError("SickLeave {} does not exist.".format(value))
             elif filtered_fields_model == 'investigation':
                 if filtered_field == 'investigation_decree_type':
+                    investigationDecreeTypeGlobal = value
                     try:
-                        MultipleInvInstance = Investigation.objects.filter(personId=p, investigation_decree_type__icontains=value).order_by(
+                        MultipleInvInstance = Investigation.objects.filter(personId=p,
+                                                                           investigation_decree_type__icontains=value).order_by(
                             '-id')
                         last_inv_instance = MultipleInvInstance.first()
 
@@ -935,7 +936,8 @@ def filter_data(request):
                         return HttpResponseServerError("Investigation {} does not exist.".format(value))
                 if filtered_field == 'investigation_decree_number':
                     try:
-                        MultipleInvInstance = Investigation.objects.filter(personId=p, investigation_decree_number__icontains=value).order_by(
+                        MultipleInvInstance = Investigation.objects.filter(personId=p,
+                                                                           investigation_decree_number__icontains=value).order_by(
                             '-id')
                         last_inv_instance = MultipleInvInstance.first()
                         if last_inv_instance is None:
@@ -943,21 +945,35 @@ def filter_data(request):
                         person_data[filtered_field] = last_inv_instance.investigation_decree_number
                     except Investigation.DoesNotExist:
                         return HttpResponseServerError("Investigation {} does not exist.".format(value))
+                if filtered_field == 'investigation_date':
+                    try:
+                        MultipleInvInstance = Investigation.objects.filter(personId=p,investigation_decree_type__icontains=investigationDecreeTypeGlobal
+                                                                          ).order_by(
+                            '-id')
+                        last_inv_instance = MultipleInvInstance.first()
+
+                        person_data[filtered_field] = last_inv_instance.investigation_date
+                    except Investigation.DoesNotExist:
+                        return HttpResponseServerError("Investigation {} does not exist.".format(value))
+
+
             elif filtered_fields_model == 'decreelist':
-                if filtered_field == 'decreeType':#required
+                if filtered_field == 'decreeType':  # required
                     decreeTypeGlobal = value
                     try:
-                        MultipleDecreeInstance = DecreeList.objects.filter(personId=p, decreeType__icontains=value).order_by(
+                        MultipleDecreeInstance = DecreeList.objects.filter(personId=p,
+                                                                           decreeType__icontains=value).order_by(
                             '-id')
                         last_dec_instance = MultipleDecreeInstance.first()
 
                         person_data[filtered_field] = last_dec_instance.decreeType
                     except DecreeList.DoesNotExist:
                         return HttpResponseServerError("DecreeList {} does not exist.".format(value))
-                if filtered_field == 'decreeSubType':#required
+                if filtered_field == 'decreeSubType':  # required
                     decreeSubTypeGlobal = value
                     try:
-                        MultipleDecreeInstance = DecreeList.objects.filter(personId=p, decreeSubType__icontains=value).order_by(
+                        MultipleDecreeInstance = DecreeList.objects.filter(personId=p,
+                                                                           decreeSubType__icontains=value).order_by(
                             '-id')
                         last_dec_instance = MultipleDecreeInstance.first()
 
@@ -966,24 +982,15 @@ def filter_data(request):
                         return HttpResponseServerError("DecreeList {} does not exist.".format(value))
                 if filtered_field == 'decreeDate':
                     try:
-                        MultipleDecreeInstance = DecreeList.objects.filter(personId=p, decreeType__icontains=decreeTypeGlobal, decreeSubType__icontains=decreeSubTypeGlobal).order_by(
+                        MultipleDecreeInstance = DecreeList.objects.filter(personId=p,
+                                                                           decreeType__icontains=decreeTypeGlobal,
+                                                                           decreeSubType__icontains=decreeSubTypeGlobal).order_by(
                             '-id')
                         last_dec_instance = MultipleDecreeInstance.first()
 
                         person_data[filtered_field] = last_dec_instance.decreeDate
                     except DecreeList.DoesNotExist:
                         return HttpResponseServerError("DecreeList {} does not exist.".format(value))
-
-
-
-
-
-
-
-
-
-
-
 
         result.append(person_data)
 
