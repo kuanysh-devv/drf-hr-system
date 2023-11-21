@@ -16,4 +16,4 @@ class RankInfo(models.Model):
     receivedDate = models.DateField()
 
     def __str__(self):
-        return str(self.id)
+        return str(self.militaryRank.rankTitle) + ' ' + str(self.id)
