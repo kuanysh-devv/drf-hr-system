@@ -9,9 +9,8 @@ from education.models import Education, Course, AcademicDegree, Attestation
 from identity_card_info.models import IdentityCardInfo
 from location.models import Department, Location
 from military_rank.models import RankInfo, MilitaryRank
-from person.models import Person, Gender, FamilyComposition, Relative, LanguageSkill, SportSkill, ClassCategory, Reward
-from person.serializers import PersonSerializer
-from position.models import PositionInfo, Position
+from person.models import Person, FamilyComposition, Relative, LanguageSkill, SportSkill, ClassCategory, Reward
+from position.models import Position
 from resident_info.models import ResidentInfo
 from working_history.models import WorkingHistory
 
@@ -947,8 +946,9 @@ def filter_data(request):
                         return HttpResponseServerError("Investigation {} does not exist.".format(value))
                 if filtered_field == 'investigation_date':
                     try:
-                        MultipleInvInstance = Investigation.objects.filter(personId=p,investigation_decree_type__icontains=investigationDecreeTypeGlobal
-                                                                          ).order_by(
+                        MultipleInvInstance = Investigation.objects.filter(personId=p,
+                                                                           investigation_decree_type__icontains=investigationDecreeTypeGlobal
+                                                                           ).order_by(
                             '-id')
                         last_inv_instance = MultipleInvInstance.first()
 

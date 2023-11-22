@@ -242,14 +242,26 @@ class PersonViewSet(viewsets.ModelViewSet):
             else:
                 return Response(identity_card_info_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-            photo_data = request.data.get('Photo')
-            photo_serializer = PhotoSerializer(data=photo_data)
-            if photo_serializer.is_valid():
-                photo_serializer.save(personId=person)
-                print("Photo done")
-            else:
-                return Response(photo_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            try:
+                # Check if 'Photo' key is present in the request data
+                if 'Photo' in request.data:
+                    photo_data = request.data.get('Photo')
+                    photo_serializer = PhotoSerializer(data=photo_data)
 
+                    if photo_serializer.is_valid():
+                        photo_serializer.save(personId=person)
+                        print("Photo done")
+                    else:
+                        return Response(photo_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                else:
+                    # Handle the case where 'Photo' key is not present
+                    print("Photo not provided")
+                    # You may choose to return a response or perform other actions
+            except Exception as e:
+                # Handle other exceptions if necessary
+                print(f"An error occurred: {e}")
+
+            # ResidentInfo
             resident_info_data = request.data.get('ResidentInfo')
             resident_info_serializer = ResidentInfoSerializer(data=resident_info_data)
             if resident_info_serializer.is_valid():
@@ -257,165 +269,315 @@ class PersonViewSet(viewsets.ModelViewSet):
                 print("ResidentInfo done")
             else:
                 return Response(resident_info_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-            print("1")
+
             # FamilyComposition
-            family_composition_data = request.data.get('FamilyComposition')
-            relatives_data = family_composition_data.get('relatives')
-            for relative_data in relatives_data:
-                relative_serializer = FamilyCompositionSerializer(data=relative_data)
-                relativeTypeName = relative_data.get('relativeType')
-                relativeType = Relative.objects.get(relativeName=relativeTypeName)
-                if relative_serializer.is_valid():
-                    relative_serializer.save(personId=person, relativeType=relativeType)
-                    print("family_composition done")
+            try:
+                # Check if 'family_composition' key is present in the request data
+                if 'FamilyComposition' in request.data:
+                    family_composition_data = request.data.get('FamilyComposition')
+                    relatives_data = family_composition_data.get('relatives')
+                    for relative_data in relatives_data:
+                        relative_serializer = FamilyCompositionSerializer(data=relative_data)
+                        relativeTypeName = relative_data.get('relativeType')
+                        relativeType = Relative.objects.get(relativeName=relativeTypeName)
+                        if relative_serializer.is_valid():
+                            relative_serializer.save(personId=person, relativeType=relativeType)
+                            print("family_composition done")
+                        else:
+                            return Response(relative_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
                 else:
-                    return Response(relative_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-            print("2")
+                    # Handle the case where 'family_composition' key is not present
+                    print("family_composition not provided")
+                    # You may choose to return a response or perform other actions
+            except Exception as e:
+                # Handle other exceptions if necessary
+                print(f"An error occurred: {e}")
+
             # Education
-            education_data = request.data.get('Education')
-            educations_data = education_data.get('educations')
-            for education_data in educations_data:
-                education_serializer = EducationSerializer(data=education_data)
-                if education_serializer.is_valid():
-                    education_serializer.save(personId=person)
-                    print("education done")
+            try:
+                # Check if 'Education' key is present in the request data
+                if 'Education' in request.data:
+                    education_data = request.data.get('Education')
+                    educations_data = education_data.get('educations')
+                    for education_data in educations_data:
+                        education_serializer = EducationSerializer(data=education_data)
+                        if education_serializer.is_valid():
+                            education_serializer.save(personId=person)
+                            print("education done")
+                        else:
+                            return Response(education_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
                 else:
-                    return Response(education_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                    # Handle the case where 'family_composition' key is not present
+                    print("Education not provided")
+                    # You may choose to return a response or perform other actions
+            except Exception as e:
+                # Handle other exceptions if necessary
+                print(f"An error occurred: {e}")
 
             # LanguageSkill
-            language_skill_data = request.data.get('LanguageSkill')
-            language_skills_data = language_skill_data.get('languageSkills')
-            for language_skill_data in language_skills_data:
-                language_skill_serializer = LanguageSkillSerializer(data=language_skill_data)
-                if language_skill_serializer.is_valid():
-                    language_skill_serializer.save(personId=person)
-                    print("language_skill done")
+            try:
+                # Check if 'LanguageSkill' key is present in the request data
+                if 'LanguageSkill' in request.data:
+                    language_skill_data = request.data.get('LanguageSkill')
+                    language_skills_data = language_skill_data.get('languageSkills')
+                    for language_skill_data in language_skills_data:
+                        language_skill_serializer = LanguageSkillSerializer(data=language_skill_data)
+                        if language_skill_serializer.is_valid():
+                            language_skill_serializer.save(personId=person)
+                            print("language_skill done")
+                        else:
+                            return Response(language_skill_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
                 else:
-                    return Response(language_skill_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                    # Handle the case where 'family_composition' key is not present
+                    print("LanguageSkill not provided")
+                    # You may choose to return a response or perform other actions
+            except Exception as e:
+                # Handle other exceptions if necessary
+                print(f"An error occurred: {e}")
 
             # AcademicDegree
-            academic_degree_data = request.data.get('AcademicDegree')
-            academic_degrees_data = academic_degree_data.get('academicDegrees')
-            for academic_degree_data in academic_degrees_data:
-                academic_degree_serializer = AcademicDegreeSerializer(data=academic_degree_data)
-                if academic_degree_serializer.is_valid():
-                    academic_degree_serializer.save(personId=person)
-                    print("academic_degree done")
+            try:
+                # Check if 'AcademicDegree' key is present in the request data
+                if 'AcademicDegree' in request.data:
+                    academic_degree_data = request.data.get('AcademicDegree')
+                    academic_degrees_data = academic_degree_data.get('academicDegrees')
+                    for academic_degree_data in academic_degrees_data:
+                        academic_degree_serializer = AcademicDegreeSerializer(data=academic_degree_data)
+                        if academic_degree_serializer.is_valid():
+                            academic_degree_serializer.save(personId=person)
+                            print("academic_degree done")
+                        else:
+                            return Response(academic_degree_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
                 else:
-                    return Response(academic_degree_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                    # Handle the case where 'family_composition' key is not present
+                    print("AcademicDegree not provided")
+                    # You may choose to return a response or perform other actions
+            except Exception as e:
+                # Handle other exceptions if necessary
+                print(f"An error occurred: {e}")
 
             # Course
-            course_data = request.data.get('Course')
-            courses_data = course_data.get('courses')
-            for course_data in courses_data:
-                course_serializer = CourseSerializer(data=course_data)
-                if course_serializer.is_valid():
-                    course_serializer.save(personId=person)
-                    print("course done")
+            try:
+                # Check if 'Course' key is present in the request data
+                if 'Course' in request.data:
+                    course_data = request.data.get('Course')
+                    courses_data = course_data.get('courses')
+                    for course_data in courses_data:
+                        course_serializer = CourseSerializer(data=course_data)
+                        if course_serializer.is_valid():
+                            course_serializer.save(personId=person)
+                            print("course done")
+                        else:
+                            return Response(course_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
                 else:
-                    return Response(course_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                    # Handle the case where 'family_composition' key is not present
+                    print("Course not provided")
+                    # You may choose to return a response or perform other actions
+            except Exception as e:
+                # Handle other exceptions if necessary
+                print(f"An error occurred: {e}")
 
             # SportSkill
-            sport_skill_data = request.data.get('SportSkill')
-            sport_skills_data = sport_skill_data.get('sportSkills')
-            for sport_skill_data in sport_skills_data:
-                sport_skill_serializer = SportSkillSerializer(data=sport_skill_data)
-                if sport_skill_serializer.is_valid():
-                    sport_skill_serializer.save(personId=person)
-                    print("sport_skill done")
+            try:
+                # Check if 'SportSkill' key is present in the request data
+                if 'SportSkill' in request.data:
+                    sport_skill_data = request.data.get('SportSkill')
+                    sport_skills_data = sport_skill_data.get('sportSkills')
+                    for sport_skill_data in sport_skills_data:
+                        sport_skill_serializer = SportSkillSerializer(data=sport_skill_data)
+                        if sport_skill_serializer.is_valid():
+                            sport_skill_serializer.save(personId=person)
+                            print("sport_skill done")
+                        else:
+                            return Response(sport_skill_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
                 else:
-                    return Response(sport_skill_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                    # Handle the case where 'family_composition' key is not present
+                    print("SportSkill not provided")
+                    # You may choose to return a response or perform other actions
+            except Exception as e:
+                # Handle other exceptions if necessary
+                print(f"An error occurred: {e}")
 
             # WorkingHistory
-            working_history_data = request.data.get('WorkingHistory')
-            working_histories_data = working_history_data.get('workingHistories')
-            for working_history_data in working_histories_data:
-                working_history_serializer = WorkingHistorySerializer(data=working_history_data)
-                if working_history_serializer.is_valid():
-                    working_history_serializer.save(personId=person)
-                    print("working_history done")
+            try:
+                # Check if 'WorkingHistory' key is present in the request data
+                if 'WorkingHistory' in request.data:
+                    working_history_data = request.data.get('WorkingHistory')
+                    working_histories_data = working_history_data.get('workingHistories')
+                    for working_history_data in working_histories_data:
+                        working_history_serializer = WorkingHistorySerializer(data=working_history_data)
+                        if working_history_serializer.is_valid():
+                            working_history_serializer.save(personId=person)
+                            print("working_history done")
+                        else:
+                            return Response(working_history_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
                 else:
-                    return Response(working_history_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                    # Handle the case where 'family_composition' key is not present
+                    print("WorkingHistory not provided")
+                    # You may choose to return a response or perform other actions
+            except Exception as e:
+                # Handle other exceptions if necessary
+                print(f"An error occurred: {e}")
 
-            spec_check_data = request.data.get('SpecCheckInfo')
-            spec_checks_data = spec_check_data.get('specChecks')
-            for spec_check in spec_checks_data:
-                spec_check_serializer = SpecCheckSerializer(data=spec_check)
-                if spec_check_serializer.is_valid():
-                    spec_check_serializer.save(personId=person)
-                    print("spec check done")
+            # SpecCheckInfo
+            try:
+                # Check if 'SpecCheckInfo' key is present in the request data
+                if 'SpecCheckInfo' in request.data:
+                    spec_check_data = request.data.get('SpecCheckInfo')
+                    spec_checks_data = spec_check_data.get('specChecks')
+                    for spec_check in spec_checks_data:
+                        spec_check_serializer = SpecCheckSerializer(data=spec_check)
+                        if spec_check_serializer.is_valid():
+                            spec_check_serializer.save(personId=person)
+                            print("spec check done")
+                        else:
+                            return Response(spec_check_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
                 else:
-                    return Response(spec_check_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                    print("SpecCheckInfo not provided")
+                    # You may choose to return a response or perform other actions
+            except Exception as e:
+                # Handle other exceptions if necessary
+                print(f"An error occurred: {e}")
 
-            attestation_data = request.data.get('AttestationInfo')
-            attestations = attestation_data.get('attestations')
-            for att in attestations:
-                attestation_serializer = AttestationSerializer(data=att)
-                if attestation_serializer.is_valid():
-                    attestation_serializer.save(personId=person)
-                    print("attestations done")
+            # AttestationInfo
+            try:
+                # Check if 'AttestationInfo' key is present in the request data
+                if 'AttestationInfo' in request.data:
+                    attestation_data = request.data.get('AttestationInfo')
+                    attestations = attestation_data.get('attestations')
+                    for att in attestations:
+                        attestation_serializer = AttestationSerializer(data=att)
+                        if attestation_serializer.is_valid():
+                            attestation_serializer.save(personId=person)
+                            print("attestations done")
+                        else:
+                            return Response(attestation_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
                 else:
-                    return Response(attestation_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                    print("AttestationInfo not provided")
+                    # You may choose to return a response or perform other actions
+            except Exception as e:
+                # Handle other exceptions if necessary
+                print(f"An error occurred: {e}")
 
-            class_category_data = request.data.get('ClassCategoriesInfo')
-            categories = class_category_data.get('classCategories')
-            for cat in categories:
-                category_serializer = ClassCategorySerializer(data=cat)
-                if category_serializer.is_valid():
-                    category_serializer.save(personId=person)
-                    print("classCategories done")
+            # ClassCategoriesInfo
+            try:
+                # Check if 'ClassCategoriesInfo' key is present in the request data
+                if 'ClassCategoriesInfo' in request.data:
+                    class_category_data = request.data.get('ClassCategoriesInfo')
+                    categories = class_category_data.get('classCategories')
+                    for cat in categories:
+                        category_serializer = ClassCategorySerializer(data=cat)
+                        if category_serializer.is_valid():
+                            category_serializer.save(personId=person)
+                            print("classCategories done")
+                        else:
+                            return Response(category_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
                 else:
-                    return Response(category_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                    print("ClassCategoriesInfo not provided")
+                    # You may choose to return a response or perform other actions
+            except Exception as e:
+                # Handle other exceptions if necessary
+                print(f"An error occurred: {e}")
 
-            autobiography_data = request.data.get('AutobiographyInfo')
-            autos = autobiography_data.get('autobiographies')
-            for auto in autos:
-                auto_serializer = AutobiographySerializer(data=auto)
-                if auto_serializer.is_valid():
-                    auto_serializer.save(personId=person)
-                    print("autobiographies done")
+            # AutobiographyInfo
+            try:
+                # Check if 'AutobiographyInfo' key is present in the request data
+                if 'AutobiographyInfo' in request.data:
+                    autobiography_data = request.data.get('AutobiographyInfo')
+                    autos = autobiography_data.get('autobiographies')
+                    for auto in autos:
+                        auto_serializer = AutobiographySerializer(data=auto)
+                        if auto_serializer.is_valid():
+                            auto_serializer.save(personId=person)
+                            print("autobiographies done")
+                        else:
+                            return Response(auto_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
                 else:
-                    return Response(auto_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                    print("AutobiographyInfo not provided")
+                    # You may choose to return a response or perform other actions
+            except Exception as e:
+                # Handle other exceptions if necessary
+                print(f"An error occurred: {e}")
 
-            rewards_data = request.data.get('RewardsInfo')
-            rewards = rewards_data.get('rewards')
-            for rew in rewards:
-                rewards_serializer = RewardSerializer(data=rew)
-                if rewards_serializer.is_valid():
-                    rewards_serializer.save(personId=person)
-                    print("rewards done")
+            # RewardsInfo
+            try:
+                # Check if 'RewardsInfo' key is present in the request data
+                if 'RewardsInfo' in request.data:
+                    rewards_data = request.data.get('RewardsInfo')
+                    rewards = rewards_data.get('rewards')
+                    for rew in rewards:
+                        rewards_serializer = RewardSerializer(data=rew)
+                        if rewards_serializer.is_valid():
+                            rewards_serializer.save(personId=person)
+                            print("rewards done")
+                        else:
+                            return Response(rewards_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
                 else:
-                    return Response(rewards_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                    print("RewardsInfo not provided")
+                    # You may choose to return a response or perform other actions
+            except Exception as e:
+                # Handle other exceptions if necessary
+                print(f"An error occurred: {e}")
 
-            sick_leaves_data = request.data.get('SickLeavesInfo')
-            sick_leaves = sick_leaves_data.get('sickLeaves')
-            for sick in sick_leaves:
-                sick_leaves_serializer = SickLeaveSerializer(data=sick)
-                if sick_leaves_serializer.is_valid():
-                    sick_leaves_serializer.save(personId=person)
-                    print("sickLeaves done")
+            # SickLeavesInfo
+            try:
+                # Check if 'SickLeavesInfo' key is present in the request data
+                if 'SickLeavesInfo' in request.data:
+                    sick_leaves_data = request.data.get('SickLeavesInfo')
+                    sick_leaves = sick_leaves_data.get('sickLeaves')
+                    for sick in sick_leaves:
+                        sick_leaves_serializer = SickLeaveSerializer(data=sick)
+                        if sick_leaves_serializer.is_valid():
+                            sick_leaves_serializer.save(personId=person)
+                            print("sickLeaves done")
+                        else:
+                            return Response(sick_leaves_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
                 else:
-                    return Response(sick_leaves_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                    print("SickLeavesInfo not provided")
+                    # You may choose to return a response or perform other actions
+            except Exception as e:
+                # Handle other exceptions if necessary
+                print(f"An error occurred: {e}")
 
-            investigations_data = request.data.get('InvestigationsInfo')
-            investigations = investigations_data.get('investigations')
-            for inv in investigations:
-                inv_serializer = InvestigationSerializer(data=inv)
-                if inv_serializer.is_valid():
-                    inv_serializer.save(personId=person)
-                    print("investigations done")
+            # InvestigationsInfo
+            try:
+                # Check if 'InvestigationsInfo' key is present in the request data
+                if 'InvestigationsInfo' in request.data:
+                    investigations_data = request.data.get('InvestigationsInfo')
+                    investigations = investigations_data.get('investigations')
+                    for inv in investigations:
+                        inv_serializer = InvestigationSerializer(data=inv)
+                        if inv_serializer.is_valid():
+                            inv_serializer.save(personId=person)
+                            print("investigations done")
+                        else:
+                            return Response(inv_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
                 else:
-                    return Response(inv_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                    print("InvestigationsInfo not provided")
+                    # You may choose to return a response or perform other actions
+            except Exception as e:
+                # Handle other exceptions if necessary
+                print(f"An error occurred: {e}")
 
-            decrees_data = request.data.get('DecreeListInfo')
-            decrees = decrees_data.get('decrees')
-            for dec in decrees:
-                dec_serializer = DecreeListSerializer(data=dec)
-                if dec_serializer.is_valid():
-                    dec_serializer.save(personId=person)
-                    print("decrees done")
+            # DecreeListInfo
+            try:
+                # Check if 'DecreeListInfo' key is present in the request data
+                if 'DecreeListInfo' in request.data:
+                    decrees_data = request.data.get('DecreeListInfo')
+                    decrees = decrees_data.get('decrees')
+                    for dec in decrees:
+                        dec_serializer = DecreeListSerializer(data=dec)
+                        if dec_serializer.is_valid():
+                            dec_serializer.save(personId=person)
+                            print("decrees done")
+                        else:
+                            return Response(dec_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
                 else:
-                    return Response(dec_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                    print("DecreeListInfo not provided")
+                    # You may choose to return a response or perform other actions
+            except Exception as e:
+                # Handle other exceptions if necessary
+                print(f"An error occurred: {e}")
 
             return Response(posSerializer.data, status=status.HTTP_201_CREATED)
 
