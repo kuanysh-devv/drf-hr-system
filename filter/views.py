@@ -1059,7 +1059,7 @@ def attestation_list_view_download(request):
         worksheet = workbook.add_worksheet()
 
         # Write header row
-        header = ['First Name', 'Last Name', 'Patronymic', 'Position', 'Department']
+        header = ['Имя', 'Фамилия', 'Отчество', 'Должность', 'Управление']
         for col_num, header_value in enumerate(header):
             worksheet.write(0, col_num, header_value)
 
@@ -1076,7 +1076,7 @@ def attestation_list_view_download(request):
 
         # Set up the response
         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        response['Content-Disposition'] = 'attachment; filename=attestation_data.xlsx'
+        response['Content-Disposition'] = 'attachment; filename={date}.xlsx'
         output.seek(0)
         response.write(output.getvalue())
 
@@ -1107,14 +1107,66 @@ def rankUps_list_view(request):
                 'lastName': person.surname,
                 'patronymic': person.patronymic,
                 'position': person.positionInfo.position.positionTitle,
+                'department': person.positionInfo.department.DepartmentName,
                 'currentRank': person.rankInfo.militaryRank.rankTitle,
                 'nextRank': person.next_rank().rankTitle if person.next_rank() else None,
+                'rankUpDate': person.rankInfo.nextPromotionDate,
                 'photo': person.photo_set.first().photoBinary if person.photo_set.exists() else None
             }
             for person in persons
         ]
 
         return JsonResponse({'data': data}, status=200)
+
+    except ValueError as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+
+@csrf_exempt
+def rankUps_list_view_download(request):
+    try:
+        # Extract date from query parameters
+        date_param = request.GET.get('date')
+        if not date_param:
+            raise ValueError('Date parameter is required')
+
+        # Convert date string to datetime object
+        date = datetime.strptime(date_param, '%Y-%m-%d').date()
+
+        # Filter Person objects based on RankInfo's nextPromotionDate
+        persons = Person.objects.filter(rankInfo__nextPromotionDate__range=[datetime.now().date(), date])
+
+        # Create an in-memory Excel file
+        output = io.BytesIO()
+        workbook = Workbook(output)
+        worksheet = workbook.add_worksheet()
+
+        # Write header row
+        header = ['Имя', 'Фамилия', 'Отчество', 'Должность', 'Управление', 'Нынешнее звание', 'Следующее звание', 'Дата повышения']
+        for col_num, header_value in enumerate(header):
+            worksheet.write(0, col_num, header_value)
+
+        # Write data rows
+        for row_num, person in enumerate(persons, start=1):
+            worksheet.write(row_num, 0, person.firstName)
+            worksheet.write(row_num, 1, person.surname)
+            worksheet.write(row_num, 2, person.patronymic)
+            worksheet.write(row_num, 3, person.positionInfo.position.positionTitle)
+            worksheet.write(row_num, 4, person.positionInfo.department.DepartmentName)
+            worksheet.write(row_num, 5, person.rankInfo.militaryRank.rankTitle)
+            worksheet.write(row_num, 6, person.next_rank().rankTitle if person.next_rank() else None)
+            worksheet.write(row_num, 7, person.rankInfo.nextPromotionDate.strftime('%d.%m.%Y') if person.rankInfo.nextPromotionDate else None)
+
+        # Close the workbook
+        workbook.close()
+
+        # Set up the response
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = 'attachment; filename=rank_ups_data.xlsx'
+        output.seek(0)
+        response.write(output.getvalue())
+
+        return response
 
     except ValueError as e:
         return JsonResponse({'error': str(e)}, status=400)

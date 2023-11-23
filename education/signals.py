@@ -10,12 +10,12 @@ from military_rank.models import RankInfo
 @receiver(post_save, sender=Attestation)
 def attestation_post_save(sender, instance, created, **kwargs):
     if created:
-        if instance.attResult == 'Proshel':
+        if instance.attResult == 'Соответствует':
             # If attResult is 'Proshel', set nextAttDateMin to lastAttDate + 3 years
             instance.nextAttDateMin = instance.lastAttDate + timedelta(days=3 * 365)
             # Set nextAttDateMax to lastAttDate + 3 years 3 months
             instance.nextAttDateMax = instance.lastAttDate + timedelta(days=(3 * 365) + (3 * 30))
-        elif instance.attResult == 'Ne proshel':
+        elif instance.attResult == 'Не соответствует':
             # If attResult is 'Ne proshel', set nextAttDateMin to lastAttDate + 3 months
             instance.nextAttDateMin = instance.lastAttDate + timedelta(days=3 * 30)
             # Set nextAttDateMax to lastAttDate + 6 months
