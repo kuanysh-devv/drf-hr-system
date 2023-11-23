@@ -242,17 +242,25 @@ class PersonViewSet(viewsets.ModelViewSet):
             else:
                 return Response(identity_card_info_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+            # Photo
             try:
                 # Check if 'Photo' key is present in the request data
                 if 'Photo' in request.data:
                     photo_data = request.data.get('Photo')
-                    photo_serializer = PhotoSerializer(data=photo_data)
 
-                    if photo_serializer.is_valid():
-                        photo_serializer.save(personId=person)
-                        print("Photo done")
+                    # Check if 'photoBinary' key is present and it's not an empty string
+                    if 'photoBinary' in photo_data and photo_data['photoBinary']:
+                        photo_serializer = PhotoSerializer(data=photo_data)
+
+                        if photo_serializer.is_valid():
+                            photo_serializer.save(personId=person)
+                            print("Photo done")
+                        else:
+                            return Response(photo_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
                     else:
-                        return Response(photo_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                        # Handle the case where 'photoBinary' key is not present or it's an empty string
+                        print("No photoBinary provided")
+                        # You may choose to return a response or perform other actions
                 else:
                     # Handle the case where 'Photo' key is not present
                     print("Photo not provided")
