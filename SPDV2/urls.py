@@ -7,6 +7,7 @@ from birth_info.views import *
 from decree.views import *
 from education.views import *
 from filter import views
+from filter.views import attestation_list_view, attestation_list_view_download
 from identity_card_info.views import *
 from location.views import *
 from military_rank.views import *
@@ -63,4 +64,6 @@ urlpatterns = [
     path('api/v1/staffing_table/', getStaffingTable, name='staffing_table'),
     path('api/v1/location_departments/<str:location_name>/', departments_by_location, name='departments_by_location'),
     path('api/v1/positions_departments/<int:department_id>/', positions_by_department, name='positions_by_department'),
+    path('api/v1/close_attestations/', attestation_list_view, name='attestation-list'),
+    path('api/v1/close_attestations_download/', attestation_list_view_download, name='attestation-list_download'),
 ]

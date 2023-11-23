@@ -1,7 +1,11 @@
-from django.contrib.postgres.search import TrigramSimilarity
-from django.http import JsonResponse, HttpResponseServerError
+import io
+
+from django.http import JsonResponse, HttpResponseServerError, HttpResponse
 from django.db.models import Q
 from datetime import datetime
+
+from django.views.decorators.csrf import csrf_exempt
+from xlsxwriter import Workbook
 
 from birth_info.models import BirthInfo
 from decree.models import SpecCheck, SickLeave, Investigation, DecreeList
@@ -10,6 +14,7 @@ from identity_card_info.models import IdentityCardInfo
 from location.models import Department, Location
 from military_rank.models import RankInfo, MilitaryRank
 from person.models import Person, FamilyComposition, Relative, LanguageSkill, SportSkill, ClassCategory, Reward
+from photo.models import Photo
 from position.models import Position
 from resident_info.models import ResidentInfo
 from working_history.models import WorkingHistory
@@ -995,3 +1000,90 @@ def filter_data(request):
         result.append(person_data)
 
     return JsonResponse(result, safe=False)
+
+@csrf_exempt
+def attestation_list_view(request):
+    try:
+        # Extract date from query parameters
+        date_param = request.GET.get('date')
+        if not date_param:
+            raise ValueError('Date parameter is required')
+
+        # Convert date string to datetime object
+        date = datetime.strptime(date_param, '%Y-%m-%d').date()
+
+        # Filter Attestation objects based on date range
+        attestations = Attestation.objects.filter(
+            Q(nextAttDateMin__lte=date) & Q(nextAttDateMax__gte=date)
+        )
+
+        # Serialize the queryset to JSON
+        data = [
+            {
+                'firstName': att.personId.firstName,
+                'lastName': att.personId.surname,
+                'patronymic': att.personId.patronymic,
+                'position': att.personId.positionInfo.position.positionTitle,
+                'department': att.personId.positionInfo.department.DepartmentName,
+                'photo': att.personId.photo_set.first().photoBinary if att.personId.photo_set.exists() else None
+            }
+            for att in attestations
+        ]
+
+        return JsonResponse({'data': data}, status=200)
+
+    except ValueError as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+
+@csrf_exempt
+def attestation_list_view_download(request):
+    try:
+        # Extract date from query parameters
+        date_param = request.GET.get('date')
+        if not date_param:
+            raise ValueError('Date parameter is required')
+
+        # Convert date string to datetime object
+        date = datetime.strptime(date_param, '%Y-%m-%d').date()
+
+        # Filter Attestation objects based on date range
+        attestations = Attestation.objects.filter(
+            Q(nextAttDateMin__lte=date) & Q(nextAttDateMax__gte=date)
+        )
+
+        # Create an in-memory Excel file
+        output = io.BytesIO()
+        workbook = Workbook(output)
+        worksheet = workbook.add_worksheet()
+
+        # Write header row
+        header = ['First Name', 'Last Name', 'Patronymic', 'Position', 'Department']
+        for col_num, header_value in enumerate(header):
+            worksheet.write(0, col_num, header_value)
+
+        # Write data rows
+        for row_num, att in enumerate(attestations, start=1):
+            worksheet.write(row_num, 0, att.personId.firstName)
+            worksheet.write(row_num, 1, att.personId.surname)
+            worksheet.write(row_num, 2, att.personId.patronymic)
+            worksheet.write(row_num, 3, att.personId.positionInfo.position.positionTitle)
+            worksheet.write(row_num, 4, att.personId.positionInfo.department.DepartmentName)
+
+        # Close the workbook
+        workbook.close()
+
+        # Set up the response
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = 'attachment; filename=attestation_data.xlsx'
+        output.seek(0)
+        response.write(output.getvalue())
+
+        return response
+
+    except ValueError as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+
+
+
