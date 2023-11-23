@@ -32,8 +32,8 @@ class Course(models.Model):
 class Attestation(models.Model):
     attResult = models.CharField(max_length=255)
     lastAttDate = models.DateField()
-    nextAttDateMin = models.DateField()
-    nextAttDateMax = models.DateField()
+    nextAttDateMin = models.DateField(null=True, blank=True)
+    nextAttDateMax = models.DateField(null=True, blank=True)
     personId = models.ForeignKey(Person, on_delete=models.CASCADE, default=1)
 
     def __str__(self):

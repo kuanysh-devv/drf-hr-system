@@ -1001,6 +1001,7 @@ def filter_data(request):
 
     return JsonResponse(result, safe=False)
 
+
 @csrf_exempt
 def attestation_list_view(request):
     try:
@@ -1084,6 +1085,39 @@ def attestation_list_view_download(request):
     except ValueError as e:
         return JsonResponse({'error': str(e)}, status=400)
 
+
+@csrf_exempt
+def rankUps_list_view(request):
+    try:
+        # Extract date from query parameters
+        date_param = request.GET.get('date')
+        if not date_param:
+            raise ValueError('Date parameter is required')
+
+        # Convert date string to datetime object
+        date = datetime.strptime(date_param, '%Y-%m-%d').date()
+
+        # Filter Person objects based on RankInfo's nextPromotionDate
+        persons = Person.objects.filter(rankInfo__nextPromotionDate__range=[datetime.now().date(), date])
+
+        # Serialize the queryset to JSON
+        data = [
+            {
+                'firstName': person.firstName,
+                'lastName': person.surname,
+                'patronymic': person.patronymic,
+                'position': person.positionInfo.position.positionTitle,
+                'currentRank': person.rankInfo.militaryRank.rankTitle,
+                'nextRank': person.next_rank().rankTitle if person.next_rank() else None,
+                'photo': person.photo_set.first().photoBinary if person.photo_set.exists() else None
+            }
+            for person in persons
+        ]
+
+        return JsonResponse({'data': data}, status=200)
+
+    except ValueError as e:
+        return JsonResponse({'error': str(e)}, status=400)
 
 
 

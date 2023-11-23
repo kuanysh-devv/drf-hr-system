@@ -14,6 +14,7 @@ class RankInfo(models.Model):
     militaryRank = models.ForeignKey('MilitaryRank', on_delete=models.CASCADE)
     receivedType = models.CharField(max_length=255)
     receivedDate = models.DateField()
+    nextPromotionDate = models.DateField(null=True, blank=True)
 
     def __str__(self):
         return str(self.militaryRank.rankTitle) + ' ' + str(self.id)

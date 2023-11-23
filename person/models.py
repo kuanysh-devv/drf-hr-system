@@ -2,7 +2,7 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models, IntegrityError
 from rest_framework.permissions import IsAuthenticated
 
-from military_rank.models import RankInfo
+from military_rank.models import RankInfo, MilitaryRank
 from position.models import PositionInfo
 
 
@@ -18,6 +18,14 @@ class Person(models.Model):
     positionInfo = models.ForeignKey(PositionInfo, on_delete=models.CASCADE)
     rankInfo = models.ForeignKey(RankInfo, on_delete=models.CASCADE)
     role = models.CharField(max_length=255, default='User')
+
+    def next_rank(self):
+        current_order = self.rankInfo.militaryRank.order
+        try:
+            next_rank = MilitaryRank.objects.get(order=current_order + 1)
+            return next_rank
+        except MilitaryRank.DoesNotExist:
+            return None
 
     def __str__(self):
         return self.iin
