@@ -413,10 +413,12 @@ def filter_data(request):
                     patronymic = p.patronymic
                     person_data[filtered_fields_model] = patronymic
 
+            filtered_field = None
             if len(parts) == 2:
                 filtered_field = parts[1]
             filtered_field_subfield = None
             if len(parts) == 3:
+                filtered_field = parts[1]
                 filtered_field_subfield = parts[2]
 
             if filtered_fields_model == 'gender':
@@ -467,6 +469,7 @@ def filter_data(request):
 
             elif filtered_fields_model == 'positionInfo':
                 if filtered_field == 'department' and filtered_field_subfield == 'DepartmentName':
+                    print("dsadasdsa")
                     departmentInstance = p.positionInfo.department.DepartmentName
                     person_data[filtered_field_subfield] = departmentInstance
                 if filtered_field == 'department' and filtered_field_subfield == 'LocationName':
