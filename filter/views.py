@@ -468,13 +468,13 @@ def filter_data(request):
             elif filtered_fields_model == 'positionInfo':
                 if filtered_field == 'department' and filtered_field_subfield == 'DepartmentName':
                     departmentInstance = p.positionInfo.department.DepartmentName
-                    person_data[filtered_field] = departmentInstance
+                    person_data[filtered_field_subfield] = departmentInstance
                 if filtered_field == 'department' and filtered_field_subfield == 'LocationName':
                     LocationNameInstance = p.positionInfo.department.Location.LocationName
-                    person_data[filtered_field + filtered_field_subfield] = LocationNameInstance
+                    person_data[filtered_field_subfield] = LocationNameInstance
                 if filtered_field == 'position' and filtered_field_subfield == 'positionTitle':
                     PositionTitleInstance = p.positionInfo.position.positionTitle
-                    person_data[filtered_field] = PositionTitleInstance
+                    person_data[filtered_field_subfield] = PositionTitleInstance
 
             elif filtered_fields_model == 'education':
 
