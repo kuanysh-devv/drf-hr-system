@@ -359,21 +359,21 @@ def filter_data(request):
                     filter_conditions &= filter_condition
                 except ValueError:
                     if value == "":
-                        field_lookup = f"{model_name}__{field_name}__icontains"
+                        field_lookup = f"{field_name}__icontains"
                         filter_condition = Q(**{field_lookup: value})
                         filter_conditions &= filter_condition
                     else:
                         start_date_str = value
                         start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
-                        field_lookup = f"{model_name}__{field_name}__exact"
+                        field_lookup = f"{field_name}__exact"
                         filter_condition = Q(**{field_lookup: start_date})
                         filter_conditions &= filter_condition
                         continue  # Skip invalid date formats
             else:
-                # For non-date fields, use an exact match
                 field_lookup = f"{field_name}__icontains"
                 filter_condition = Q(**{field_lookup: value})
                 filter_conditions &= filter_condition
+
     print(filter_conditions)
     filtered_persons = filtered_persons.filter(filter_conditions).distinct()
 
@@ -390,11 +390,31 @@ def filter_data(request):
 
         for key, value in request.GET.items():
             parts = key.split(":")
-            if len(parts) == 1:
-                continue
 
             filtered_fields_model = parts[0]
-            filtered_field = parts[1]
+
+            if len(parts) == 1:
+                if filtered_fields_model == 'nationality':
+                    nationalityInstance = p.nationality
+                    person_data[filtered_fields_model] = nationalityInstance
+                if filtered_fields_model == 'iin':
+                    iin = p.iin
+                    person_data[filtered_fields_model] = iin
+                if filtered_fields_model == 'pin':
+                    pinInstance = p.pin
+                    person_data[filtered_fields_model] = pinInstance
+                if filtered_fields_model == 'surname':
+                    surname = p.surname
+                    person_data[filtered_fields_model] = surname
+                if filtered_fields_model == 'firstName':
+                    firstname = p.firstName
+                    person_data[filtered_fields_model] = firstname
+                if filtered_fields_model == 'patronymic':
+                    patronymic = p.patronymic
+                    person_data[filtered_fields_model] = patronymic
+
+            if len(parts) == 2:
+                filtered_field = parts[1]
             filtered_field_subfield = None
             if len(parts) == 3:
                 filtered_field_subfield = parts[2]
@@ -1142,7 +1162,8 @@ def rankUps_list_view_download(request):
         worksheet = workbook.add_worksheet()
 
         # Write header row
-        header = ['Имя', 'Фамилия', 'Отчество', 'Должность', 'Управление', 'Нынешнее звание', 'Следующее звание', 'Дата повышения']
+        header = ['Имя', 'Фамилия', 'Отчество', 'Должность', 'Управление', 'Нынешнее звание', 'Следующее звание',
+                  'Дата повышения']
         for col_num, header_value in enumerate(header):
             worksheet.write(0, col_num, header_value)
 
@@ -1155,7 +1176,8 @@ def rankUps_list_view_download(request):
             worksheet.write(row_num, 4, person.positionInfo.department.DepartmentName)
             worksheet.write(row_num, 5, person.rankInfo.militaryRank.rankTitle)
             worksheet.write(row_num, 6, person.next_rank().rankTitle if person.next_rank() else None)
-            worksheet.write(row_num, 7, person.rankInfo.nextPromotionDate.strftime('%d.%m.%Y') if person.rankInfo.nextPromotionDate else None)
+            worksheet.write(row_num, 7, person.rankInfo.nextPromotionDate.strftime(
+                '%d.%m.%Y') if person.rankInfo.nextPromotionDate else None)
 
         # Close the workbook
         workbook.close()
@@ -1170,6 +1192,3 @@ def rankUps_list_view_download(request):
 
     except ValueError as e:
         return JsonResponse({'error': str(e)}, status=400)
-
-
-
