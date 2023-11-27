@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from django.core.exceptions import ValidationError
 from django.db.models.signals import post_save
@@ -11,20 +11,22 @@ from person.models import Person
 @receiver(post_save, sender=RankInfo)
 def rankInfo_post_save(sender, instance, created, **kwargs):
     if created:
-
+        post_save.disconnect(rankInfo_post_save, sender=RankInfo)
         if instance.militaryRank.rankTitle == 'Polkovnik':
             instance.nextPromotionDate = None
             instance.save()
+
         else:
+            received_date_str = instance.receivedDate
+            received_date = datetime.strptime(received_date_str, '%Y-%m-%d')
             next_promotion_days = instance.militaryRank.nextPromotionDateInDays
-            new_next_promotion_date = instance.receivedDate + timedelta(days=next_promotion_days)
+            new_next_promotion_date = received_date + timedelta(days=next_promotion_days)
 
             instance.nextPromotionDate = new_next_promotion_date
             instance.save()
+        post_save.connect(rankInfo_post_save, sender=RankInfo)
 
     else:
-        # Code to handle update
-        # Disconnect the signal temporarily to avoid recursion
         post_save.disconnect(rankInfo_post_save, sender=RankInfo)
 
         person_instance = Person.objects.get(rankInfo=instance)

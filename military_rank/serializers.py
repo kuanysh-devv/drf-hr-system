@@ -16,6 +16,9 @@ class RankInfoSerializer(serializers.ModelSerializer):
         model = RankInfo
         fields = "__all__"
 
+    def create(self, validated_data):
+        return RankInfo.objects.create(**validated_data)
+
     @staticmethod
     def get_militaryRank(obj):
         militaryRank = obj.militaryRank

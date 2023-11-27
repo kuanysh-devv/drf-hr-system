@@ -209,10 +209,18 @@ class PersonViewSet(viewsets.ModelViewSet):
 
             rankInfoData = request.data.get('RankInfo')
             rankName = rankInfoData.get('militaryRank')
+            receivedType = rankInfoData.get('receivedType')
+            receivedDate = rankInfoData.get('receivedDate')
             rankInstance = MilitaryRank.objects.get(rankTitle=rankName)
+            rank_info_data = {
+                'militaryRank': rankInstance,
+                'receivedType': receivedType,
+                'receivedDate': receivedDate,
+            }
 
+            # Use create method instead of save
+            rankInfo = rankSerializer.create(validated_data=rank_info_data)
             posinfo = posSerializer.save(position=positionInstance, department=departmentInstance)
-            rankInfo = rankSerializer.save(militaryRank=rankInstance)
 
             person_data = request.data.get('Person')
             genderName = person_data.get('gender')

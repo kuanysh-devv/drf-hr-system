@@ -19,3 +19,5 @@ class RankInfo(models.Model):
 
     def __str__(self):
         return str(self.militaryRank.rankTitle) + ' ' + str(self.id)
+
+
