@@ -1041,6 +1041,7 @@ def attestation_list_view(request):
                 'patronymic': att.personId.patronymic,
                 'position': att.personId.positionInfo.position.positionTitle,
                 'department': att.personId.positionInfo.department.DepartmentName,
+                'lastAttDate': att.lastAttDate,
                 'photo': att.personId.photo_set.first().photoBinary if att.personId.photo_set.exists() else None
             }
             for att in attestations
