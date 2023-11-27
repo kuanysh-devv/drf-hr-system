@@ -27,7 +27,10 @@ class PersonSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_photo(obj):
-        photo = Photo.objects.get(personId=obj)
+        try:
+            photo = Photo.objects.get(personId=obj)
+        except Photo.DoesNotExist:
+            return None
         if photo:
             return PhotoSerializer(photo).data
         return None

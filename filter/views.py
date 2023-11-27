@@ -71,30 +71,32 @@ def filter_data(request):
                 if field_name == 'department':
                     if field_value == 'DepartmentName':
                         try:
-                            submodelInstance = Department.objects.get(DepartmentName__icontains=value)
+                            submodelInstance = Department.objects.filter(DepartmentName__icontains=value)
                         except Department.DoesNotExist:
                             return HttpResponseServerError("Department with name {} does not exist.".format(value))
-                        field_lookup = f"{model_name}__{field_name}__exact"
+                        field_lookup = f"{model_name}__{field_name}__in"
                         filter_condition = Q(**{field_lookup: submodelInstance})
                         filter_conditions &= filter_condition
                     if field_value == 'LocationName':
                         try:
-                            LocationInstance = Location.objects.get(LocationName=value)
+                            LocationInstance = Location.objects.filter(LocationName__icontains=value)
                         except Location.DoesNotExist:
                             return HttpResponseServerError("Location with name {} does not exist.".format(value))
 
-                        submodelInstance = Department.objects.filter(Location=LocationInstance)
+                        submodelInstance = Department.objects.filter(Location__in=LocationInstance)
+                        print(submodelInstance)
                         field_lookup = f"{model_name}__{field_name}__in"
                         filter_condition = Q(**{field_lookup: submodelInstance})
                         filter_conditions &= filter_condition
+                        print(filter_conditions)
 
                 if field_name == 'position':
                     if field_value == 'positionTitle':
                         try:
-                            submodelInstance = Position.objects.get(positionTitle__icontains=value)
+                            submodelInstance = Position.objects.filter(positionTitle__icontains=value)
                         except Position.DoesNotExist:
                             return HttpResponseServerError("Position with name {} does not exist.".format(value))
-                        field_lookup = f"{model_name}__{field_name}__exact"
+                        field_lookup = f"{model_name}__{field_name}__in"
                         filter_condition = Q(**{field_lookup: submodelInstance})
                         filter_conditions &= filter_condition
         if len(parts) == 2:
@@ -370,11 +372,9 @@ def filter_data(request):
                         filter_conditions &= filter_condition
                         continue  # Skip invalid date formats
             else:
-                # For non-date fields, use an exact match
                 field_lookup = f"{field_name}__icontains"
                 filter_condition = Q(**{field_lookup: value})
                 filter_conditions &= filter_condition
-    print(filter_conditions)
     filtered_persons = filtered_persons.filter(filter_conditions).distinct()
 
     # Serialize the required fields along with the filtered field
@@ -390,14 +390,25 @@ def filter_data(request):
 
         for key, value in request.GET.items():
             parts = key.split(":")
-            if len(parts) == 1:
-                continue
-
+            filtered_field = None
             filtered_fields_model = parts[0]
-            filtered_field = parts[1]
+            if len(parts) == 2:
+                filtered_field = parts[1]
             filtered_field_subfield = None
             if len(parts) == 3:
                 filtered_field_subfield = parts[2]
+
+            if filtered_fields_model == 'nationality':
+                nationality = p.nationality
+                person_data[filtered_fields_model] = nationality
+
+            if filtered_fields_model == 'iin':
+                iin = p.iin
+                person_data[filtered_fields_model] = iin
+
+            if filtered_fields_model == 'pin':
+                pin = p.pin
+                person_data[filtered_fields_model] = pin
 
             if filtered_fields_model == 'gender':
                 if filtered_field == 'genderName':
@@ -448,13 +459,13 @@ def filter_data(request):
             elif filtered_fields_model == 'positionInfo':
                 if filtered_field == 'department' and filtered_field_subfield == 'DepartmentName':
                     departmentInstance = p.positionInfo.department.DepartmentName
-                    person_data[filtered_field] = departmentInstance
+                    person_data[filtered_field_subfield] = departmentInstance
                 if filtered_field == 'department' and filtered_field_subfield == 'LocationName':
                     LocationNameInstance = p.positionInfo.department.Location.LocationName
-                    person_data[filtered_field + filtered_field_subfield] = LocationNameInstance
+                    person_data[filtered_field_subfield] = LocationNameInstance
                 if filtered_field == 'position' and filtered_field_subfield == 'positionTitle':
                     PositionTitleInstance = p.positionInfo.position.positionTitle
-                    person_data[filtered_field] = PositionTitleInstance
+                    person_data[filtered_field_subfield] = PositionTitleInstance
 
             elif filtered_fields_model == 'education':
 

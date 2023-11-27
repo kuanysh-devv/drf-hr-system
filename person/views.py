@@ -39,7 +39,9 @@ from .serializers import PersonSerializer, GenderSerializer, FamilyStatusSeriali
 @csrf_exempt
 def departments_persons(request, *args, **kwargs):
     try:
-        department_id = request.GET.items('department_id')
+
+        department_id = request.GET.get('department_id', None)
+
         department = Department.objects.get(pk=department_id)
         persons = Person.objects.filter(positionInfo__department=department)
 
