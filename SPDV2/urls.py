@@ -18,7 +18,7 @@ from position.views import *
 from resident_info.views import *
 from rest_framework import routers
 
-from staffing_table.views import StaffingTableViewSet, getStaffingTable
+from staffing_table.views import StaffingTableViewSet, getStaffingTable, downloadStaffingTable
 from working_history.views import WorkingHistoryViewSet
 
 router = routers.DefaultRouter()
@@ -69,4 +69,6 @@ urlpatterns = [
     path('api/v1/close_attestations_download/', attestation_list_view_download, name='attestation-list_download'),
     path('api/v1/rank-up-list/', rankUps_list_view, name='rankUps_list_view'),
     path('api/v1/rank-up-list-download/', rankUps_list_view_download, name='rankUps_list_view_download'),
+    path('api/v1/download-staffing-table/', downloadStaffingTable, name='downloadStaffingTable'),
+
 ]

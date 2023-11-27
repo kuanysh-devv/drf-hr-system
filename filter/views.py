@@ -533,7 +533,7 @@ def filter_data(request):
                     relativeTypeGlobal = value
                     try:
                         relativeTypeInstance = Relative.objects.get(relativeName=relativeTypeGlobal)
-                        familyInstance = FamilyComposition.objects.get(personId=p, relativeType=relativeTypeInstance)
+                        familyInstance = FamilyComposition.objects.filter(personId=p, relativeType=relativeTypeInstance).order_by('-id').first()
                         person_data[filtered_field] = familyInstance.relativeType.relativeName
                     except Relative.DoesNotExist:
                         return HttpResponseServerError("RelativeType {} does not exist.".format(value))

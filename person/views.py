@@ -1,3 +1,4 @@
+import base64
 import json
 
 from django.contrib.auth.decorators import login_required
@@ -268,13 +269,46 @@ class PersonViewSet(viewsets.ModelViewSet):
                         else:
                             return Response(photo_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
                     else:
-                        # Handle the case where 'photoBinary' key is not present or it's an empty string
-                        print("No photoBinary provided")
-                        # You may choose to return a response or perform other actions
+                        # 'photoBinary' is empty or not present
+                        print("No photoBinary provided. Using default PNG photo.")
+
+                        # Load default PNG photo
+                        default_photo_path = "person/static/images/defaultPerson.png"
+                        with open(default_photo_path, "rb") as f:
+                            content = f.read()
+                            encoded_photo = base64.b64encode(content).decode('utf-8')
+
+                        # Assign the encoded string to 'photoBinary' field
+                        photo_data['photoBinary'] = encoded_photo
+
+                        # Save the default photo
+                        photo_serializer = PhotoSerializer(data=photo_data)
+                        if photo_serializer.is_valid():
+                            photo_serializer.save(personId=person)
+                            print("Default Photo saved")
+                        else:
+                            return Response(photo_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
                 else:
-                    # Handle the case where 'Photo' key is not present
-                    print("Photo not provided")
-                    # You may choose to return a response or perform other actions
+                    # 'Photo' key is not present
+                    print("Photo not provided. Using default PNG photo.")
+
+                    # Load default PNG photo
+                    default_photo_path = "person/static/images/defaultPerson.png"
+                    with open(default_photo_path, "rb") as f:
+                        content = f.read()
+                        encoded_photo = base64.b64encode(content).decode('utf-8')
+
+                    # Create a new 'Photo' dictionary with the encoded photo
+                    default_photo_data = {'photoBinary': encoded_photo, 'personId': person.id}
+
+                    # Save the default photo
+                    default_photo_serializer = PhotoSerializer(data=default_photo_data)
+                    if default_photo_serializer.is_valid():
+                        default_photo_serializer.save()
+                        print("Default Photo saved")
+                    else:
+                        return Response(default_photo_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
             except Exception as e:
                 # Handle other exceptions if necessary
                 print(f"An error occurred: {e}")
