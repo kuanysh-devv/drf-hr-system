@@ -1,3 +1,5 @@
+import io
+
 import xlsxwriter
 from django.db.models import F
 from django.http import JsonResponse, HttpResponse
@@ -40,7 +42,8 @@ def downloadStaffingTable(request, *args, **kwargs):
     df = df.drop(['current_count', 'max_count'], axis=1)
     print(df)
     # Create a new workbook and add a worksheet
-    workbook = xlsxwriter.Workbook('staffing_table.xlsx')
+    output = io.BytesIO()
+    workbook = Workbook(output)
     worksheet = workbook.add_worksheet()
 
     # Write the column headers with bold formatting
@@ -63,11 +66,12 @@ def downloadStaffingTable(request, *args, **kwargs):
     workbook.close()
 
     # Create the HttpResponse with the Excel file
-    with open('staffing_table.xlsx', 'rb') as excel_file:
-        response = HttpResponse(excel_file.read(),
-                                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        response['Content-Disposition'] = 'attachment; filename=staffing_table.xlsx'
-        return response
+
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename=staffing_table.xlsx'
+    output.seek(0)
+    response.write(output.getvalue())
+    return response
 
 
 def getStaffingTable(request, *args, **kwargs):
