@@ -361,13 +361,13 @@ def filter_data(request):
                     filter_conditions &= filter_condition
                 except ValueError:
                     if value == "":
-                        field_lookup = f"{model_name}__{field_name}__icontains"
+                        field_lookup = f"{field_name}__icontains"
                         filter_condition = Q(**{field_lookup: value})
                         filter_conditions &= filter_condition
                     else:
                         start_date_str = value
                         start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
-                        field_lookup = f"{model_name}__{field_name}__exact"
+                        field_lookup = f"{field_name}__exact"
                         filter_condition = Q(**{field_lookup: start_date})
                         filter_conditions &= filter_condition
                         continue  # Skip invalid date formats
@@ -375,6 +375,8 @@ def filter_data(request):
                 field_lookup = f"{field_name}__icontains"
                 filter_condition = Q(**{field_lookup: value})
                 filter_conditions &= filter_condition
+
+    print(filter_conditions)
     filtered_persons = filtered_persons.filter(filter_conditions).distinct()
 
     # Serialize the required fields along with the filtered field
@@ -390,12 +392,13 @@ def filter_data(request):
 
         for key, value in request.GET.items():
             parts = key.split(":")
-            filtered_field = None
             filtered_fields_model = parts[0]
+            filtered_field = None
             if len(parts) == 2:
                 filtered_field = parts[1]
             filtered_field_subfield = None
             if len(parts) == 3:
+                filtered_field = parts[1]
                 filtered_field_subfield = parts[2]
 
             if filtered_fields_model == 'nationality':
@@ -458,6 +461,7 @@ def filter_data(request):
 
             elif filtered_fields_model == 'positionInfo':
                 if filtered_field == 'department' and filtered_field_subfield == 'DepartmentName':
+                    print("dsadasdsa")
                     departmentInstance = p.positionInfo.department.DepartmentName
                     person_data[filtered_field_subfield] = departmentInstance
                 if filtered_field == 'department' and filtered_field_subfield == 'LocationName':
@@ -1153,7 +1157,8 @@ def rankUps_list_view_download(request):
         worksheet = workbook.add_worksheet()
 
         # Write header row
-        header = ['Имя', 'Фамилия', 'Отчество', 'Должность', 'Управление', 'Нынешнее звание', 'Следующее звание', 'Дата повышения']
+        header = ['Имя', 'Фамилия', 'Отчество', 'Должность', 'Управление', 'Нынешнее звание', 'Следующее звание',
+                  'Дата повышения']
         for col_num, header_value in enumerate(header):
             worksheet.write(0, col_num, header_value)
 
@@ -1166,7 +1171,8 @@ def rankUps_list_view_download(request):
             worksheet.write(row_num, 4, person.positionInfo.department.DepartmentName)
             worksheet.write(row_num, 5, person.rankInfo.militaryRank.rankTitle)
             worksheet.write(row_num, 6, person.next_rank().rankTitle if person.next_rank() else None)
-            worksheet.write(row_num, 7, person.rankInfo.nextPromotionDate.strftime('%d.%m.%Y') if person.rankInfo.nextPromotionDate else None)
+            worksheet.write(row_num, 7, person.rankInfo.nextPromotionDate.strftime(
+                '%d.%m.%Y') if person.rankInfo.nextPromotionDate else None)
 
         # Close the workbook
         workbook.close()
@@ -1181,6 +1187,3 @@ def rankUps_list_view_download(request):
 
     except ValueError as e:
         return JsonResponse({'error': str(e)}, status=400)
-
-
-
