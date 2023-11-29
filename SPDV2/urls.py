@@ -70,5 +70,6 @@ urlpatterns = [
     path('api/v1/rank-up-list/', rankUps_list_view, name='rankUps_list_view'),
     path('api/v1/rank-up-list-download/', rankUps_list_view_download, name='rankUps_list_view_download'),
     path('api/v1/download-staffing-table/', downloadStaffingTable, name='downloadStaffingTable'),
+    path('api/v1/get-attestation-info/', getAttestationInfo, name='getAttestationInfo'),
 
 ]

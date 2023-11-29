@@ -1,10 +1,11 @@
 import base64
 import json
+from datetime import datetime
 
-from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_protect, csrf_exempt
-from django.views.decorators.http import require_POST
+from django.shortcuts import get_object_or_404
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_GET
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -19,11 +20,10 @@ from education.serializers import CourseSerializer, AcademicDegreeSerializer, Ed
 from identity_card_info.models import IdentityCardInfo
 from identity_card_info.serializers import IdentityCardInfoSerializer
 from location.models import Department
-from military_rank.models import RankInfo, MilitaryRank
+from military_rank.models import MilitaryRank
 from military_rank.serializers import RankInfoSerializer
-from photo.models import Photo
 from photo.serializers import PhotoSerializer
-from position.models import PositionInfo, Position
+from position.models import Position
 
 from position.serializers import PositionInfoSerializer
 from resident_info.models import ResidentInfo
@@ -58,7 +58,7 @@ class PersonViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated,)
 
     @action(detail=True, methods=['PATCH'])
-    def update_family_status(self, request, pk=None):
+    def update_family_status(self, request):
         try:
             person = self.get_object()
             family_status_name = request.data.get('statusName')
@@ -83,7 +83,7 @@ class PersonViewSet(viewsets.ModelViewSet):
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @action(detail=True, methods=['patch'])
-    def update_gender(self, request, pk=None):
+    def update_gender(self, request):
         """
         Update the gender of a person.
         """
@@ -220,7 +220,7 @@ class PersonViewSet(viewsets.ModelViewSet):
 
             # Use create method instead of save
             rankInfo = rankSerializer.create(validated_data=rank_info_data)
-            posinfo = posSerializer.save(position=positionInstance, department=departmentInstance)
+            posInfo = posSerializer.save(position=positionInstance, department=departmentInstance)
 
             person_data = request.data.get('Person')
             genderName = person_data.get('gender')
@@ -231,7 +231,7 @@ class PersonViewSet(viewsets.ModelViewSet):
             person_serializer = PersonSerializer(data=person_data)
 
             if person_serializer.is_valid():
-                person = person_serializer.save(positionInfo=posinfo, rankInfo=rankInfo, gender=genderInstance,
+                person = person_serializer.save(positionInfo=posInfo, rankInfo=rankInfo, gender=genderInstance,
                                                 familyStatus=familyStatusInstance)
             else:
                 return Response(person_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -387,7 +387,7 @@ class PersonViewSet(viewsets.ModelViewSet):
                             else:
                                 return Response(language_skill_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
                     else:
-                        # Handle the case where 'languageSkills' key is not present or it's an empty array
+                        # Handle the case where 'languageSkills' key is not present
                         print("No languageSkills provided")
                         # You may choose to return a response or perform other actions
                 else:
@@ -417,7 +417,7 @@ class PersonViewSet(viewsets.ModelViewSet):
                             else:
                                 return Response(academic_degree_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
                     else:
-                        # Handle the case where 'academicDegrees' key is not present or it's an empty array
+                        # Handle the case where 'academicDegrees' key is not present
                         print("No academicDegrees provided")
                         # You may choose to return a response or perform other actions
                 else:
@@ -447,7 +447,7 @@ class PersonViewSet(viewsets.ModelViewSet):
                             else:
                                 return Response(course_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
                     else:
-                        # Handle the case where 'courses' key is not present or it's an empty array
+                        # Handle the case where 'courses' key is not present
                         print("No courses provided")
                         # You may choose to return a response or perform other actions
                 else:
@@ -477,7 +477,7 @@ class PersonViewSet(viewsets.ModelViewSet):
                             else:
                                 return Response(sport_skill_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
                     else:
-                        # Handle the case where 'sportSkills' key is not present or it's an empty array
+                        # Handle the case where 'sportSkills' key is not present
                         print("No sportSkills provided")
                         # You may choose to return a response or perform other actions
                 else:
@@ -507,7 +507,7 @@ class PersonViewSet(viewsets.ModelViewSet):
                             else:
                                 return Response(working_history_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
                     else:
-                        # Handle the case where 'workingHistories' key is not present or it's an empty array
+                        # Handle the case where 'workingHistories' key is not present
                         print("No workingHistories provided")
                         # You may choose to return a response or perform other actions
                 else:
@@ -537,7 +537,7 @@ class PersonViewSet(viewsets.ModelViewSet):
                             else:
                                 return Response(spec_check_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
                     else:
-                        # Handle the case where 'specChecks' key is not present or it's an empty array
+                        # Handle the case where 'specChecks' key is not present
                         print("No specChecks provided")
                         # You may choose to return a response or perform other actions
                 else:
@@ -567,7 +567,7 @@ class PersonViewSet(viewsets.ModelViewSet):
                             else:
                                 return Response(attestation_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
                     else:
-                        # Handle the case where 'attestations' key is not present or it's an empty array
+                        # Handle the case where 'attestations' key is not present
                         print("No attestations provided")
                         # You may choose to return a response or perform other actions
                 else:
@@ -597,7 +597,7 @@ class PersonViewSet(viewsets.ModelViewSet):
                             else:
                                 return Response(category_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
                     else:
-                        # Handle the case where 'classCategories' key is not present or it's an empty array
+                        # Handle the case where 'classCategories' key is not present
                         print("No classCategories provided")
                         # You may choose to return a response or perform other actions
                 else:
@@ -627,7 +627,7 @@ class PersonViewSet(viewsets.ModelViewSet):
                             else:
                                 return Response(auto_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
                     else:
-                        # Handle the case where 'autobiographies' key is not present or it's an empty array
+                        # Handle the case where 'autobiographies' key is not present
                         print("No autobiographies provided")
                         # You may choose to return a response or perform other actions
                 else:
@@ -657,7 +657,7 @@ class PersonViewSet(viewsets.ModelViewSet):
                             else:
                                 return Response(rewards_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
                     else:
-                        # Handle the case where 'rewards' key is not present or it's an empty array
+                        # Handle the case where 'rewards' key is not present
                         print("No rewards provided")
                         # You may choose to return a response or perform other actions
                 else:
@@ -687,7 +687,7 @@ class PersonViewSet(viewsets.ModelViewSet):
                             else:
                                 return Response(sick_leaves_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
                     else:
-                        # Handle the case where 'sickLeaves' key is not present or it's an empty array
+                        # Handle the case where 'sickLeaves' key is not present
                         print("No sickLeaves provided")
                         # You may choose to return a response or perform other actions
                 else:
@@ -717,7 +717,7 @@ class PersonViewSet(viewsets.ModelViewSet):
                             else:
                                 return Response(inv_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
                     else:
-                        # Handle the case where 'investigations' key is not present or it's an empty array
+                        # Handle the case where 'investigations' key is not present
                         print("No investigations provided")
                         # You may choose to return a response or perform other actions
                 else:
@@ -747,7 +747,7 @@ class PersonViewSet(viewsets.ModelViewSet):
                             else:
                                 return Response(dec_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
                     else:
-                        # Handle the case where 'decrees' key is not present or it's an empty array
+                        # Handle the case where 'decrees' key is not present
                         print("No decrees provided")
                         # You may choose to return a response or perform other actions
                 else:
@@ -853,3 +853,45 @@ def change_password(request):
             return JsonResponse({'error': 'User not found'}, status=404)
     else:
         return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
+@require_GET
+def getAttestationInfo(request):
+    # Get the personId from the query parameters
+    person_id = request.GET.get('personId', None)
+
+    if person_id is None:
+        return JsonResponse({'error': 'personId is required'}, status=400)
+
+    # Retrieve the person and their latest attestation
+    person = get_object_or_404(Person, id=person_id)
+    latest_attestation = Attestation.objects.filter(personId=person).order_by('-id').first()
+
+    if latest_attestation is None:
+        return JsonResponse({'error': 'No attestation found for the given personId'}, status=404)
+
+    # Calculate the differences
+    today = datetime.now().date()
+    difference_min = (latest_attestation.nextAttDateMin - today).days
+    difference_max = (latest_attestation.nextAttDateMax - today).days
+
+    AttStatus = None
+
+    if 0 <= difference_min <= 30:
+        AttStatus = 'Have close attestation'
+
+    elif 0 > difference_max:
+        AttStatus = 'Missed'
+    elif 0 > difference_min:
+        AttStatus = 'In progress'
+    else:
+        AttStatus = 'No status'
+
+    # Prepare the response data
+    response_data = {
+        'Status': AttStatus,
+        'AttestationMinDate': str(latest_attestation.nextAttDateMin),
+        'AttestationMaxDate': str(latest_attestation.nextAttDateMax),
+    }
+
+    return JsonResponse(response_data)
