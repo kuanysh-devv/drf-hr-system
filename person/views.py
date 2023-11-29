@@ -895,3 +895,37 @@ def getAttestationInfo(request):
     }
 
     return JsonResponse(response_data)
+
+
+@require_GET
+def getRankInfo(request):
+    # Get the personId from the query parameters
+    person_id = request.GET.get('personId', None)
+
+    if person_id is None:
+        return JsonResponse({'error': 'personId is required'}, status=400)
+
+    # Retrieve the person and their rank information
+    person = get_object_or_404(Person, id=person_id)
+    rank_info = person.rankInfo
+
+    if rank_info is None:
+        return JsonResponse({'error': 'No rank information found for the given personId'}, status=404)
+
+    RankStatus = None
+    difference = rank_info.nextPromotionDate - datetime.now().date()
+
+    if 0 < difference.days <= 30:
+        RankStatus = 'Have close Rank up'
+    elif -90 <= difference.days <= 0:
+        RankStatus = 'Need to Rank up'
+    else:
+        RankStatus = 'No status'
+
+    # Prepare the response data
+    response_data = {
+        'Status': RankStatus,
+        'NextPromotionDate': str(rank_info.nextPromotionDate),
+    }
+
+    return JsonResponse(response_data)
