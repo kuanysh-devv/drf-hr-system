@@ -533,7 +533,9 @@ def filter_data(request):
                     relativeTypeGlobal = value
                     try:
                         relativeTypeInstance = Relative.objects.get(relativeName=relativeTypeGlobal)
-                        familyInstance = FamilyComposition.objects.filter(personId=p, relativeType=relativeTypeInstance).order_by('-id').first()
+                        familyInstance = FamilyComposition.objects.filter(personId=p,
+                                                                          relativeType=relativeTypeInstance).order_by(
+                            '-id').first()
                         person_data[filtered_field] = familyInstance.relativeType.relativeName
                     except Relative.DoesNotExist:
                         return HttpResponseServerError("RelativeType {} does not exist.".format(value))
@@ -1075,7 +1077,7 @@ def attestation_list_view_download(request):
         worksheet = workbook.add_worksheet()
 
         # Write header row
-        header = ['Имя', 'Фамилия', 'Отчество', 'Должность', 'Управление']
+        header = ['Имя', 'Фамилия', 'Отчество', 'Должность', 'Управление', 'Дата последней аттестации']
         for col_num, header_value in enumerate(header):
             worksheet.write(0, col_num, header_value)
 
@@ -1086,6 +1088,8 @@ def attestation_list_view_download(request):
             worksheet.write(row_num, 2, att.personId.patronymic)
             worksheet.write(row_num, 3, att.personId.positionInfo.position.positionTitle)
             worksheet.write(row_num, 4, att.personId.positionInfo.department.DepartmentName)
+            worksheet.write(row_num, 5, att.lastAttDate.strftime(
+                '%d.%m.%Y') if att.lastAttDate else None)
 
         # Close the workbook
         workbook.close()
