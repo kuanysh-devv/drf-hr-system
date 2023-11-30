@@ -72,5 +72,6 @@ urlpatterns = [
     path('api/v1/download-staffing-table/', downloadStaffingTable, name='downloadStaffingTable'),
     path('api/v1/get-attestation-info/', getAttestationInfo, name='getAttestationInfo'),
     path('api/v1/get-rank-info/', getRankInfo, name='get_rank_info'),
+    path('api/v1/get-available-pin/', getAvailableLastPin, name='getAvailableLastPin'),
 
 ]

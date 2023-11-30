@@ -146,7 +146,8 @@ class PersonViewSet(viewsets.ModelViewSet):
         working_history_data = WorkingHistorySerializer(working_history_objects, many=True).data
 
         overall_experience = self.calculate_experience(self=self, working_histories=working_history_data, type='All')
-        pravo_experience = self.calculate_experience(self=self, working_histories=working_history_data, type='PravoOhranka')
+        pravo_experience = self.calculate_experience(self=self, working_histories=working_history_data,
+                                                     type='PravoOhranka')
 
         spec_check_objects = SpecCheck.objects.filter(personId=person.id)
         spec_check_data = SpecCheckSerializer(spec_check_objects, many=True).data
@@ -970,6 +971,31 @@ def getRankInfo(request):
     response_data = {
         'Status': RankStatus,
         'NextPromotionDate': str(rank_info.nextPromotionDate),
+    }
+
+    return JsonResponse(response_data)
+
+
+@require_GET
+def getAvailableLastPin(request):
+    # Get the last person
+    last_person = Person.objects.order_by('-id').first()
+
+    if last_person is None:
+        return JsonResponse({'error': 'LastPerson is required'}, status=400)
+
+    # Extract the numeric part of the last person's pin
+    last_pin_numeric = int(last_person.pin[3:])
+
+    # Increment the numeric part
+    new_pin_numeric = last_pin_numeric + 1
+
+    # Format the new pin with leading zeros
+    new_pin = f'001{new_pin_numeric:06d}'
+
+    # Prepare the response data
+    response_data = {
+        'newPin': new_pin,
     }
 
     return JsonResponse(response_data)

@@ -14,7 +14,7 @@ def attestation_post_save(sender, instance, created, **kwargs):
             # If attResult is 'Proshel', set nextAttDateMin to lastAttDate + 3 years
             instance.nextAttDateMin = instance.lastAttDate + timedelta(days=3 * 365)
             # Set nextAttDateMax to lastAttDate + 3 years 3 months
-            instance.nextAttDateMax = instance.lastAttDate + timedelta(days=(3 * 365) + (3 * 30))
+            instance.nextAttDateMax = instance.lastAttDate + timedelta(days=(3 * 365) + (6 * 30))
         elif instance.attResult == 'Не соответствует':
             # If attResult is 'Ne proshel', set nextAttDateMin to lastAttDate + 3 months
             instance.nextAttDateMin = instance.lastAttDate + timedelta(days=3 * 30)
@@ -31,7 +31,7 @@ def attestation_post_init(sender, instance, **kwargs):
         # If attResult is 'Proshel', set nextAttDateMin to lastAttDate + 3 years
         instance.nextAttDateMin = instance.lastAttDate + timedelta(days=3 * 365)
         # Set nextAttDateMax to lastAttDate + 3 years 3 months
-        instance.nextAttDateMax = instance.lastAttDate + timedelta(days=(3 * 365) + (3 * 30))
+        instance.nextAttDateMax = instance.lastAttDate + timedelta(days=(3 * 365) + (6 * 30))
     elif instance.attResult == 'Не соответствует':
         # If attResult is 'Ne proshel', set nextAttDateMin to lastAttDate + 3 months
         instance.nextAttDateMin = instance.lastAttDate + timedelta(days=3 * 30)
