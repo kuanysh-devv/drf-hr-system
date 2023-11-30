@@ -2,13 +2,13 @@ from rest_framework import serializers
 from location.models import Department
 from location.serializers import DepartmentSerializer
 from military_rank.models import RankInfo
-from military_rank.serializers import RankInfoSerializer
+from military_rank.serializers import RankInfoSerializer, MilitaryRankSerializer
 from photo.models import Photo
 from photo.serializers import PhotoSerializer
 from position.models import PositionInfo
 from position.serializers import PositionInfoSerializer
 from .models import Person, Relative, FamilyComposition, FamilyStatus, Gender, ClassCategory, Autobiography, Reward, \
-    LanguageSkill, SportSkill
+    LanguageSkill, SportSkill, RankArchive
 
 from rest_framework import serializers
 from .models import Person
@@ -125,3 +125,18 @@ class SportSkillSerializer(serializers.ModelSerializer):
     class Meta:
         model = SportSkill
         fields = "__all__"
+
+
+class RankArchiveSerializer(serializers.ModelSerializer):
+    militaryRank = serializers.SerializerMethodField()
+
+    class Meta:
+        model = RankArchive
+        fields = "__all__"
+
+    @staticmethod
+    def get_militaryRank(obj):
+        militaryRank = obj.militaryRank
+        if militaryRank:
+            return MilitaryRankSerializer(militaryRank).data
+        return None

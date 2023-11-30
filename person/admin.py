@@ -1,7 +1,7 @@
 from django.contrib import admin
 
 from person.models import Person, Gender, FamilyStatus, Relative, FamilyComposition, ClassCategory, Autobiography, \
-    Reward, LanguageSkill, SportSkill, CustomUser
+    Reward, LanguageSkill, SportSkill, CustomUser, RankArchive
 
 admin.site.register(Person)
 admin.site.register(Gender)
@@ -14,3 +14,4 @@ admin.site.register(Reward)
 admin.site.register(LanguageSkill)
 admin.site.register(SportSkill)
 admin.site.register(CustomUser)
+admin.site.register(RankArchive)

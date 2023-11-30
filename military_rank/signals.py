@@ -1,11 +1,12 @@
 from datetime import datetime, timedelta
 
 from django.core.exceptions import ValidationError
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
+from django.utils import timezone
 
 from military_rank.models import RankInfo, MilitaryRank
-from person.models import Person
+from person.models import Person, RankArchive
 
 
 @receiver(post_save, sender=RankInfo)
@@ -57,3 +58,32 @@ def rankInfo_post_save(sender, instance, created, **kwargs):
 
         # Reconnect the signal after saving
         post_save.connect(rankInfo_post_save, sender=RankInfo)
+
+
+@receiver(pre_save, sender=RankInfo)
+def create_rank_archive(sender, instance, **kwargs):
+    # Check if militaryRank field has changed
+    if instance._state.adding or not instance.pk:
+        # This is a new instance, not an update
+        return
+
+    try:
+        # Get the original instance from the database
+        original_instance = RankInfo.objects.get(pk=instance.pk)
+    except RankInfo.DoesNotExist:
+        return
+
+    # Check if militaryRank has changed
+    print(original_instance.militaryRank)
+    print(instance.militaryRank)
+    if original_instance.militaryRank != instance.militaryRank:
+        # Create RankArchive instance
+        person_instance = Person.objects.get(rankInfo=instance)
+        RankArchive.objects.create(
+            personId=person_instance,
+            militaryRank=original_instance.militaryRank,
+            receivedType=original_instance.receivedType,
+            decreeNumber=original_instance.decreeNumber,
+            startDate=original_instance.receivedDate,
+            endDate=timezone.now().date()
+        )

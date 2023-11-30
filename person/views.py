@@ -31,10 +31,10 @@ from resident_info.serializers import ResidentInfoSerializer
 from working_history.models import WorkingHistory
 from working_history.serializers import WorkingHistorySerializer
 from .models import Person, Gender, FamilyStatus, Relative, FamilyComposition, ClassCategory, Autobiography, Reward, \
-    LanguageSkill, SportSkill, CustomUser
+    LanguageSkill, SportSkill, CustomUser, RankArchive
 from .serializers import PersonSerializer, GenderSerializer, FamilyStatusSerializer, RelativeSerializer, \
     FamilyCompositionSerializer, ClassCategorySerializer, AutobiographySerializer, RewardSerializer, \
-    LanguageSkillSerializer, SportSkillSerializer
+    LanguageSkillSerializer, SportSkillSerializer, RankArchiveSerializer
 
 
 @csrf_exempt
@@ -141,8 +141,10 @@ class PersonViewSet(viewsets.ModelViewSet):
         sport_skill_objects = SportSkill.objects.filter(personId=person.id)
         sport_skill_data = SportSkillSerializer(sport_skill_objects, many=True).data
 
-        working_history_objects = WorkingHistory.objects.filter(personId=person.id)
+        rankArchieve_objects = RankArchive.objects.filter(personId=person.id)
+        rankArchieve_data = RankArchiveSerializer(rankArchieve_objects, many=True).data
 
+        working_history_objects = WorkingHistory.objects.filter(personId=person.id)
         working_history_data = WorkingHistorySerializer(working_history_objects, many=True).data
 
         overall_experience = self.calculate_experience(self=self, working_histories=working_history_data, type='All')
@@ -189,6 +191,9 @@ class PersonViewSet(viewsets.ModelViewSet):
                 'Overall experience': overall_experience,
                 'PravoOhranka experience': pravo_experience,
                 'workingHistories': working_history_data
+            },
+            'RankArchive': {
+                'archiveObjects': rankArchieve_data
             },
             'SpecCheckInfo': {'specChecks': spec_check_data},
             'AttestationInfo': {'attestations': attestation_data},

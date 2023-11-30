@@ -136,3 +136,15 @@ class CustomUser(AbstractUser):
             pass
 
         super().save(*args, **kwargs)
+
+
+class RankArchive(models.Model):
+    personId = models.ForeignKey('Person', on_delete=models.CASCADE, default=1)
+    militaryRank = models.ForeignKey(MilitaryRank, on_delete=models.CASCADE)
+    receivedType = models.CharField(max_length=255)
+    decreeNumber = models.CharField(max_length=1024, default="", null=True, blank=True)
+    startDate = models.DateField()
+    endDate = models.DateField()
+
+    def __str__(self):
+        return str(self.personId) + ' ' + str(self.militaryRank.rankTitle)
