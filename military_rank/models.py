@@ -13,6 +13,7 @@ class MilitaryRank(models.Model):
 class RankInfo(models.Model):
     militaryRank = models.ForeignKey('MilitaryRank', on_delete=models.CASCADE)
     receivedType = models.CharField(max_length=255)
+    decreeNumber = models.CharField(max_length=1024, default="", null=True, blank=True)
     receivedDate = models.DateField()
     nextPromotionDate = models.DateField(null=True, blank=True)
     needPositionUp = models.BooleanField(default=False)
