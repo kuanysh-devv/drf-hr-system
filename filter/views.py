@@ -1119,7 +1119,7 @@ def rankUps_list_view(request):
 
         # Filter Person objects based on RankInfo's nextPromotionDate
         persons = Person.objects.filter(rankInfo__nextPromotionDate__range=[datetime.now().date(), date])
-
+        # NextPromotiondate range = date - todays.daty
         # Serialize the queryset to JSON
         data = [
             {

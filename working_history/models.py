@@ -6,10 +6,12 @@ from person.models import Person
 class WorkingHistory(models.Model):
     positionName = models.CharField(max_length=255)
     startDate = models.DateField()
-    endDate = models.DateField(null=True)
+    endDate = models.DateField(null=True, blank=True)
     department = models.CharField(max_length=255, null=True)
     organizationName = models.CharField(max_length=255)
     organizationAddress = models.CharField(max_length=492, null=True)
+    isPravoOhranka = models.BooleanField(default=False)
+    HaveCoefficient = models.BooleanField(default=False)
     personId = models.ForeignKey(Person, on_delete=models.CASCADE, default=1)
 
     def __str__(self):

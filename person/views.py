@@ -1,6 +1,6 @@
 import base64
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
@@ -142,7 +142,11 @@ class PersonViewSet(viewsets.ModelViewSet):
         sport_skill_data = SportSkillSerializer(sport_skill_objects, many=True).data
 
         working_history_objects = WorkingHistory.objects.filter(personId=person.id)
+
         working_history_data = WorkingHistorySerializer(working_history_objects, many=True).data
+
+        overall_experience = self.calculate_experience(self=self, working_histories=working_history_data, type='All')
+        pravo_experience = self.calculate_experience(self=self, working_histories=working_history_data, type='PravoOhranka')
 
         spec_check_objects = SpecCheck.objects.filter(personId=person.id)
         spec_check_data = SpecCheckSerializer(spec_check_objects, many=True).data
@@ -180,7 +184,11 @@ class PersonViewSet(viewsets.ModelViewSet):
             'AcademicDegree': {'academicDegrees': academic_degree_data},
             'Course': {'courses': course_data},
             'SportSkill': {'sportSkills': sport_skill_data},
-            'WorkingHistory': {'workingHistories': working_history_data},
+            'WorkingHistory': {
+                'Overall experience': overall_experience,
+                'PravoOhranka experience': pravo_experience,
+                'workingHistories': working_history_data
+            },
             'SpecCheckInfo': {'specChecks': spec_check_data},
             'AttestationInfo': {'attestations': attestation_data},
             'ClassCategoriesInfo': {'classCategories': class_categories_data},
@@ -766,6 +774,42 @@ class PersonViewSet(viewsets.ModelViewSet):
         instance = self.get_object()
         instance.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @staticmethod
+    def calculate_experience(self, working_histories, type):
+        total_experience = timedelta()
+        if type == 'All':
+            for working_history in working_histories:
+                start_date_str = working_history['startDate']
+                end_date_str = working_history['endDate'] or datetime.now().date().isoformat()
+                start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+                end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+                experience = end_date - start_date
+                total_experience += experience
+        if type == 'PravoOhranka':
+            for working_history in working_histories:
+                if working_history['isPravoOhranka']:
+                    start_date_str = working_history['startDate']
+                    end_date_str = working_history['endDate'] or datetime.now().date().isoformat()
+                    start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+                    end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+                    experience = end_date - start_date
+                    if working_history['HaveCoefficient']:
+                        experience = experience * 1.5
+                    total_experience += experience
+
+        total_years = total_experience.days // 365
+        remaining_days = total_experience.days % 365
+        total_months = remaining_days // 30
+        remaining_days %= 30
+
+        overall_experience = {
+            'years': total_years,
+            'months': total_months,
+            'days': remaining_days
+        }
+
+        return overall_experience
 
 
 class GenderViewSet(viewsets.ModelViewSet):
