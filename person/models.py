@@ -1,23 +1,22 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models, IntegrityError
-from rest_framework.permissions import IsAuthenticated
-
+from django.utils.translation import gettext_lazy as _
 from military_rank.models import RankInfo, MilitaryRank
 from position.models import PositionInfo
 
 
 class Person(models.Model):
-    iin = models.CharField(max_length=12)
-    pin = models.CharField(max_length=255)
-    surname = models.CharField(max_length=255)
-    firstName = models.CharField(max_length=255)
-    patronymic = models.CharField(max_length=255)
-    gender = models.ForeignKey('Gender', on_delete=models.CASCADE)
-    nationality = models.CharField(max_length=255)
-    familyStatus = models.ForeignKey('FamilyStatus', on_delete=models.CASCADE)
-    positionInfo = models.ForeignKey(PositionInfo, on_delete=models.CASCADE)
-    rankInfo = models.ForeignKey(RankInfo, on_delete=models.CASCADE)
-    role = models.CharField(max_length=255, default='User')
+    iin = models.CharField(max_length=12, verbose_name=_("IIN"))
+    pin = models.CharField(max_length=255, verbose_name=_("PIN"))
+    surname = models.CharField(max_length=255, verbose_name=_("Surname"))
+    firstName = models.CharField(max_length=255, verbose_name=_("First Name"))
+    patronymic = models.CharField(max_length=255, verbose_name=_("Patronymic"))
+    gender = models.ForeignKey('Gender', on_delete=models.CASCADE, verbose_name=_("Gender"))
+    nationality = models.CharField(max_length=255, verbose_name=_("Nationality"))
+    familyStatus = models.ForeignKey('FamilyStatus', on_delete=models.CASCADE, verbose_name=_("Family Status"))
+    positionInfo = models.ForeignKey(PositionInfo, on_delete=models.CASCADE, verbose_name=_("Position Info"))
+    rankInfo = models.ForeignKey(RankInfo, on_delete=models.CASCADE, verbose_name=_("Rank Info"))
+    role = models.CharField(max_length=255, default='User', verbose_name=_("Role"))
 
     def next_rank(self):
         current_order = self.rankInfo.militaryRank.order
@@ -30,85 +29,125 @@ class Person(models.Model):
     def __str__(self):
         return self.iin
 
+    class Meta:
+        verbose_name = _("Person")
+        verbose_name_plural = _("Persons")
+
 
 class Gender(models.Model):
-    genderName = models.CharField(max_length=255)
+    genderName = models.CharField(max_length=255, verbose_name=_("Gender Name"))
 
     def __str__(self):
         return self.genderName
 
+    class Meta:
+        verbose_name = _("Gender")
+        verbose_name_plural = _("Genders")
+
 
 class FamilyStatus(models.Model):
-    statusName = models.CharField(max_length=255)
+    statusName = models.CharField(max_length=255, verbose_name=_("Status Name"))
 
     def __str__(self):
         return self.statusName
 
+    class Meta:
+        verbose_name = _("FamilyStatus")
+        verbose_name_plural = _("FamilyStatuses")
+
 
 class Relative(models.Model):
-    relativeName = models.CharField(max_length=255)
+    relativeName = models.CharField(max_length=255, verbose_name=_("Relative Name"))
 
     def __str__(self):
         return self.relativeName
 
+    class Meta:
+        verbose_name = _("Relative")
+        verbose_name_plural = _("Relatives")
+
 
 class FamilyComposition(models.Model):
-    relativeType = models.ForeignKey('Relative', on_delete=models.PROTECT)
-    relName = models.CharField(max_length=255)
-    relSurname = models.CharField(max_length=255)
-    relPatronymic = models.CharField(max_length=255)
-    relIin = models.CharField(max_length=12)
-    relBirthDate = models.DateField()
-    relJobPlace = models.CharField(max_length=255)
-    personId = models.ForeignKey('Person', on_delete=models.CASCADE, default=1)
+    relativeType = models.ForeignKey('Relative', on_delete=models.PROTECT, verbose_name=_("Relative Type"))
+    relName = models.CharField(max_length=255, verbose_name=_("Relative Name"))
+    relSurname = models.CharField(max_length=255, verbose_name=_("Relative Surname"))
+    relPatronymic = models.CharField(max_length=255, verbose_name=_("Relative Patronymic"))
+    relIin = models.CharField(max_length=12, verbose_name=_("Relative IIN"))
+    relBirthDate = models.DateField(verbose_name=_("Relative Birth Date"))
+    relJobPlace = models.CharField(max_length=255, verbose_name=_("Relative Job Place"))
+    personId = models.ForeignKey('Person', on_delete=models.CASCADE, default=1, verbose_name=_("Person"))
 
     def __str__(self):
         return str(self.relativeType)
 
+    class Meta:
+        verbose_name = _("FamilyComposition")
+        verbose_name_plural = _("FamilyCompositions")
+
 
 class ClassCategory(models.Model):
-    categoryType = models.CharField(max_length=255)
-    personId = models.ForeignKey('Person', on_delete=models.CASCADE, default=1)
+    categoryType = models.CharField(max_length=255, verbose_name=_("Category Type"))
+    personId = models.ForeignKey('Person', on_delete=models.CASCADE, default=1, verbose_name=_("Person"))
 
     def __str__(self):
         return self.categoryType
 
+    class Meta:
+        verbose_name = _("ClassCategory")
+        verbose_name_plural = _("ClassCategories")
+
 
 class Autobiography(models.Model):
-    autobiographyText = models.CharField(max_length=2096, null=True)
-    autobiographyImage = models.TextField(null=True)
-    personId = models.ForeignKey('Person', on_delete=models.CASCADE, default=1)
+    autobiographyText = models.CharField(max_length=2096, null=True, verbose_name=_("Autobiography Text"))
+    autobiographyImage = models.TextField(null=True, verbose_name=_("Autobiography Image"))
+    personId = models.ForeignKey('Person', on_delete=models.CASCADE, default=1, verbose_name=_("Person"))
 
     def __str__(self):
         return str(self.personId) + 's autobiography'
 
+    class Meta:
+        verbose_name = _("Autobiography")
+        verbose_name_plural = _("Autobiographies")
+
 
 class Reward(models.Model):
-    rewardType = models.CharField(max_length=255)
-    rewardDocNumber = models.CharField(max_length=255)
-    rewardDate = models.DateField()
-    personId = models.ForeignKey('Person', on_delete=models.CASCADE, default=1)
+    rewardType = models.CharField(max_length=255, verbose_name=_("Reward Type"))
+    rewardDocNumber = models.CharField(max_length=255, verbose_name=_("Reward Document Number"))
+    rewardDate = models.DateField(verbose_name=_("Reward Date"))
+    personId = models.ForeignKey('Person', on_delete=models.CASCADE, default=1, verbose_name=_("Person"))
 
     def __str__(self):
         return str(self.personId) + ' ' + str(self.rewardType)
 
+    class Meta:
+        verbose_name = _("Reward")
+        verbose_name_plural = _("Rewards")
+
 
 class LanguageSkill(models.Model):
-    langName = models.CharField(max_length=255)
-    skillLvl = models.CharField(max_length=255)
-    personId = models.ForeignKey('Person', on_delete=models.CASCADE, default=1)
+    langName = models.CharField(max_length=255, verbose_name=_("Language Name"))
+    skillLvl = models.CharField(max_length=255, verbose_name=_("Language Skill Level"))
+    personId = models.ForeignKey('Person', on_delete=models.CASCADE, default=1, verbose_name=_("Person"))
 
     def __str__(self):
         return str(self.personId) + ' ' + str(self.langName)
 
+    class Meta:
+        verbose_name = _("LanguageSkill")
+        verbose_name_plural = _("LanguageSkills")
+
 
 class SportSkill(models.Model):
-    sportType = models.CharField(max_length=255)
-    sportSkillLvl = models.CharField(max_length=255)
-    personId = models.ForeignKey('Person', on_delete=models.CASCADE, default=1)
+    sportType = models.CharField(max_length=255, verbose_name=_("Sport Type"))
+    sportSkillLvl = models.CharField(max_length=255, verbose_name=_("Sport Skill Level"))
+    personId = models.ForeignKey('Person', on_delete=models.CASCADE, default=1, verbose_name=_("Person"))
 
     def __str__(self):
         return str(self.personId) + ' ' + str(self.sportType)
+
+    class Meta:
+        verbose_name = _("SportSkill")
+        verbose_name_plural = _("SportSkills")
 
 
 class CustomUser(AbstractUser):
@@ -139,12 +178,16 @@ class CustomUser(AbstractUser):
 
 
 class RankArchive(models.Model):
-    personId = models.ForeignKey('Person', on_delete=models.CASCADE, default=1)
-    militaryRank = models.ForeignKey(MilitaryRank, on_delete=models.CASCADE)
-    receivedType = models.CharField(max_length=255)
-    decreeNumber = models.CharField(max_length=1024, default="", null=True, blank=True)
-    startDate = models.DateField()
-    endDate = models.DateField()
+    personId = models.ForeignKey('Person', on_delete=models.CASCADE, default=1, verbose_name=_("Person"))
+    militaryRank = models.ForeignKey(MilitaryRank, on_delete=models.CASCADE, verbose_name=_("Military Rank"))
+    receivedType = models.CharField(max_length=255, verbose_name=_("Received Type"))
+    decreeNumber = models.CharField(max_length=1024, default="", null=True, blank=True, verbose_name=_("Decree Number"))
+    startDate = models.DateField(verbose_name=_("Start Date"))
+    endDate = models.DateField(verbose_name=_("End Date"))
 
     def __str__(self):
         return str(self.personId) + ' ' + str(self.militaryRank.rankTitle)
+
+    class Meta:
+        verbose_name = _("RankArchive")
+        verbose_name_plural = _("RankArchives")
