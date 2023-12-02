@@ -906,76 +906,27 @@ def change_password(request):
 
 
 @require_GET
-def getAttestationInfo(request):
-    # Get the personId from the query parameters
-    person_id = request.GET.get('personId', None)
+def get_rank_up_info(request):
+    # Get persons who need to rank up
+    test_date = datetime(2024, 11, 2).date()
+    persons_to_rank_up = Person.objects.filter(
+        rankInfo__nextPromotionDate__lte=test_date + timedelta(days=30)
+    )
+    print(datetime.now().date())
+    # Extract relevant information for response
+    rank_up_data = []
+    for person in persons_to_rank_up:
+        person_data = {
+            'firstName': person.firstName,
+            'surname': person.surname,
+            'patronymic': person.patronymic,
+            'photo': person.photo_set.first().photoBinary,  # Assuming 'photo' is a FileField
+        }
+        rank_up_data.append(person_data)
 
-    if person_id is None:
-        return JsonResponse({'error': 'personId is required'}, status=400)
-
-    # Retrieve the person and their latest attestation
-    person = get_object_or_404(Person, id=person_id)
-    latest_attestation = Attestation.objects.filter(personId=person).order_by('-id').first()
-
-    if latest_attestation is None:
-        return JsonResponse({'error': 'No attestation found for the given personId'}, status=404)
-
-    # Calculate the differences
-    today = datetime.now().date()
-    difference_min = (latest_attestation.nextAttDateMin - today).days
-    difference_max = (latest_attestation.nextAttDateMax - today).days
-
-    AttStatus = None
-
-    if 0 <= difference_min <= 30:
-        AttStatus = 'Have close attestation'
-
-    elif 0 > difference_max:
-        AttStatus = 'Missed'
-    elif 0 > difference_min:
-        AttStatus = 'In progress'
-    else:
-        AttStatus = 'No status'
-
-    # Prepare the response data
     response_data = {
-        'Status': AttStatus,
-        'AttestationMinDate': str(latest_attestation.nextAttDateMin),
-        'AttestationMaxDate': str(latest_attestation.nextAttDateMax),
-    }
-
-    return JsonResponse(response_data)
-
-
-@require_GET
-def getRankInfo(request):
-    # Get the personId from the query parameters
-    person_id = request.GET.get('personId', None)
-
-    if person_id is None:
-        return JsonResponse({'error': 'personId is required'}, status=400)
-
-    # Retrieve the person and their rank information
-    person = get_object_or_404(Person, id=person_id)
-    rank_info = person.rankInfo
-
-    if rank_info is None:
-        return JsonResponse({'error': 'No rank information found for the given personId'}, status=404)
-
-    RankStatus = None
-    difference = rank_info.nextPromotionDate - datetime.now().date()
-
-    if 0 < difference.days <= 30:
-        RankStatus = 'Have close Rank up'
-    elif -90 <= difference.days <= 0:
-        RankStatus = 'Need to Rank up'
-    else:
-        RankStatus = 'No status'
-
-    # Prepare the response data
-    response_data = {
-        'Status': RankStatus,
-        'NextPromotionDate': str(rank_info.nextPromotionDate),
+        'count': len(rank_up_data),
+        'persons': rank_up_data,
     }
 
     return JsonResponse(response_data)
