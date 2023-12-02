@@ -8,7 +8,7 @@ from decree.views import *
 from education.views import *
 from filter import views
 from filter.views import attestation_list_view, attestation_list_view_download, rankUps_list_view, \
-    rankUps_list_view_download
+    rankUps_list_view_download, pension_list_view, pension_list_view_download
 from identity_card_info.views import *
 from location.views import *
 from military_rank.views import *
@@ -73,5 +73,7 @@ urlpatterns = [
     path('api/v1/get-attestation-info/', getAttestationInfo, name='getAttestationInfo'),
     path('api/v1/get-rank-info/', getRankInfo, name='get_rank_info'),
     path('api/v1/get-available-pin/', getAvailableLastPin, name='getAvailableLastPin'),
+    path('api/v1/pension-list-view/', pension_list_view, name='pension_list_view'),
+    path('api/v1/pension-list-download/', pension_list_view_download, name='pension_list_view_download'),
 
 ]

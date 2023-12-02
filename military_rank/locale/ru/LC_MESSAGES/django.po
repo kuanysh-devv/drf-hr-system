@@ -71,3 +71,6 @@ msgstr "Информация о звании"
 #: .\military_rank\models.py:31
 msgid "Rank Infos"
 msgstr "Информации о звании"
+
+msgid "PensionAge"
+msgstr "Пенсионный возраст"

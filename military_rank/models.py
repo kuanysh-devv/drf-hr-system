@@ -5,6 +5,7 @@ from django.utils.translation import gettext_lazy as _
 class MilitaryRank(models.Model):
     rankTitle = models.CharField(max_length=255, verbose_name=_("Rank Title"))
     order = models.IntegerField(verbose_name=_("Order"))
+    pensionAge = models.IntegerField(verbose_name=_("PensionAge"), default=48)
     nextPromotionDateInDays = models.IntegerField(default=1, null=True, verbose_name=_("Next Promotion Date in Days"))
 
     def __str__(self):

@@ -3,6 +3,8 @@ import io
 from django.http import JsonResponse, HttpResponseServerError, HttpResponse
 from django.db.models import Q
 from datetime import datetime
+from dateutil.relativedelta import relativedelta
+from django.db.models import F
 
 from django.views.decorators.csrf import csrf_exempt
 from xlsxwriter import Workbook
@@ -1185,6 +1187,103 @@ def rankUps_list_view_download(request):
         # Set up the response
         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
         response['Content-Disposition'] = 'attachment; filename=rank_ups_data.xlsx'
+        output.seek(0)
+        response.write(output.getvalue())
+
+        return response
+
+    except ValueError as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+
+@csrf_exempt
+def pension_list_view(request):
+    try:
+        # Extract date from query parameters
+        date_param = request.GET.get('date')
+        if not date_param:
+            raise ValueError('Date parameter is required')
+
+        # Convert date string to datetime object
+        date = datetime.strptime(date_param, '%Y-%m-%d').date()
+
+        # Retrieve persons with birth info
+        persons = Person.objects.filter(birthinfo__isnull=False)
+
+        # Create a list of persons close to pension age within 1 month based on the given request date
+        data = [
+            {
+                'firstName': person.firstName,
+                'lastName': person.surname,
+                'patronymic': person.patronymic,
+                'position': person.positionInfo.position.positionTitle,
+                'department': person.positionInfo.department.DepartmentName,
+                'currentRank': person.rankInfo.militaryRank.rankTitle,
+                'photo': person.photo_set.first().photoBinary if person.photo_set.exists() else None,
+                'age': (date - person.birthinfo_set.first().birth_date).days // 365,
+                'pensionDate': (person.birthinfo_set.first().birth_date.replace(year=person.birthinfo_set.first().birth_date.year + person.rankInfo.militaryRank.pensionAge)).strftime('%Y-%m-%d'),
+            }
+            for person in persons
+            if (
+                person.birthinfo_set.first().birth_date <= date - relativedelta(years=person.rankInfo.militaryRank.pensionAge) <= date
+            ) and ((date - (relativedelta(years=person.rankInfo.militaryRank.pensionAge) + person.birthinfo_set.first().birth_date)).days <= 30)
+        ]
+
+        return JsonResponse({'data': data}, status=200)
+
+    except ValueError as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+
+@csrf_exempt
+def pension_list_view_download(request):
+    try:
+        # Extract date from query parameters
+        date_param = request.GET.get('date')
+        if not date_param:
+            raise ValueError('Date parameter is required')
+
+        # Convert date string to datetime object
+        date = datetime.strptime(date_param, '%Y-%m-%d').date()
+
+        # Retrieve persons with birth info, filtered based on pension conditions
+        persons = Person.objects.filter(
+            birthinfo__isnull=False,
+            rankInfo__militaryRank__pensionAge__isnull=False,
+        )
+
+        # Create an in-memory Excel file
+        output = io.BytesIO()
+        workbook = Workbook(output)
+        worksheet = workbook.add_worksheet()
+
+        # Write header row
+        header = ['Имя', 'Фамилия', 'Отчество', 'Должность', 'Управление', 'Нынешнее звание', 'Возраст', 'Дата пенсии']
+        for col_num, header_value in enumerate(header):
+            worksheet.write(0, col_num, header_value)
+
+        # Write data rows
+        for row_num, person in enumerate(persons, start=1):
+            age = (date - person.birthinfo_set.first().birth_date).days // 365
+            pension_age = person.rankInfo.militaryRank.pensionAge
+            pension_date = person.birthinfo_set.first().birth_date.replace(year=person.birthinfo_set.first().birth_date.year + pension_age)
+
+            if person.birthinfo_set.first().birth_date <= date - relativedelta(years=pension_age) <= date and (date - pension_date).days <= 30:
+                worksheet.write(row_num, 0, person.firstName)
+                worksheet.write(row_num, 1, person.surname)
+                worksheet.write(row_num, 2, person.patronymic)
+                worksheet.write(row_num, 3, person.positionInfo.position.positionTitle)
+                worksheet.write(row_num, 4, person.positionInfo.department.DepartmentName)
+                worksheet.write(row_num, 5, person.rankInfo.militaryRank.rankTitle)
+                worksheet.write(row_num, 6, age)  # Age
+                worksheet.write(row_num, 7, pension_date.strftime('%Y-%m-%d'))  # Pension Date
+
+        # Close the workbook
+        workbook.close()
+
+        # Set up the response
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = 'attachment; filename=pension_list_data.xlsx'
         output.seek(0)
         response.write(output.getvalue())
 
