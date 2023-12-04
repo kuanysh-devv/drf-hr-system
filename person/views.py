@@ -1,9 +1,7 @@
 import base64
 import json
-from datetime import datetime, timedelta
-
+from datetime import datetime, timedelta, date
 from django.http import JsonResponse
-from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET
 from rest_framework import viewsets, status
@@ -905,14 +903,16 @@ def change_password(request):
         return JsonResponse({'error': 'Method not allowed'}, status=405)
 
 
-@require_GET
 def get_rank_up_info(request):
+    # Get test_date from query parameters, defaulting to today's date if not provided
+    test_date_param = request.GET.get('test_date')
+    test_date = datetime.strptime(test_date_param, '%Y-%m-%d').date() if test_date_param else date.today()
+
     # Get persons who need to rank up
-    test_date = datetime(2024, 11, 2).date()
     persons_to_rank_up = Person.objects.filter(
         rankInfo__nextPromotionDate__lte=test_date + timedelta(days=30)
     )
-    print(datetime.now().date())
+
     # Extract relevant information for response
     rank_up_data = []
     for person in persons_to_rank_up:
@@ -920,7 +920,8 @@ def get_rank_up_info(request):
             'firstName': person.firstName,
             'surname': person.surname,
             'patronymic': person.patronymic,
-            'photo': person.photo_set.first().photoBinary,  # Assuming 'photo' is a FileField
+            'photo': person.photo_set.first().photoBinary if person.photo_set.exists() else None,
+            # Assuming 'photo' is a FileField
         }
         rank_up_data.append(person_data)
 
