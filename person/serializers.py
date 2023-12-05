@@ -71,18 +71,21 @@ class RelativeSerializer(serializers.ModelSerializer):
 
 
 class FamilyCompositionSerializer(serializers.ModelSerializer):
-    relativeType = serializers.SerializerMethodField()
+    relativeType = serializers.CharField(write_only=True)
 
     class Meta:
         model = FamilyComposition
         fields = "__all__"
 
-    @staticmethod
-    def get_relativeType(obj):
-        relativeType = obj.relativeType
-        if relativeType:
-            return RelativeSerializer(relativeType).data
-        return None
+    def validate_relativeType(self, value):
+        try:
+            # Attempt to get the Relative object with the provided name
+            relative = Relative.objects.get(relativeName=value)
+            return relative
+        except Relative.DoesNotExist:
+            raise serializers.ValidationError("Invalid relativeType. This relative does not exist.")
+
+
 
 
 class FamilyStatusSerializer(serializers.ModelSerializer):

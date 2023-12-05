@@ -770,7 +770,7 @@ class PersonViewSet(viewsets.ModelViewSet):
                 # Handle other exceptions if necessary
                 print(f"An error occurred: {e}")
 
-            return Response(posSerializer.data, status=status.HTTP_201_CREATED)
+            return Response("Person created successfully")
 
         return Response(posSerializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
