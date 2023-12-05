@@ -939,7 +939,10 @@ def getAvailableLastPin(request):
     last_person = Person.objects.order_by('-id').first()
 
     if last_person is None:
-        return JsonResponse({'error': 'LastPerson is required'}, status=400)
+        response_data = {
+            'newPin': '00100001',
+        }
+        return JsonResponse(response_data)
 
     # Extract the numeric part of the last person's pin
     last_pin_numeric = int(last_person.pin[3:])
@@ -948,7 +951,7 @@ def getAvailableLastPin(request):
     new_pin_numeric = last_pin_numeric + 1
 
     # Format the new pin with leading zeros
-    new_pin = f'001{new_pin_numeric:06d}'
+    new_pin = f'001{new_pin_numeric:05d}'
 
     # Prepare the response data
     response_data = {
