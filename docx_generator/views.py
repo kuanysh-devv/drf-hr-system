@@ -1,23 +1,24 @@
+import base64
+import io
 import json
 from datetime import datetime
+from io import BytesIO
+
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from docx import Document
 from docx.enum.table import WD_ALIGN_VERTICAL
+from docx.shared import Inches
 from docx.shared import Pt
-from io import BytesIO
-from django.http import HttpResponse, JsonResponse
-from django.shortcuts import get_object_or_404
 
+from birth_info.models import BirthInfo
+from education.models import Education, AcademicDegree
 from education.serializers import EducationSerializer, AcademicDegreeSerializer
 from location.models import Department
 from person.models import Person
 from photo.models import Photo
-from birth_info.models import BirthInfo
-from education.models import Education, AcademicDegree
-import base64, io
-from docx.shared import Inches
-
-from position.models import PositionInfo, Position
+from position.models import Position, PositionInfo
 from working_history.models import WorkingHistory
 
 
@@ -198,28 +199,29 @@ def generate_appointment_decree(request):
             glasnie = ['а', 'е', 'ё', 'и', 'о', 'у', 'ы', 'э', 'ю', 'я']
 
             changedSurname = None
+            changedFirstName = None
+
             if gender == 'Мужской':
+                if firstName[-1] in soglasnie:
+                    changedFirstName = firstName + 'а'  # Қасымбаева Қуаныша Ахатұлы
+                else:
+                    changedFirstName = firstName
+
                 if surname[-1] in soglasnie:
                     changedSurname = surname + 'а'  # Қасымбаева Қуаныша Ахатұлы
                 else:
                     changedSurname = surname
+
             if gender == 'Женский':
+                if firstName[-1] in glasnie:
+                    changedFirstName = firstName + 'у'  # Қасымбаеву Динару
+                else:
+                    changedFirstName = firstName
+
                 if surname[-1] in glasnie:
                     changedSurname = surname + 'у'  # Қасымбаеву Динару
                 else:
                     changedSurname = surname
-
-            changedFirstName = None
-            if gender == 'Мужской':
-                if surname[-1] in soglasnie:
-                    changedFirstName = firstName + 'а'  # Қасымбаева Қуаныша Ахатұлы
-                else:
-                    changedFirstName = firstName
-            if gender == 'Женский':
-                if surname[-1] in glasnie:
-                    changedFirstName = firstName + 'у'  # Қасымбаеву Динару
-                else:
-                    changedFirstName = firstName
 
             personsFIO = changedSurname + ' ' + changedFirstName + ' ' + patronymic
             personsFIOKaz = surname + ' ' + firstName + ' ' + patronymic
@@ -328,6 +330,181 @@ def generate_appointment_decree(request):
                                     content_type='application/vnd.openxmlformats-officedocument.wordprocessingml'
                                                  '.document')
             response['Content-Disposition'] = f'attachment; filename=Приказ о назначении.docx'
+
+            return response
+
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON data'}, status=400)
+
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+
+@csrf_exempt
+def generate_transfer_decree(request):
+    if request.method == 'POST':
+        try:
+            # Get the raw request body
+            body = request.body.decode('utf-8')
+
+            # Parse the JSON data from the request body
+            data = json.loads(body)
+
+            # Extract variables from the parsed data
+            person_id = data.get('personId')
+            newPositionTitle = data.get('newPosition')
+            newDepartmentName = data.get('newDepartment')
+            base = data.get('base')
+
+            personInstance = Person.objects.get(pk=person_id)
+            newDepartmentInstance = Department.objects.get(DepartmentName=newDepartmentName)
+            newPositionInstance = Position.objects.get(positionTitle=newPositionTitle)
+
+            currentPosition = PositionInfo.objects.get(person=personInstance).position
+            currentDepartment = PositionInfo.objects.get(person=personInstance).department
+
+            soglasnie = ['б', 'в', 'г', 'д', 'ж', 'з', 'й', 'к', 'л', 'м', 'н', 'п', 'р', 'с', 'т', 'ф', 'х', 'ц', 'ч',
+                         'ш', 'щ']
+            glasnie = ['а', 'е', 'ё', 'и', 'о', 'у', 'ы', 'э', 'ю', 'я']
+
+            changedSurname = None
+            changedFirstName = None
+
+            if personInstance.gender.genderName == 'Мужской':
+                if personInstance.firstName[-1] in soglasnie:
+                    changedFirstName = personInstance.firstName + 'а'  # Қасымбаева Қуаныша Ахатұлы
+                else:
+                    changedFirstName = personInstance.firstName
+
+                if personInstance.surname[-1] in soglasnie:
+                    changedSurname = personInstance.surname + 'а'  # Қасымбаева Қуаныша Ахатұлы
+                else:
+                    changedSurname = personInstance.surname
+
+            if personInstance.gender.genderName == 'Женский':
+                if personInstance.firstName[-1] in glasnie:
+                    changedFirstName = personInstance.firstName + 'у'  # Қасымбаеву Динару
+                else:
+                    changedFirstName = personInstance.firstName
+
+                if personInstance.surname[-1] in glasnie:
+                    changedSurname = personInstance.surname + 'у'  # Қасымбаеву Динару
+                else:
+                    changedSurname = personInstance.surname
+
+            personsFIO = changedSurname + ' ' + changedFirstName + ' ' + personInstance.patronymic
+            personsFIOKaz = personInstance.surname + ' ' + personInstance.firstName + ' ' + personInstance.patronymic
+
+            changedPositionTitle = newPositionInstance.positionTitle
+            changedCurrentPositionTitle = currentPosition.positionTitle
+
+            if newPositionTitle == 'Руководитель департамента':
+                changedPositionTitle = 'Руководителя департамента'
+            if newPositionTitle == 'Заместитель руководителя департамента':
+                changedPositionTitle = 'Заместителя руководителя департамента'
+            if newPositionTitle == 'Руководитель управления':
+                changedPositionTitle = 'Руководителя управления'
+            if newPositionTitle == 'Заместитель руководителя управления':
+                changedPositionTitle = 'Заместителя руководителя управления'
+            if newPositionTitle == 'Оперуполномоченный по особо важным делам':
+                changedPositionTitle = 'Оперуполномоченного по особо важным делам'
+            if newPositionTitle == 'Старший оперуполномоченный':
+                changedPositionTitle = 'Старшего оперуполномоченного'
+            if newPositionTitle == 'Оперуполномоченный':
+                changedPositionTitle = 'Оперуполномоченного'
+
+            if currentPosition.positionTitle == 'Руководитель департамента':
+                changedCurrentPositionTitle = 'Руководителя департамента'
+            if currentPosition.positionTitle == 'Заместитель руководителя департамента':
+                changedCurrentPositionTitle = 'Заместителя руководителя департамента'
+            if currentPosition.positionTitle == 'Руководитель управления':
+                changedCurrentPositionTitle = 'Руководителя управления'
+            if currentPosition.positionTitle == 'Заместитель руководителя управления':
+                changedCurrentPositionTitle = 'Заместителя руководителя управления'
+            if currentPosition.positionTitle == 'Оперуполномоченный по особо важным делам':
+                changedCurrentPositionTitle = 'Оперуполномоченного по особо важным делам'
+            if currentPosition.positionTitle == 'Старший оперуполномоченный':
+                changedCurrentPositionTitle = 'Старшего оперуполномоченного'
+            if currentPosition.positionTitle == 'Оперуполномоченный':
+                changedCurrentPositionTitle = 'Оперуполномоченного'
+
+            changedDepartmentName = newDepartmentInstance.DepartmentName
+            changedCurrentDepartmentName = currentDepartment.DepartmentName
+            changedCurrentDepartmentNameKaz = currentDepartment.DepartmentNameKaz
+            changedNewDepartmentNameKaz = newDepartmentInstance.DepartmentNameKaz
+
+            words = newDepartmentName.split()
+            if words[0] == 'Управление':
+                words[0] = 'Управления'
+                changedDepartmentName = ' '.join(words)
+            if newDepartmentName == 'ЦА':
+                changedDepartmentName = 'Управления'
+            if newDepartmentName == 'ЦА':
+                departmentName = 'Управление'
+
+            words = currentDepartment.DepartmentName.split()
+            if words[0] == 'Управление':
+                words[0] = 'Управления'
+                changedCurrentDepartmentName = ' '.join(words)
+            if currentDepartment.DepartmentName == 'ЦА':
+                changedCurrentDepartmentName = 'Управления'
+            if currentDepartment.DepartmentName == 'ЦА':
+                currentDepartment.DepartmentName = 'Управление'
+
+            if currentDepartment.DepartmentNameKaz == 'Басқарма':
+                changedCurrentDepartmentNameKaz = 'Басқармасының'
+            else:
+                changedCurrentDepartmentNameKaz = currentDepartment.DepartmentNameKaz + 'ның'
+
+            if newDepartmentInstance.DepartmentNameKaz == 'Басқарма':
+                changedNewDepartmentNameKaz = 'Басқармасының'
+            else:
+                changedNewDepartmentNameKaz = newDepartmentInstance.DepartmentNameKaz + 'ның'
+
+            baseKaz = None
+            if base == 'представление':
+                baseKaz = 'ұсыныс'
+            if base == 'рапорт':
+                baseKaz = 'баянат'
+
+            # Load the Word document template
+            template_path = 'docx_generator/static/templates/transfer_template.docx'  # Update with the path to your template
+            document = Document(template_path)
+
+            # Define a function to replace placeholders in the document
+            def replace_placeholder(placeholder, replacement):
+                for paragraph1 in document.paragraphs:
+                    if placeholder in paragraph1.text:
+
+                        for run1 in paragraph1.runs:
+                            if placeholder in run1.text:
+                                run1.text = run1.text.replace(placeholder, replacement)
+                                run1.font.size = Pt(14)  # Adjust the font size if needed
+                                run1.font.name = 'Times New Roman'
+
+            # Replace placeholders with actual data
+            replace_placeholder('FIO', f"{personsFIO}")
+            replace_placeholder('POSITIONTITLE', f"{changedPositionTitle}")
+            replace_placeholder('DEPARTMENTNAME', f"{changedDepartmentName}")
+            replace_placeholder('CURRENTP', f"{changedCurrentPositionTitle}")
+            replace_placeholder('CURRENTD', f"{changedCurrentDepartmentName}")
+            replace_placeholder('BASE', base)
+
+            replace_placeholder('fio', f"{personsFIOKaz}")
+            replace_placeholder('currentd', f"{changedCurrentDepartmentNameKaz}")
+            replace_placeholder('currentp', f"{currentPosition.positionTitleKaz}")
+            replace_placeholder('departmentname', f"{changedNewDepartmentNameKaz}")
+            replace_placeholder('positiontitle', f"{newPositionInstance.positionTitleKaz}")
+            replace_placeholder('base', baseKaz)
+
+            doc_stream = BytesIO()
+            document.save(doc_stream)
+            doc_stream.seek(0)
+
+            # Prepare the HTTP response with the modified document
+            response = HttpResponse(doc_stream.read(),
+                                    content_type='application/vnd.openxmlformats-officedocument.wordprocessingml'
+                                                 '.document')
+            response['Content-Disposition'] = f'attachment; filename=Приказ о перемещении.docx'
 
             return response
 
