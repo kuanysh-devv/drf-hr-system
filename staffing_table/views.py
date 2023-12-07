@@ -1,20 +1,16 @@
 import io
 
-import xlsxwriter
-from django.db.models import F
 from django.http import JsonResponse, HttpResponse
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.renderers import JSONRenderer
-from rest_framework.response import Response
 from xlsxwriter import Workbook
 import pandas as pd
 from location.models import Location, Department
-from location.serializers import LocationSerializer, DepartmentSerializer
+from location.serializers import DepartmentSerializer
 from person.models import Person
 from person.serializers import PersonSerializer
-from position.models import Position, PositionInfo
-from position.serializers import PositionSerializer, PositionInfoSerializer
+from position.models import PositionInfo
+from position.serializers import PositionSerializer
 from staffing_table.models import StaffingTable
 from staffing_table.serializers import StaffingTableSerializer
 
@@ -116,7 +112,6 @@ def getStaffingTable(request, *args, **kwargs):
         location = Location.objects.get(pk=location_id)
 
         departments = Department.objects.filter(Location=location)
-        depSerializer = DepartmentSerializer(departments, many=True)
         data = {'Departments': []}
         for department in departments:
             DistinctPositionInfosToGetPositions = PositionInfo.objects.filter(department=department).distinct(

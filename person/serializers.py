@@ -77,15 +77,14 @@ class FamilyCompositionSerializer(serializers.ModelSerializer):
         model = FamilyComposition
         fields = "__all__"
 
-    def validate_relativeType(self, value):
+    @staticmethod
+    def validate_relativeType(value):
         try:
             # Attempt to get the Relative object with the provided name
             relative = Relative.objects.get(relativeName=value)
             return relative
         except Relative.DoesNotExist:
             raise serializers.ValidationError("Invalid relativeType. This relative does not exist.")
-
-
 
 
 class FamilyStatusSerializer(serializers.ModelSerializer):

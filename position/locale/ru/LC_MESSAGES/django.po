@@ -28,6 +28,9 @@ msgstr "О должностях"
 msgid "Position Title"
 msgstr "Название должности"
 
+msgid "Position Title Kaz"
+msgstr "Название должности на казахском"
+
 #: .\position\models.py:9
 msgid "Order"
 msgstr "Приоритетность"

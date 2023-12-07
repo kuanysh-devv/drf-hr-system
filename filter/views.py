@@ -4,7 +4,6 @@ from django.http import JsonResponse, HttpResponseServerError, HttpResponse
 from django.db.models import Q
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
-from django.db.models import F
 
 from django.views.decorators.csrf import csrf_exempt
 from xlsxwriter import Workbook
@@ -16,7 +15,6 @@ from identity_card_info.models import IdentityCardInfo
 from location.models import Department, Location
 from military_rank.models import RankInfo, MilitaryRank
 from person.models import Person, FamilyComposition, Relative, LanguageSkill, SportSkill, ClassCategory, Reward
-from photo.models import Photo
 from position.models import Position
 from resident_info.models import ResidentInfo
 from working_history.models import WorkingHistory
@@ -25,7 +23,6 @@ from working_history.models import WorkingHistory
 def filter_data(request):
     filtered_persons = Person.objects.all()
     filter_conditions = Q()
-    filtered_fields = []
     educationTypeGlobal = None
     relativeTypeGlobal = None
     langNameGlobal = None

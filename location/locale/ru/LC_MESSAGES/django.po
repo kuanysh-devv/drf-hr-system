@@ -40,6 +40,9 @@ msgstr "Города/Области"
 msgid "Department Name"
 msgstr "Название управления"
 
+msgid "Department Name Kaz"
+msgstr "Название управления на казахском"
+
 #: .\location\models.py:24
 msgid "Department"
 msgstr "Управление"

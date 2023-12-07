@@ -1,20 +1,23 @@
+import json
 from datetime import datetime
 from django.views.decorators.csrf import csrf_exempt
 from docx import Document
-from docx.enum.table import WD_ALIGN_VERTICAL, WD_CELL_VERTICAL_ALIGNMENT
+from docx.enum.table import WD_ALIGN_VERTICAL
 from docx.shared import Pt
 from io import BytesIO
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404
 
 from education.serializers import EducationSerializer, AcademicDegreeSerializer
+from location.models import Department
 from person.models import Person
 from photo.models import Photo
-from position.models import PositionInfo
 from birth_info.models import BirthInfo
 from education.models import Education, AcademicDegree
 import base64, io
 from docx.shared import Inches
+
+from position.models import PositionInfo, Position
 from working_history.models import WorkingHistory
 
 
@@ -165,3 +168,170 @@ def generate_work_reference(request, person_id):
     response['Content-Disposition'] = f'attachment; filename=work_reference.docx'
 
     return response
+
+
+@csrf_exempt
+def generate_appointment_decree(request):
+    if request.method == 'POST':
+        try:
+            # Get the raw request body
+            body = request.body.decode('utf-8')
+
+            # Parse the JSON data from the request body
+            data = json.loads(body)
+
+            # Extract variables from the parsed data
+            firstName = data.get('firstName')
+            surname = data.get('surname')
+            patronymic = data.get('patronymic')
+            gender = data.get('gender')
+            positionTitle = data.get('position')
+            departmentName = data.get('department')
+            month_count = data.get('monthCount')
+            base = data.get('base')
+
+            departmentInstance = Department.objects.get(DepartmentName=departmentName)
+            positionInstance = Position.objects.get(positionTitle=positionTitle)
+
+            soglasnie = ['б', 'в', 'г', 'д', 'ж', 'з', 'й', 'к', 'л', 'м', 'н', 'п', 'р', 'с', 'т', 'ф', 'х', 'ц', 'ч',
+                         'ш', 'щ']
+            glasnie = ['а', 'е', 'ё', 'и', 'о', 'у', 'ы', 'э', 'ю', 'я']
+
+            changedSurname = None
+            if gender == 'Мужской':
+                if surname[-1] in soglasnie:
+                    changedSurname = surname + 'а'  # Қасымбаева Қуаныша Ахатұлы
+                else:
+                    changedSurname = surname
+            if gender == 'Женский':
+                if surname[-1] in glasnie:
+                    changedSurname = surname + 'у'  # Қасымбаеву Динару
+                else:
+                    changedSurname = surname
+
+            changedFirstName = None
+            if gender == 'Мужской':
+                if surname[-1] in soglasnie:
+                    changedFirstName = firstName + 'а'  # Қасымбаева Қуаныша Ахатұлы
+                else:
+                    changedFirstName = firstName
+            if gender == 'Женский':
+                if surname[-1] in glasnie:
+                    changedFirstName = firstName + 'у'  # Қасымбаеву Динару
+                else:
+                    changedFirstName = firstName
+
+            personsFIO = changedSurname + ' ' + changedFirstName + ' ' + patronymic
+            personsFIOKaz = surname + ' ' + firstName + ' ' + patronymic
+            changedPositionTitle = positionTitle
+
+            positionsList = [
+                'Руководитель департамента',
+                'Заместитель руководителя департамента',
+                'Руководитель управления',
+                'Заместитель руководителя управления',
+                'Оперуполномоченный по особо важным делам',
+                'Старший оперуполномоченный',
+                'Оперуполномоченный'
+            ]
+
+            departmentsList = [
+                'ЦА',
+                'Управление по городу Алматы',
+                'Управление по городу Шымкент',
+                'Управление по Акмолинской области',
+                'Управление по Актюбинской области',
+                'Управление по Алматинской  области',
+                'Управление по области Жетісу',
+                'Управление по Атырауской области',
+                'Управление по Восточно-Казахстанской области',
+                'Управление по области Абай',
+                'Управление по Жамбылской области',
+                'Управление по Западно-Казахстанской области',
+                'Управление по Карагандинской области',
+                'Управление по области Ұлытау',
+                'Управление по Костанайской области',
+                'Управление по Кызылординской области',
+                'Управление по Мангистауской области',
+                'Управление по Павлодарской области',
+                'Управление по Северо-Казахстанской области',
+                'Управление по по Туркестанской области'
+            ]
+            if positionTitle == 'Руководитель департамента':
+                changedPositionTitle = 'Руководителя департамента'
+            if positionTitle == 'Заместитель руководителя департамента':
+                changedPositionTitle = 'Заместителя руководителя департамента'
+            if positionTitle == 'Руководитель управления':
+                changedPositionTitle = 'Руководителя управления'
+            if positionTitle == 'Заместитель руководителя управления':
+                changedPositionTitle = 'Заместителя руководителя управления'
+            if positionTitle == 'Оперуполномоченный по особо важным делам':
+                changedPositionTitle = 'Оперуполномоченного по особо важным делам'
+            if positionTitle == 'Старший оперуполномоченный':
+                changedPositionTitle = 'Старшего оперуполномоченного'
+            if positionTitle == 'Оперуполномоченный':
+                changedPositionTitle = 'Оперуполномоченного'
+
+            changedDepartmentName = departmentName
+            words = departmentName.split()
+            if words[0] == 'Управление':
+                words[0] = 'Управления'
+                changedDepartmentName = ' '.join(words)
+            if departmentName == 'ЦА':
+                changedDepartmentName = 'Управления'
+            if departmentName == 'ЦА':
+                departmentName = 'Управление'
+            baseKaz = None
+            if base == 'представление':
+                baseKaz = 'ұсыныс'
+            if base == 'рапорт':
+                baseKaz = 'баянат'
+            if base == 'заявление':
+                baseKaz = 'өтініш'
+            if base == 'протокол и докладная записка':
+                baseKaz = 'хаттама'
+
+            # Load the Word document template
+            template_path = 'docx_generator/static/templates/appointment_template.docx'  # Update with the path to your template
+            document = Document(template_path)
+
+            # Define a function to replace placeholders in the document
+            def replace_placeholder(placeholder, replacement):
+                for paragraph1 in document.paragraphs:
+                    if placeholder in paragraph1.text:
+
+                        for run1 in paragraph1.runs:
+                            print(run1.text)
+                            if placeholder in run1.text:
+                                run1.text = run1.text.replace(placeholder, replacement)
+                                run1.font.size = Pt(14)  # Adjust the font size if needed
+                                run1.font.name = 'Times New Roman'
+
+            # Replace placeholders with actual data
+            replace_placeholder('departmentName', f"{departmentName}")
+            replace_placeholder('PersonsFio', f"{personsFIO}")
+            replace_placeholder('PositionTitle', f"{changedPositionTitle}")
+            replace_placeholder('ChangedDepartmentName', f"{changedDepartmentName}")
+            replace_placeholder('monthCount', str(month_count))
+            replace_placeholder('base', base)
+
+            replace_placeholder('DepartmentNameKaz', f"{departmentInstance.DepartmentNameKaz}")
+            replace_placeholder('PersonFioKaz', f"{personsFIOKaz}")
+            replace_placeholder('positionTitleKaz', f"{positionInstance.positionTitleKaz}")
+            replace_placeholder('variable4', baseKaz)
+            doc_stream = BytesIO()
+            document.save(doc_stream)
+            doc_stream.seek(0)
+
+            # Prepare the HTTP response with the modified document
+            response = HttpResponse(doc_stream.read(),
+                                    content_type='application/vnd.openxmlformats-officedocument.wordprocessingml'
+                                                 '.document')
+            response['Content-Disposition'] = f'attachment; filename=Приказ о назначении.docx'
+
+            return response
+
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON data'}, status=400)
+
+    return JsonResponse({'error': 'Invalid request method'}, status=405)

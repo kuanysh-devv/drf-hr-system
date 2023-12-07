@@ -6,6 +6,7 @@ from military_rank.models import MilitaryRank
 
 class Position(models.Model):
     positionTitle = models.CharField(max_length=255, verbose_name=_("Position Title"))
+    positionTitleKaz = models.CharField(max_length=255, verbose_name=_("Position Title Kaz"), default='Жедел уәкіл')
     order = models.IntegerField(null=True, verbose_name=_("Order"))
     maxRank = models.ForeignKey(MilitaryRank, on_delete=models.CASCADE, default=1, verbose_name=_("Max Rank"))
 
@@ -23,7 +24,7 @@ class PositionInfo(models.Model):
     receivedDate = models.DateField(verbose_name=_("Received Date"))
 
     def __str__(self):
-        return str(self.position) + ' ' + str(self.id)
+        return str(self.position) + ' ' + str(self.department.DepartmentName)
 
     class Meta:
         verbose_name = _("Position Info")

@@ -61,6 +61,7 @@ urlpatterns = [
     path('api/v1/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
     path('api/v1/change_password/', change_password, name='change_password'),
     path('generate_work_reference/<int:person_id>/', generate_work_reference, name='generate_work_reference'),
+    path('api/v1/generate-appointment-decree/', generate_appointment_decree, name='generate_appointment_decree'),
     path('api/v1/persons_by_department/', departments_persons, name='persons_by_department'),
     path('api/v1/staffing_table/', getStaffingTable, name='staffing_table'),
     path('api/v1/location_departments/<str:location_name>/', departments_by_location, name='departments_by_location'),
