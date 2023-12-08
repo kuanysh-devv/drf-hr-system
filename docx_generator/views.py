@@ -6,6 +6,7 @@ from io import BytesIO
 
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from docx import Document
 from docx.enum.table import WD_ALIGN_VERTICAL
@@ -13,6 +14,7 @@ from docx.shared import Inches
 from docx.shared import Pt
 
 from birth_info.models import BirthInfo
+from decree.models import DecreeList
 from education.models import Education, AcademicDegree
 from education.serializers import EducationSerializer, AcademicDegreeSerializer
 from location.models import Department
@@ -179,7 +181,7 @@ def generate_appointment_decree(request):
             body = request.body.decode('utf-8')
 
             # Parse the JSON data from the request body
-            data = json.loads(body)
+            data = json
 
             # Extract variables from the parsed data
             firstName = data.get('firstName')
@@ -358,6 +360,18 @@ def generate_transfer_decree(request):
             personInstance = Person.objects.get(pk=person_id)
             newDepartmentInstance = Department.objects.get(DepartmentName=newDepartmentName)
             newPositionInstance = Position.objects.get(positionTitle=newPositionTitle)
+
+            personsPositionInfo = PositionInfo.objects.get(person=personInstance)
+            personsPositionInfo.department = newDepartmentInstance
+            personsPositionInfo.position = newPositionInstance
+            personsPositionInfo.receivedDate = timezone.datetime.now()
+            personsPositionInfo.save()
+
+            DecreeList.objects.create(
+                decreeType="Перемещение",
+                decreeDate=timezone.datetime.now(),
+                personId=personInstance
+            )
 
             currentPosition = PositionInfo.objects.get(person=personInstance).position
             currentDepartment = PositionInfo.objects.get(person=personInstance).department

@@ -5,13 +5,16 @@ from person.models import Person
 
 class DecreeList(models.Model):
     decreeType = models.CharField(max_length=255, verbose_name=_("Decree Type"))
-    decreeSubType = models.CharField(max_length=255, verbose_name=_("Decree SubType"))
+    decreeSubType = models.CharField(max_length=255, verbose_name=_("Decree SubType"), null=True, blank=True)
     decreeDate = models.DateField(verbose_name=_("Decree Date"))
     personId = models.ForeignKey(Person, on_delete=models.CASCADE, default=1, verbose_name=_("Person"))
 
     class Meta:
         verbose_name = _("Decree List")
         verbose_name_plural = _("Decree Lists")
+
+    def __str__(self):
+        return self.decreeType + ' - ИИН: ' + str(self.personId) + ' - Дата: ' + str(self.decreeDate)
 
 
 class SpecCheck(models.Model):
@@ -52,3 +55,5 @@ class Investigation(models.Model):
 
     def __str__(self):
         return str(self.personId) + ' ' + self.investigation_decree_number
+
+

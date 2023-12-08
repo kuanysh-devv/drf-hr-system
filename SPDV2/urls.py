@@ -77,5 +77,7 @@ urlpatterns = [
     path('api/v1/get-available-pin/', getAvailableLastPin, name='getAvailableLastPin'),
     path('api/v1/pension-list-view/', pension_list_view, name='pension_list_view'),
     path('api/v1/pension-list-download/', pension_list_view_download, name='pension_list_view_download'),
-
+    path('api/v1/get-decree-list', getDecreeList, name='getDecreeList'),
+    path('api/v1/get-transfer-info', getTransferInfo, name='getTransferInfo'),
+    path('api/v1/cancel-transfer/', cancelTransfer, name='cancelTransfer'),
 ]
