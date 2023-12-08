@@ -15,7 +15,7 @@ class WorkingHistory(models.Model):
     personId = models.ForeignKey(Person, on_delete=models.CASCADE, default=1, verbose_name=_("Person"))
 
     def __str__(self):
-        return str(self.positionName)
+        return str(self.personId.pin) + " - " + str(self.positionName) + " - " + str(self.department)
 
     class Meta:
         verbose_name = _("Working History")

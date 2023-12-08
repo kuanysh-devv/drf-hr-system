@@ -33,15 +33,3 @@ def person_post_save(sender, instance, created, **kwargs):
         User = get_user_model()
         user = User.objects.create_user(username=username, password=hashed_password, person_id=instance)
         user.save()
-
-        posinfo_instance = instance.positionInfo
-
-        WorkingHistory.objects.create(
-                positionName=str(posinfo_instance.position.positionTitle),
-                startDate=posinfo_instance.receivedDate,
-                personId=instance,
-                department=posinfo_instance.department.DepartmentName,
-                organizationName="АФМ",
-                organizationAddress="Бейбітшілік 10"
-                # Add other fields from PositionInfo as needed
-        )

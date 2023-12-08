@@ -11,7 +11,7 @@ class StaffingTable(models.Model):
     max_count = models.IntegerField(verbose_name=_("Max Count"))
 
     def __str__(self):
-        return str(self.id)
+        return str("Штатное расписание - ") + str(self.department.DepartmentName) + " - " + str(self.position.positionTitle)
 
     class Meta:
         verbose_name = _("Staffing Table")

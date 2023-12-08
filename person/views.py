@@ -530,6 +530,17 @@ class PersonViewSet(viewsets.ModelViewSet):
                 # Handle other exceptions if necessary
                 print(f"An error occurred: {e}")
 
+
+            WorkingHistory.objects.create(
+                positionName=str(posInfo.position.positionTitle),
+                startDate=posInfo.receivedDate,
+                personId=person,
+                department=posInfo.department.DepartmentName,
+                organizationName="АФМ",
+                organizationAddress="Бейбітшілік 10"
+                # Add other fields from PositionInfo as needed
+            )
+
             # SpecCheckInfo
             try:
                 # Check if 'SpecCheckInfo' key is present in the request data
