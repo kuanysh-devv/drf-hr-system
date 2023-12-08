@@ -1,6 +1,8 @@
 import base64
 import json
 from datetime import datetime, timedelta, date
+
+from django.db.models import Q
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET
@@ -530,7 +532,6 @@ class PersonViewSet(viewsets.ModelViewSet):
                 # Handle other exceptions if necessary
                 print(f"An error occurred: {e}")
 
-
             WorkingHistory.objects.create(
                 positionName=str(posInfo.position.positionTitle),
                 startDate=posInfo.receivedDate,
@@ -827,6 +828,35 @@ class PersonViewSet(viewsets.ModelViewSet):
         return overall_experience
 
 
+def search_persons(request):
+    if request.method == 'GET':
+        search_query = request.GET.get('q', '')
+        search_fields = ['firstName__icontains', 'surname__icontains', 'patronymic__icontains']
+
+        # Use Q objects to create OR conditions for each search field
+        query = Q()
+        for field in search_fields:
+            query |= Q(**{field: search_query})
+
+        persons = Person.objects.filter(query)
+
+        # You can serialize the persons to JSON and return it
+        persons_data = [
+            {
+                'id': person.id,
+                'firstName': person.firstName,
+                'surname': person.surname,
+                'patronymic': person.patronymic,
+                'photo': person.photo_set.first().photoBinary if person.photo_set.exists() else None
+            }
+            for person in persons
+        ]
+
+        return JsonResponse({'persons': persons_data})
+
+    return JsonResponse({'error': 'Invalid request method'})
+
+
 class GenderViewSet(viewsets.ModelViewSet):
     queryset = Gender.objects.all()
     serializer_class = GenderSerializer
@@ -886,16 +916,16 @@ def change_password(request):
     if request.method == 'POST':
         try:
             # Parse JSON data from the request body
-            data = json
+            data = json.loads(request.body.decode('utf-8'))
 
             person_id = data.get('personId')
             print(person_id)
             current_password = data.get('current_password')
             new_password = data.get('new_password')
             repeat_password = data.get('repeat_password')
-            Person_instance = Person.objects.get(pk=person_id)
+
             # Assuming CustomUser model has a field named 'person_id'
-            user = get(person_id_id=Person_instance)
+            user = CustomUser.objects.get(person_id=person_id)
             print(user)
             if user.check_password(current_password):
                 if new_password == repeat_password:

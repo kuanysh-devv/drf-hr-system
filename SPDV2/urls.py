@@ -80,4 +80,5 @@ urlpatterns = [
     path('api/v1/get-decree-list', getDecreeList, name='getDecreeList'),
     path('api/v1/get-transfer-info', getTransferInfo, name='getTransferInfo'),
     path('api/v1/cancel-transfer/', cancelTransfer, name='cancelTransfer'),
+    path('api/v1/search_persons/', search_persons, name='search_persons'),
 ]
