@@ -1,4 +1,4 @@
-from django.db.models.signals import post_save, post_init, pre_init, pre_save
+from django.db.models.signals import pre_save
 from django.dispatch import receiver
 from django.utils import timezone
 from education.models import Attestation
