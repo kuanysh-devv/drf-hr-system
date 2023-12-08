@@ -112,6 +112,8 @@ def cancelTransfer(request):
             working_history_duplicate = WorkingHistory.objects.filter(personId=personInstance).order_by('-id').first()
             working_history_duplicate.delete()
 
+            decree_instance.delete()
+
             response_data = {'status': 'success', 'message': 'Transfer canceled successfully'}
             response_json = json.dumps(response_data)
             return HttpResponse(response_json, content_type='application/json')
