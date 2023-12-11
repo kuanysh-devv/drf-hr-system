@@ -181,7 +181,7 @@ def generate_appointment_decree(request):
             body = request.body.decode('utf-8')
 
             # Parse the JSON data from the request body
-            data = json
+            data = json.loads(body)
 
             # Extract variables from the parsed data
             firstName = data.get('firstName')
