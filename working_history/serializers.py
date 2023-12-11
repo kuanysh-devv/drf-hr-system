@@ -35,8 +35,15 @@ class WorkingHistorySerializer(serializers.ModelSerializer):
         overall_experience = self.get_overall_experience(instance)
         pravo_experience = self.get_pravo_experience(instance)
 
-        data['overall_experience'] = overall_experience
-        data['pravo_experience'] = pravo_experience
+        # Remove the 'overall_experience' and 'pravo_experience' keys from each working history item
+        for key in ['overall_experience', 'pravo_experience']:
+            data.pop(key, None)
+
+        # Add 'overall_experience' and 'pravo_experience' only once at the top level
+        if not hasattr(self, 'added_experience'):
+            data['overall_experience'] = overall_experience
+            data['pravo_experience'] = pravo_experience
+            self.added_experience = True
 
         return data
 
