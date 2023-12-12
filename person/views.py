@@ -208,14 +208,15 @@ class PersonViewSet(viewsets.ModelViewSet):
         rankSerializer = RankInfoSerializer(data=request.data.get('RankInfo'))
         if posSerializer.is_valid() and rankSerializer.is_valid():
             # Create the Person instance
-            positionInfoData = request.data
+            positionInfoData = request.data.get('PositionInfo')
+
             positionName = positionInfoData.get('position')
             positionInstance = Position.objects.get(positionTitle=positionName)
 
             departmentName = positionInfoData.get('department')
             departmentInstance = Department.objects.get(DepartmentName=departmentName)
 
-            rankInfoData = request.data
+            rankInfoData = request.data.get('RankInfo')
             rankName = rankInfoData.get('militaryRank')
             receivedType = rankInfoData.get('receivedType')
             receivedDate = rankInfoData.get('receivedDate')
@@ -230,7 +231,7 @@ class PersonViewSet(viewsets.ModelViewSet):
             rankInfo = rankSerializer.create(validated_data=rank_info_data)
             posInfo = posSerializer.save(position=positionInstance, department=departmentInstance)
 
-            person_data = request.data
+            person_data = request.data.get('Person')
             genderName = person_data.get('gender')
             genderInstance = Gender.objects.get(genderName=genderName)
             familyStatusName = person_data.get('familyStatus')
