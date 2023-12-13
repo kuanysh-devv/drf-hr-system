@@ -789,13 +789,19 @@ class PersonViewSet(viewsets.ModelViewSet):
 
 def search_persons(request):
     if request.method == 'GET':
-        search_query = request.GET.get('q', '')
+        search_query = request.GET.get('q', '').strip()
+
+        # Split the search query into separate terms
+        search_terms = search_query.split()
+
+        # Define search fields
         search_fields = ['firstName__icontains', 'surname__icontains', 'patronymic__icontains']
 
-        # Use Q objects to create OR conditions for each search field
+        # Use Q objects to create OR conditions for each search field and term
         query = Q()
-        for field in search_fields:
-            query |= Q(**{field: search_query})
+        for term in search_terms:
+            for field in search_fields:
+                query |= Q(**{field: term})
 
         persons = Person.objects.filter(query)
 
