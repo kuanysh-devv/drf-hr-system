@@ -362,6 +362,9 @@ def generate_transfer_decree(request):
             newPositionInstance = Position.objects.get(positionTitle=newPositionTitle)
 
             personsPositionInfo = PositionInfo.objects.get(person=personInstance)
+            currentPosition = PositionInfo.objects.get(person=personInstance).position
+            currentDepartment = PositionInfo.objects.get(person=personInstance).department
+
             personsPositionInfo.department = newDepartmentInstance
             personsPositionInfo.position = newPositionInstance
             personsPositionInfo.receivedDate = timezone.datetime.now()
@@ -372,9 +375,6 @@ def generate_transfer_decree(request):
                 decreeDate=timezone.datetime.now(),
                 personId=personInstance
             )
-
-            currentPosition = PositionInfo.objects.get(person=personInstance).position
-            currentDepartment = PositionInfo.objects.get(person=personInstance).department
 
             soglasnie = ['б', 'в', 'г', 'д', 'ж', 'з', 'й', 'к', 'л', 'м', 'н', 'п', 'р', 'с', 'т', 'ф', 'х', 'ц', 'ч',
                          'ш', 'щ']
