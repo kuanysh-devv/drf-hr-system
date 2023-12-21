@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-12-01 15:48+0600\n"
+"POT-Creation-Date: 2023-12-21 10:31+0600\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -33,44 +33,45 @@ msgid "Order"
 msgstr ""
 
 #: .\military_rank\models.py:8
+msgid "PensionAge"
+msgstr "Пенсионный возраст"
+
+#: .\military_rank\models.py:9
 msgid "Next Promotion Date in Days"
 msgstr "Следующее повышение в днях"
 
-#: .\military_rank\models.py:14 .\military_rank\models.py:19
+#: .\military_rank\models.py:15 .\military_rank\models.py:20
 msgid "Military Rank"
 msgstr "Специальное звание"
 
-#: .\military_rank\models.py:15
+#: .\military_rank\models.py:16
 msgid "Military Ranks"
 msgstr "Специальные звания"
 
-#: .\military_rank\models.py:20
+#: .\military_rank\models.py:21
 msgid "Received Type"
 msgstr "Вид получения повышения"
 
-#: .\military_rank\models.py:21
+#: .\military_rank\models.py:22
 msgid "Decree Number"
 msgstr "Номер приказа"
 
-#: .\military_rank\models.py:22
+#: .\military_rank\models.py:23
 msgid "Received Date"
 msgstr "Дата получения"
 
-#: .\military_rank\models.py:23
+#: .\military_rank\models.py:24
 msgid "Next Promotion Date"
 msgstr "Дата следующего повышения"
 
-#: .\military_rank\models.py:24
+#: .\military_rank\models.py:25
 msgid "Need Position Up"
 msgstr "Необходимо повыситься по должности для повышения по званию"
 
-#: .\military_rank\models.py:30
+#: .\military_rank\models.py:31
 msgid "Rank Info"
 msgstr "Информация о звании"
 
-#: .\military_rank\models.py:31
+#: .\military_rank\models.py:32
 msgid "Rank Infos"
 msgstr "Информации о звании"
-
-msgid "PensionAge"
-msgstr "Пенсионный возраст"

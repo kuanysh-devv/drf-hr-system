@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-12-01 15:17+0600\n"
+"POT-Creation-Date: 2023-12-21 10:31+0600\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -24,115 +24,115 @@ msgstr ""
 msgid "education_ru"
 msgstr "Образование"
 
-#: .\education\models.py:8
+#: .\education\models.py:9
 msgid "Education Type"
 msgstr "Вид образования"
 
-#: .\education\models.py:9
+#: .\education\models.py:10
 msgid "Education Place"
 msgstr "Место образования"
 
-#: .\education\models.py:10
+#: .\education\models.py:11
 msgid "Education Start Date"
 msgstr "Дата начала образования"
 
-#: .\education\models.py:11
+#: .\education\models.py:12
 msgid "Education End Date"
 msgstr "Дата окончания образования"
 
-#: .\education\models.py:12
+#: .\education\models.py:13
 msgid "Speciality"
 msgstr "Специальность"
 
-#: .\education\models.py:13
+#: .\education\models.py:14
 msgid "Diploma Number"
 msgstr "Номер диплома"
 
-#: .\education\models.py:14 .\education\models.py:31 .\education\models.py:46
-#: .\education\models.py:61
+#: .\education\models.py:15 .\education\models.py:32 .\education\models.py:47
+#: .\education\models.py:77
 msgid "Person"
 msgstr ""
 
-#: .\education\models.py:20
+#: .\education\models.py:21
 msgid "Education"
 msgstr "Образование"
 
-#: .\education\models.py:21
+#: .\education\models.py:22
 msgid "Educations"
 msgstr "Образования"
 
-#: .\education\models.py:25
+#: .\education\models.py:26
 msgid "Course Name"
 msgstr "Название курса"
 
-#: .\education\models.py:26
+#: .\education\models.py:27
 msgid "Course Type"
 msgstr "Вид курса"
 
-#: .\education\models.py:27
+#: .\education\models.py:28
 msgid "Course Organization"
 msgstr "Организация прохождения курса"
 
-#: .\education\models.py:28
+#: .\education\models.py:29
 msgid "Start Date"
 msgstr "Дата начала курса"
 
-#: .\education\models.py:29
+#: .\education\models.py:30
 msgid "End Date"
 msgstr "Дата окончания курса"
 
-#: .\education\models.py:30
+#: .\education\models.py:31
 msgid "Document Type"
 msgstr "Вид документа"
 
-#: .\education\models.py:37
+#: .\education\models.py:38
 msgid "Course"
 msgstr "Курс"
 
-#: .\education\models.py:38
+#: .\education\models.py:39
 msgid "Courses"
 msgstr "Курсы"
 
-#: .\education\models.py:42
+#: .\education\models.py:43
 msgid "Attestation Result"
 msgstr "Результат аттестации"
 
-#: .\education\models.py:43
+#: .\education\models.py:44
 msgid "Last Attestation Date"
 msgstr "Дата последней аттестации"
 
-#: .\education\models.py:44
+#: .\education\models.py:45
 msgid "Next Attestation Date (Min)"
 msgstr "Минимальная дата следующей аттестации"
 
-#: .\education\models.py:45
+#: .\education\models.py:46
 msgid "Next Attestation Date (Max)"
 msgstr "Максимальная дата следующей аттестации"
 
-#: .\education\models.py:52
+#: .\education\models.py:68
 msgid "Attestation"
 msgstr "Аттестация"
 
-#: .\education\models.py:53
+#: .\education\models.py:69
 msgid "Attestations"
 msgstr "Аттестации"
 
-#: .\education\models.py:57
+#: .\education\models.py:73
 msgid "Academic Place"
 msgstr "Высшее учебное заведение"
 
-#: .\education\models.py:58 .\education\models.py:67
+#: .\education\models.py:74 .\education\models.py:83
 msgid "Academic Degree"
 msgstr "Академическая степень"
 
-#: .\education\models.py:59
+#: .\education\models.py:75
 msgid "Academic Diploma Number"
 msgstr "Номер диплома"
 
-#: .\education\models.py:60
+#: .\education\models.py:76
 msgid "Academic Diploma Date"
 msgstr "Дата получения диплома"
 
-#: .\education\models.py:68
+#: .\education\models.py:84
 msgid "Academic Degrees"
 msgstr "Академические степени"

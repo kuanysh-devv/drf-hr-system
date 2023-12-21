@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-12-01 15:29+0600\n"
+"POT-Creation-Date: 2023-12-21 10:31+0600\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -28,7 +28,7 @@ msgstr "Города/Области управлений"
 msgid "Location Name"
 msgstr "Название города/области"
 
-#: .\location\models.py:12 .\location\models.py:18
+#: .\location\models.py:12 .\location\models.py:19
 msgid "Location"
 msgstr "Город/Область"
 
@@ -40,13 +40,14 @@ msgstr "Города/Области"
 msgid "Department Name"
 msgstr "Название управления"
 
+#: .\location\models.py:18
 msgid "Department Name Kaz"
 msgstr "Название управления на казахском"
 
-#: .\location\models.py:24
+#: .\location\models.py:25
 msgid "Department"
 msgstr "Управление"
 
-#: .\location\models.py:25
+#: .\location\models.py:26
 msgid "Departments"
 msgstr "Управления"

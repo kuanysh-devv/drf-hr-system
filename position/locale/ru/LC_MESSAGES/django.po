@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-12-01 16:23+0600\n"
+"POT-Creation-Date: 2023-12-21 10:31+0600\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -28,37 +28,38 @@ msgstr "О должностях"
 msgid "Position Title"
 msgstr "Название должности"
 
+#: .\position\models.py:9
 msgid "Position Title Kaz"
 msgstr "Название должности на казахском"
 
-#: .\position\models.py:9
+#: .\position\models.py:10
 msgid "Order"
 msgstr "Приоритетность"
 
-#: .\position\models.py:10
+#: .\position\models.py:11
 msgid "Max Rank"
 msgstr "Максимальное звание в этой должности"
 
-#: .\position\models.py:16 .\position\models.py:21
+#: .\position\models.py:17 .\position\models.py:22
 msgid "Position"
 msgstr "Должность"
 
-#: .\position\models.py:17
+#: .\position\models.py:18
 msgid "Positions"
 msgstr "Должности"
 
-#: .\position\models.py:22
+#: .\position\models.py:23
 msgid "Department"
 msgstr "Управление"
 
-#: .\position\models.py:23
+#: .\position\models.py:24
 msgid "Received Date"
 msgstr "Дата получения"
 
-#: .\position\models.py:29
+#: .\position\models.py:30
 msgid "Position Info"
 msgstr "Информация о должности"
 
-#: .\position\models.py:30
+#: .\position\models.py:31
 msgid "Position Infos"
 msgstr "Информации о должностях"

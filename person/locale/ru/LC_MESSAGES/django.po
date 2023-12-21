@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-12-01 16:12+0600\n"
+"POT-Creation-Date: 2023-12-21 10:31+0600\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -44,7 +44,7 @@ msgstr "Имя"
 msgid "Patronymic"
 msgstr "Отчество"
 
-#: .\person\models.py:14 .\person\models.py:44
+#: .\person\models.py:14 .\person\models.py:45
 msgid "Gender"
 msgstr "Пол"
 
@@ -64,188 +64,191 @@ msgstr "Информация о должности"
 msgid "Rank Info"
 msgstr "Информация о звании"
 
-#: .\person\models.py:19
+msgid "isFired"
+msgstr "Уволен"
+
+#: .\person\models.py:20
 msgid "Role"
 msgstr "Роль"
 
-#: .\person\models.py:33 .\person\models.py:78 .\person\models.py:90
-#: .\person\models.py:103 .\person\models.py:117 .\person\models.py:130
-#: .\person\models.py:143 .\person\models.py:181
+#: .\person\models.py:34 .\person\models.py:79 .\person\models.py:91
+#: .\person\models.py:104 .\person\models.py:118 .\person\models.py:131
+#: .\person\models.py:144 .\person\models.py:182
 msgid "Person"
 msgstr "Сотрудники"
 
-#: .\person\models.py:34
+#: .\person\models.py:35
 msgid "Persons"
 msgstr "Сотрудники"
 
-#: .\person\models.py:38
+#: .\person\models.py:39
 msgid "Gender Name"
 msgstr "Название пола"
 
-#: .\person\models.py:45
+#: .\person\models.py:46
 msgid "Genders"
 msgstr "Пол"
 
-#: .\person\models.py:49
+#: .\person\models.py:50
 msgid "Status Name"
 msgstr "Название семейного положения"
 
-#: .\person\models.py:55
+#: .\person\models.py:56
 msgid "FamilyStatus"
 msgstr "Семейное положение"
 
-#: .\person\models.py:56
+#: .\person\models.py:57
 msgid "FamilyStatuses"
 msgstr "Семейное положение"
 
-#: .\person\models.py:60 .\person\models.py:72
+#: .\person\models.py:61 .\person\models.py:73
 msgid "Relative Name"
 msgstr "Имя родственника"
 
-#: .\person\models.py:66
+#: .\person\models.py:67
 msgid "Relative"
 msgstr "Родственник/Близкий"
 
-#: .\person\models.py:67
+#: .\person\models.py:68
 msgid "Relatives"
 msgstr "Родственники/Близкие"
 
-#: .\person\models.py:71
+#: .\person\models.py:72
 msgid "Relative Type"
 msgstr "Степень родства"
 
-#: .\person\models.py:73
+#: .\person\models.py:74
 msgid "Relative Surname"
 msgstr "Фамилия родственника"
 
-#: .\person\models.py:74
+#: .\person\models.py:75
 msgid "Relative Patronymic"
 msgstr "Отчество родственника"
 
-#: .\person\models.py:75
+#: .\person\models.py:76
 msgid "Relative IIN"
 msgstr "ИИН родственника"
 
-#: .\person\models.py:76
+#: .\person\models.py:77
 msgid "Relative Birth Date"
 msgstr "Дата рождения родственника"
 
-#: .\person\models.py:77
+#: .\person\models.py:78
 msgid "Relative Job Place"
 msgstr "Место работы родственника"
 
-#: .\person\models.py:84
+#: .\person\models.py:85
 msgid "FamilyComposition"
 msgstr "Состав семьи"
 
-#: .\person\models.py:85
+#: .\person\models.py:86
 msgid "FamilyCompositions"
 msgstr "Составы семей"
 
-#: .\person\models.py:89
+#: .\person\models.py:90
 msgid "Category Type"
 msgstr "Тип категорий"
 
-#: .\person\models.py:96
+#: .\person\models.py:97
 msgid "ClassCategory"
 msgstr "Классная категория"
 
-#: .\person\models.py:97
+#: .\person\models.py:98
 msgid "ClassCategories"
 msgstr "Классные категории"
 
-#: .\person\models.py:101
+#: .\person\models.py:102
 msgid "Autobiography Text"
 msgstr "Автобиография (текст)"
 
-#: .\person\models.py:102
+#: .\person\models.py:103
 msgid "Autobiography Image"
 msgstr "Автобиография (скан)"
 
-#: .\person\models.py:109
+#: .\person\models.py:110
 msgid "Autobiography"
 msgstr "Автобиография"
 
-#: .\person\models.py:110
+#: .\person\models.py:111
 msgid "Autobiographies"
 msgstr "Автобиографии"
 
-#: .\person\models.py:114
+#: .\person\models.py:115
 msgid "Reward Type"
 msgstr "Тип поощрения"
 
-#: .\person\models.py:115
+#: .\person\models.py:116
 msgid "Reward Document Number"
 msgstr "Номер документа поощрения"
 
-#: .\person\models.py:116
+#: .\person\models.py:117
 msgid "Reward Date"
 msgstr "Дата поощрения"
 
-#: .\person\models.py:123
+#: .\person\models.py:124
 msgid "Reward"
 msgstr "Поощрение"
 
-#: .\person\models.py:124
+#: .\person\models.py:125
 msgid "Rewards"
 msgstr "Поощрения"
 
-#: .\person\models.py:128
+#: .\person\models.py:129
 msgid "Language Name"
 msgstr "Язык"
 
-#: .\person\models.py:129
+#: .\person\models.py:130
 msgid "Language Skill Level"
 msgstr "Уровень владения"
 
-#: .\person\models.py:136
+#: .\person\models.py:137
 msgid "LanguageSkill"
 msgstr "Знание языка"
 
-#: .\person\models.py:137
+#: .\person\models.py:138
 msgid "LanguageSkills"
 msgstr "Знания языков"
 
-#: .\person\models.py:141
+#: .\person\models.py:142
 msgid "Sport Type"
 msgstr "Вид спорта"
 
-#: .\person\models.py:142
+#: .\person\models.py:143
 msgid "Sport Skill Level"
 msgstr "Уровень владения"
 
-#: .\person\models.py:149
+#: .\person\models.py:150
 msgid "SportSkill"
 msgstr "Спортивное достижение"
 
-#: .\person\models.py:150
+#: .\person\models.py:151
 msgid "SportSkills"
 msgstr "Спортивные достижения"
 
-#: .\person\models.py:182
+#: .\person\models.py:183
 msgid "Military Rank"
 msgstr "Специальное звание"
 
-#: .\person\models.py:183
+#: .\person\models.py:184
 msgid "Received Type"
 msgstr "Вид получения повышения"
 
-#: .\person\models.py:184
+#: .\person\models.py:185
 msgid "Decree Number"
 msgstr "Номер приказа"
 
-#: .\person\models.py:185
+#: .\person\models.py:186
 msgid "Start Date"
 msgstr "Дата начала службы"
 
-#: .\person\models.py:186
+#: .\person\models.py:187
 msgid "End Date"
 msgstr "Дата окончания службы"
 
-#: .\person\models.py:192
+#: .\person\models.py:193
 msgid "RankArchive"
 msgstr "Архив званий"
 
-#: .\person\models.py:193
+#: .\person\models.py:194
 msgid "RankArchives"
 msgstr "Архивы званий"

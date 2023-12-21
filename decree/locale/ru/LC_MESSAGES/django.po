@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-12-01 15:17+0600\n"
+"POT-Creation-Date: 2023-12-21 10:31+0600\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -36,8 +36,8 @@ msgstr "Сабтип приказа"
 msgid "Decree Date"
 msgstr "Дата приказа"
 
-#: .\decree\models.py:10 .\decree\models.py:20 .\decree\models.py:33
-#: .\decree\models.py:47
+#: .\decree\models.py:10 .\decree\models.py:23 .\decree\models.py:36
+#: .\decree\models.py:50
 msgid "Person"
 msgstr ""
 
@@ -49,54 +49,54 @@ msgstr "Приказ"
 msgid "Decree Lists"
 msgstr "Список приказов"
 
-#: .\decree\models.py:18
+#: .\decree\models.py:21
 msgid "Document Number"
 msgstr "Номер документа"
 
-#: .\decree\models.py:19
+#: .\decree\models.py:22
 msgid "Document Date"
 msgstr "Дата документа"
 
-#: .\decree\models.py:23
+#: .\decree\models.py:26
 msgid "Spec Check"
 msgstr "Специальная проверка"
 
-#: .\decree\models.py:24
+#: .\decree\models.py:27
 msgid "Spec Checks"
 msgstr "Специальные проверки"
 
-#: .\decree\models.py:31
+#: .\decree\models.py:34
 msgid "Sick Document Number"
 msgstr "Номер больничного документа"
 
-#: .\decree\models.py:32
+#: .\decree\models.py:35
 msgid "Sick Document Date"
 msgstr "Дата больничного документа"
 
-#: .\decree\models.py:36
+#: .\decree\models.py:39
 msgid "Sick Leave"
 msgstr "Больничный лист"
 
-#: .\decree\models.py:37
+#: .\decree\models.py:40
 msgid "Sick Leaves"
 msgstr "Больничные листы"
 
-#: .\decree\models.py:44
+#: .\decree\models.py:47
 msgid "Investigation Decree Type"
 msgstr "Тип приказа взыскания"
 
-#: .\decree\models.py:45
+#: .\decree\models.py:48
 msgid "Investigation Decree Number"
 msgstr "Дата приказа взыскания"
 
-#: .\decree\models.py:46
+#: .\decree\models.py:49
 msgid "Investigation Date"
 msgstr "Дата взыскания"
 
-#: .\decree\models.py:50
+#: .\decree\models.py:53
 msgid "Investigation"
 msgstr "Взыскание"
 
-#: .\decree\models.py:51
+#: .\decree\models.py:54
 msgid "Investigations"
 msgstr "Взыскания"
