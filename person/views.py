@@ -333,7 +333,7 @@ class PersonViewSet(viewsets.ModelViewSet):
             # FamilyComposition
             try:
                 if 'FamilyComposition' in request.data:
-                    family_composition_data = request.data
+                    family_composition_data = request.data['FamilyComposition']
                     if 'relatives' in family_composition_data and family_composition_data['relatives']:
                         relatives_data = family_composition_data.get('relatives')
 
@@ -359,7 +359,7 @@ class PersonViewSet(viewsets.ModelViewSet):
             # Education
             try:
                 if 'Education' in request.data:
-                    education_data = request.data
+                    education_data = request.data['Education']
                     if 'educations' in education_data and education_data['educations']:
                         educations_data = education_data.get('educations')
                         for education_data in educations_data:
@@ -381,7 +381,7 @@ class PersonViewSet(viewsets.ModelViewSet):
             try:
                 # Check if 'LanguageSkill' key is present in the request data
                 if 'LanguageSkill' in request.data:
-                    language_skill_data = request.data
+                    language_skill_data = request.data['LanguageSkill']
 
                     # Check if 'languageSkills' key is present and it's not an empty array
                     if 'languageSkills' in language_skill_data and language_skill_data['languageSkills']:
@@ -411,7 +411,7 @@ class PersonViewSet(viewsets.ModelViewSet):
             try:
                 # Check if 'AcademicDegree' key is present in the request data
                 if 'AcademicDegree' in request.data:
-                    academic_degree_data = request.data
+                    academic_degree_data = request.data['AcademicDegree']
 
                     # Check if 'academicDegrees' key is present and it's not an empty array
                     if 'academicDegrees' in academic_degree_data and academic_degree_data['academicDegrees']:
@@ -441,7 +441,7 @@ class PersonViewSet(viewsets.ModelViewSet):
             try:
                 # Check if 'Course' key is present in the request data
                 if 'Course' in request.data:
-                    course_data = request.data
+                    course_data = request.data['Course']
 
                     # Check if 'courses' key is present and it's not an empty array
                     if 'courses' in course_data and course_data['courses']:
@@ -471,7 +471,7 @@ class PersonViewSet(viewsets.ModelViewSet):
             try:
                 # Check if 'SportSkill' key is present in the request data
                 if 'SportSkill' in request.data:
-                    sport_skill_data = request.data
+                    sport_skill_data = request.data['SportSkill']
 
                     # Check if 'sportSkills' key is present and it's not an empty array
                     if 'sportSkills' in sport_skill_data and sport_skill_data['sportSkills']:
@@ -501,10 +501,10 @@ class PersonViewSet(viewsets.ModelViewSet):
             try:
                 # Check if 'WorkingHistory' key is present in the request data
                 if 'WorkingHistory' in request.data:
-                    working_history_data = request.data
+                    working_history_data = request.data['WorkingHistory']
 
                     # Check if 'workingHistories' key is present and it's not an empty array
-                    if 'workingHistories' in working_history_data and working_history_data['workingHistories']:
+                    if 'workingHistories' in working_history_data:
                         working_histories_data = working_history_data.get('workingHistories')
 
                         for working_history_data in working_histories_data:
@@ -541,10 +541,10 @@ class PersonViewSet(viewsets.ModelViewSet):
             try:
                 # Check if 'SpecCheckInfo' key is present in the request data
                 if 'SpecCheckInfo' in request.data:
-                    spec_check_data = request.data
+                    spec_check_data = request.data['SpecCheckInfo']
 
                     # Check if 'specChecks' key is present and it's not an empty array
-                    if 'specChecks' in spec_check_data and spec_check_data['specChecks']:
+                    if 'specChecks' in spec_check_data:
                         spec_checks_data = spec_check_data.get('specChecks')
 
                         for spec_check in spec_checks_data:
@@ -571,7 +571,7 @@ class PersonViewSet(viewsets.ModelViewSet):
             try:
                 # Check if 'AttestationInfo' key is present in the request data
                 if 'AttestationInfo' in request.data:
-                    attestation_data = request.data
+                    attestation_data = request.data['AttestationInfo']
 
                     # Check if 'attestations' key is present and it's not an empty array
                     if 'attestations' in attestation_data and attestation_data['attestations']:
@@ -601,7 +601,7 @@ class PersonViewSet(viewsets.ModelViewSet):
             try:
                 # Check if 'ClassCategoriesInfo' key is present in the request data
                 if 'ClassCategoriesInfo' in request.data:
-                    class_category_data = request.data
+                    class_category_data = request.data['ClassCategoriesInfo']
 
                     # Check if 'classCategories' key is present and it's not an empty array
                     if 'classCategories' in class_category_data and class_category_data['classCategories']:
@@ -631,7 +631,7 @@ class PersonViewSet(viewsets.ModelViewSet):
             try:
                 # Check if 'AutobiographyInfo' key is present in the request data
                 if 'AutobiographyInfo' in request.data:
-                    autobiography_data = request.data
+                    autobiography_data = request.data['AutobiographyInfo']
 
                     # Check if 'autobiographies' key is present and it's not an empty array
                     if 'autobiographies' in autobiography_data and autobiography_data['autobiographies']:
@@ -661,7 +661,7 @@ class PersonViewSet(viewsets.ModelViewSet):
             try:
                 # Check if 'RewardsInfo' key is present in the request data
                 if 'RewardsInfo' in request.data:
-                    rewards_data = request.data
+                    rewards_data = request.data['RewardsInfo']
 
                     # Check if 'rewards' key is present and it's not an empty array
                     if 'rewards' in rewards_data and rewards_data['rewards']:
@@ -691,7 +691,7 @@ class PersonViewSet(viewsets.ModelViewSet):
             try:
                 # Check if 'SickLeavesInfo' key is present in the request data
                 if 'SickLeavesInfo' in request.data:
-                    sick_leaves_data = request.data
+                    sick_leaves_data = request.data['SickLeavesInfo']
 
                     # Check if 'sickLeaves' key is present and it's not an empty array
                     if 'sickLeaves' in sick_leaves_data and sick_leaves_data['sickLeaves']:
@@ -721,7 +721,7 @@ class PersonViewSet(viewsets.ModelViewSet):
             try:
                 # Check if 'InvestigationsInfo' key is present in the request data
                 if 'InvestigationsInfo' in request.data:
-                    investigations_data = request.data
+                    investigations_data = request.data['InvestigationsInfo']
 
                     # Check if 'investigations' key is present and it's not an empty array
                     if 'investigations' in investigations_data and investigations_data['investigations']:
@@ -751,7 +751,7 @@ class PersonViewSet(viewsets.ModelViewSet):
             try:
                 # Check if 'DecreeListInfo' key is present in the request data
                 if 'DecreeListInfo' in request.data:
-                    decrees_data = request.data
+                    decrees_data = request.data['DecreeListInfo']
 
                     # Check if 'decrees' key is present and it's not an empty array
                     if 'decrees' in decrees_data and decrees_data['decrees']:
