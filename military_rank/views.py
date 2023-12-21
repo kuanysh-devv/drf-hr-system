@@ -28,7 +28,7 @@ class RankInfoViewSet(viewsets.ModelViewSet):
 
             # Check if the military rank with the given ID exists
             try:
-                military_rank = MilitaryRank.objects.get(pk=military_rank_id)
+                military_rank = MilitaryRank.objects.get(rankTitle=military_rank_id)
             except MilitaryRank.DoesNotExist:
                 return Response({"detail": "Military Rank not found"}, status=status.HTTP_400_BAD_REQUEST)
 
