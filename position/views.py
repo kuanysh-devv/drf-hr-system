@@ -4,6 +4,8 @@ from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 
 from location.models import Department
+from person.models import Person
+from person.serializers import PersonSerializer
 from .models import Position, PositionInfo
 from .serializers import PositionSerializer, PositionInfoSerializer
 
@@ -29,9 +31,17 @@ def positions_by_department(request, department_id):
         # Get unique Position models based on the obtained IDs
         unique_positions = Position.objects.filter(id__in=position_ids)
 
-        serializer = PositionSerializer(unique_positions, many=True)
+        # Serialize positions and include related persons
+        serialized_positions = []
+        for position in unique_positions:
+            position_data = PositionSerializer(position).data
+            persons = Person.objects.filter(positionInfo__position=position)
+            person_data = [{'id': person.id, 'surname': person.surname, 'firstName': person.firstName, 'patronymic': person.patronymic,
+                            'photo': person.photo_set.first().photoBinary} for person in persons]
+            position_data['persons'] = person_data
+            serialized_positions.append(position_data)
 
-        return JsonResponse({'positions': serializer.data})
+        return JsonResponse({'positions': serialized_positions})
     except Department.DoesNotExist:
         return JsonResponse({'error': 'Department not found'}, status=404)
 
