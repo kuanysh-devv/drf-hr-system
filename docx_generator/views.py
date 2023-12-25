@@ -35,15 +35,17 @@ def generate_work_reference(request, person_id):
 
     education_objects = Education.objects.filter(personId=person.id)
     education_data = EducationSerializer(education_objects, many=True).data
-    first_education = education_data[0]
-    date_edu_string = first_education['educationDateOut']  # Assuming 'first_education' is an OrderedDict
-    date_obj = datetime.strptime(date_edu_string, '%Y-%m-%d')
+    if education_data is not None:
+        first_education = education_data[0]
+        date_edu_string = first_education['educationDateOut']  # Assuming 'first_education' is an OrderedDict
+        date_obj = datetime.strptime(date_edu_string, '%Y-%m-%d')
 
     academic_degrees_objects = AcademicDegree.objects.filter(personId=person.id)
     academic_degrees_data = AcademicDegreeSerializer(academic_degrees_objects, many=True).data
-    first_academic_degree = academic_degrees_data[0]
-    date_academ_string = first_academic_degree['academicDiplomaDate']
-    date_academ_obj = datetime.strptime(date_academ_string, '%Y-%m-%d')
+    if academic_degrees_data is not None:
+        first_academic_degree = academic_degrees_data[0]
+        date_academ_string = first_academic_degree['academicDiplomaDate']
+        date_academ_obj = datetime.strptime(date_academ_string, '%Y-%m-%d')
 
     persons_photo = Photo.objects.get(personId=person)
     photo_base64 = persons_photo.photoBinary

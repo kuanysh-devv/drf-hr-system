@@ -5,7 +5,6 @@ from rest_framework.permissions import IsAuthenticated
 
 from location.models import Department
 from person.models import Person
-from person.serializers import PersonSerializer
 from staffing_table.models import StaffingTable
 from .models import Position, PositionInfo
 from .serializers import PositionSerializer, PositionInfoSerializer
@@ -44,7 +43,8 @@ def positions_by_department(request, department_id):
 
             # Get persons for the current position
             persons = Person.objects.filter(positionInfo__position=position, positionInfo__department=department)
-            person_data = [{'surname': person.surname, 'firstName': person.firstName, 'patronymic': person.patronymic, 'photo': person.photo_set.first().photoBinary} for person in persons]
+            person_data = [{'surname': person.surname, 'firstName': person.firstName, 'patronymic': person.patronymic,
+                            'photo': person.photo_set.first().photoBinary} for person in persons]
             position_data['persons'] = person_data
 
             serialized_positions.append(position_data)
@@ -52,5 +52,3 @@ def positions_by_department(request, department_id):
         return JsonResponse({'positions': serialized_positions})
     except Department.DoesNotExist:
         return JsonResponse({'error': 'Department not found'}, status=404)
-
-
