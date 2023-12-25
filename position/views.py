@@ -30,7 +30,7 @@ def positions_by_department(request, department_id):
 
         # Use StaffingTable to get positions in the department
         staffing_info = StaffingTable.objects.filter(department=department)
-
+        print(staffing_info)
         serialized_positions = []
         for staffing_entry in staffing_info:
             position = staffing_entry.position
@@ -43,7 +43,7 @@ def positions_by_department(request, department_id):
             position_data['available_count'] = available_count
 
             # Get persons for the current position
-            persons = Person.objects.filter(positionInfo__position=position)
+            persons = Person.objects.filter(positionInfo__position=position, positionInfo__department=department)
             person_data = [{'surname': person.surname, 'firstName': person.firstName, 'patronymic': person.patronymic, 'photo': person.photo_set.first().photoBinary} for person in persons]
             position_data['persons'] = person_data
 
