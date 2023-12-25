@@ -27,30 +27,26 @@ class PositionInfoViewSet(viewsets.ModelViewSet):
 def positions_by_department(request, department_id):
     try:
         department = Department.objects.get(pk=department_id)
-        positions_info = PositionInfo.objects.filter(department=department)
-        position_ids = positions_info.values('position').distinct()
-        # Get unique Position models based on the obtained IDs
-        unique_positions = Position.objects.filter(id__in=position_ids)
 
-        # Serialize positions and include selected person fields and available count
+        # Use StaffingTable to get positions in the department
+        staffing_info = StaffingTable.objects.filter(department=department)
+
         serialized_positions = []
-        for position in unique_positions:
+        for staffing_entry in staffing_info:
+            position = staffing_entry.position
+
+            # Create a dictionary with position data
             position_data = PositionSerializer(position).data
 
-            # Get staffing information for the current position
-            staffing_info = StaffingTable.objects.filter(position=position, department=department).first()
-
             # Calculate available count by subtracting current count from max count
-            if staffing_info:
-                available_count = staffing_info.max_count - staffing_info.current_count
-            else:
-                available_count = 0
-
+            available_count = staffing_entry.max_count - staffing_entry.current_count
             position_data['available_count'] = available_count
 
+            # Get persons for the current position
             persons = Person.objects.filter(positionInfo__position=position)
             person_data = [{'surname': person.surname, 'firstName': person.firstName, 'patronymic': person.patronymic, 'photo': person.photo_set.first().photoBinary} for person in persons]
             position_data['persons'] = person_data
+
             serialized_positions.append(position_data)
 
         return JsonResponse({'positions': serialized_positions})
