@@ -140,7 +140,36 @@ def generate_work_reference(request, person_id):
     pravo_experience = calculate_experience(working_histories=work_history,
                                             type='PravoOhranka')
 
-    print(pravo_experience)
+    if pravo_experience['years'] == 1:
+        yearString = 'год'
+    elif pravo_experience['years'] in [2, 3, 4, 22, 23, 24, 32, 33, 34, 42, 43, 44, 52, 53, 54]:
+        yearString = 'года'
+    else:
+        yearString = 'лет'
+
+    if pravo_experience['months'] == 1:
+        monthString = 'месяц'
+    elif pravo_experience['months'] in [2, 3, 4]:
+        monthString = 'месяца'
+    else:
+        monthString = 'месяцев'
+
+    if pravo_experience['days'] == 1:
+        dayString = 'день'
+    elif pravo_experience['days'] in [2, 3, 4]:
+        dayString = 'дня'
+    else:
+        dayString = 'дней'
+
+    if pravo_experience['years'] == 0 and pravo_experience['months'] == 0:
+        pravo_experience_string = str(pravo_experience['days']) + ' ' + dayString
+    elif pravo_experience['years'] == 0:
+        pravo_experience_string = str(pravo_experience['months']) + ' ' + monthString + ' ' + str(pravo_experience['days']) + ' ' + dayString
+    else:
+        pravo_experience_string = str(pravo_experience['years']) + ' ' + yearString + ' ' + str(
+            pravo_experience['months']) + ' ' + monthString + ' ' + str(pravo_experience['days']) + ' ' + dayString
+
+    replace_placeholder('pravoexp', pravo_experience_string)
 
     # Create a new section in the document after a specific keyword
     keyword = "ДЕЯТЕЛЬНОСТЬ"  # Replace with the keyword you want to use

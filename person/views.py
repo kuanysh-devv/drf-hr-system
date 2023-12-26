@@ -144,7 +144,7 @@ class PersonViewSet(viewsets.ModelViewSet):
         rankArchieve_objects = RankArchive.objects.filter(personId=person.id)
         rankArchieve_data = RankArchiveSerializer(rankArchieve_objects, many=True).data
 
-        working_history_objects = WorkingHistory.objects.filter(personId=person.id)
+        working_history_objects = WorkingHistory.objects.filter(personId=person.id).order_by('-startDate')
         working_history_data = WorkingHistorySerializer(working_history_objects, many=True).data
 
         spec_check_objects = SpecCheck.objects.filter(personId=person.id)
