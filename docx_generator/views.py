@@ -302,41 +302,9 @@ def generate_appointment_decree(request):
                     changedSurname = surname
 
             personsFIO = changedSurname + ' ' + changedFirstName + ' ' + patronymic
-            personsFIOKaz = surname + ' ' + firstName + ' ' + patronymic
+            personsFIOKaz = firstName + ' ' + patronymic + ' ' + surname
             changedPositionTitle = positionTitle
 
-            positionsList = [
-                'Руководитель департамента',
-                'Заместитель руководителя департамента',
-                'Руководитель управления',
-                'Заместитель руководителя управления',
-                'Оперуполномоченный по особо важным делам',
-                'Старший оперуполномоченный',
-                'Оперуполномоченный'
-            ]
-
-            departmentsList = [
-                'ЦА',
-                'Управление по городу Алматы',
-                'Управление по городу Шымкент',
-                'Управление по Акмолинской области',
-                'Управление по Актюбинской области',
-                'Управление по Алматинской  области',
-                'Управление по области Жетісу',
-                'Управление по Атырауской области',
-                'Управление по Восточно-Казахстанской области',
-                'Управление по области Абай',
-                'Управление по Жамбылской области',
-                'Управление по Западно-Казахстанской области',
-                'Управление по Карагандинской области',
-                'Управление по области Ұлытау',
-                'Управление по Костанайской области',
-                'Управление по Кызылординской области',
-                'Управление по Мангистауской области',
-                'Управление по Павлодарской области',
-                'Управление по Северо-Казахстанской области',
-                'Управление по по Туркестанской области'
-            ]
             if positionTitle == 'Руководитель департамента':
                 changedPositionTitle = 'Руководителя департамента'
             if positionTitle == 'Заместитель руководителя департамента':
@@ -482,7 +450,7 @@ def generate_transfer_decree(request):
                     changedSurname = personInstance.surname
 
             personsFIO = changedSurname + ' ' + changedFirstName + ' ' + personInstance.patronymic
-            personsFIOKaz = personInstance.surname + ' ' + personInstance.firstName + ' ' + personInstance.patronymic
+            personsFIOKaz = personInstance.firstName + ' ' + personInstance.patronymic + ' ' + personInstance.surname
 
             changedPositionTitle = newPositionInstance.positionTitle
             changedCurrentPositionTitle = currentPosition.positionTitle
