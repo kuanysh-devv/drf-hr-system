@@ -38,7 +38,7 @@ def generate_work_reference(request, person_id):
 
     education_objects = Education.objects.filter(personId=person.id)
     education_data = EducationSerializer(education_objects, many=True).data
-    print(education_data)
+
     if len(education_data) != 0:
         first_education = education_data[0]
         date_edu_string = first_education['educationDateOut']  # Assuming 'first_education' is an OrderedDict
@@ -164,7 +164,8 @@ def generate_work_reference(request, person_id):
     if pravo_experience['years'] == 0 and pravo_experience['months'] == 0:
         pravo_experience_string = str(pravo_experience['days']) + ' ' + dayString
     elif pravo_experience['years'] == 0:
-        pravo_experience_string = str(pravo_experience['months']) + ' ' + monthString + ' ' + str(pravo_experience['days']) + ' ' + dayString
+        pravo_experience_string = (str(pravo_experience['months']) + ' ' + monthString + ' '
+                                   + str(pravo_experience['days']) + ' ' + dayString)
     else:
         pravo_experience_string = str(pravo_experience['years']) + ' ' + yearString + ' ' + str(
             pravo_experience['months']) + ' ' + monthString + ' ' + str(pravo_experience['days']) + ' ' + dayString

@@ -184,7 +184,7 @@ class RankArchive(models.Model):
     receivedType = models.CharField(max_length=255, verbose_name=_("Received Type"))
     decreeNumber = models.CharField(max_length=1024, default="", null=True, blank=True, verbose_name=_("Decree Number"))
     startDate = models.DateField(verbose_name=_("Start Date"))
-    endDate = models.DateField(verbose_name=_("End Date"))
+    endDate = models.DateField(verbose_name=_("End Date"), null=True, blank=True)
 
     def __str__(self):
         return str(self.personId) + ' ' + str(self.militaryRank.rankTitle)

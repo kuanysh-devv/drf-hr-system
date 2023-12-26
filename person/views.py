@@ -537,6 +537,15 @@ class PersonViewSet(viewsets.ModelViewSet):
                 # Add other fields from PositionInfo as needed
             )
 
+            RankArchive.objects.create(
+                personId=person,
+                militaryRank=rankInfo.militaryRank,
+                receivedType=rankInfo.receivedType,
+                decreeNumber=rankInfo.decreeNumber,
+                startDate=rankInfo.receivedDate,
+                endDate=None
+            )
+
             # SpecCheckInfo
             try:
                 # Check if 'SpecCheckInfo' key is present in the request data

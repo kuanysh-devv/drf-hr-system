@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from django.utils import timezone
@@ -35,7 +36,7 @@ def rankInfo_post_save(sender, instance, created, **kwargs):
         non_valid_ranks = MilitaryRank.objects.filter(order__gt=max_rank.order)
 
         if instance.militaryRank in non_valid_ranks:
-            print("Error")
+            print("Max rank error")
             instance.militaryRank = max_rank
             instance.save()
 
@@ -71,18 +72,28 @@ def create_rank_archive(sender, instance, **kwargs):
         original_instance = RankInfo.objects.get(pk=instance.pk)
     except RankInfo.DoesNotExist:
         return
-
+    print("orig", original_instance)
+    print("change", instance)
     # Check if militaryRank has changed
-    print(original_instance.militaryRank)
-    print(instance.militaryRank)
-    if original_instance.militaryRank != instance.militaryRank:
-        # Create RankArchive instance
+    if original_instance.militaryRank != instance.militaryRank and original_instance.receivedDate != instance.receivedDate:
+        # Update the existing RankArchive for the old militaryRank
         person_instance = Person.objects.get(rankInfo=instance)
+        try:
+            # Try to get the existing RankArchive
+            originalRankArchive = RankArchive.objects.get(personId=person_instance,
+                                                          militaryRank=original_instance.militaryRank)
+        except RankArchive.DoesNotExist:
+            raise ObjectDoesNotExist(f"RankArchive for militaryRank '{original_instance.militaryRank}' does not exist.")
+
+        originalRankArchive.endDate = instance.receivedDate
+        originalRankArchive.save()
+
+        # Create a new RankArchive for the new militaryRank
         RankArchive.objects.create(
             personId=person_instance,
-            militaryRank=original_instance.militaryRank,
-            receivedType=original_instance.receivedType,
-            decreeNumber=original_instance.decreeNumber,
-            startDate=original_instance.receivedDate,
-            endDate=timezone.now().date()
+            militaryRank=instance.militaryRank,
+            receivedType=instance.receivedType,
+            decreeNumber=instance.decreeNumber,
+            startDate=instance.receivedDate,
+            endDate=None  # You can update this when the rank changes again
         )

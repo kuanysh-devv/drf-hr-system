@@ -34,11 +34,8 @@ class RankInfoViewSet(viewsets.ModelViewSet):
 
             # Update the 'militaryRank' field
             instance.militaryRank = military_rank
+            instance.__dict__.update(serializer.validated_data)
             instance.save()
-
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
 
         # Update the instance with the provided data
         instance.__dict__.update(serializer.validated_data)
