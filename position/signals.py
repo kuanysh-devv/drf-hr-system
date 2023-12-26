@@ -21,7 +21,8 @@ def pre_save_position_info(sender, instance, **kwargs):
             # -1 to old job place in staffing table
             try:
                 # Retrieve the staffing table entry for the department and position
-                staffing_entry = StaffingTable.objects.get(department=original_instance.department, position=original_instance.position)
+                staffing_entry = StaffingTable.objects.get(department=original_instance.department,
+                                                           position=original_instance.position)
 
                 if staffing_entry.current_count > 0:
                     staffing_entry.current_count -= 1
@@ -29,7 +30,7 @@ def pre_save_position_info(sender, instance, **kwargs):
 
             except StaffingTable.DoesNotExist:
                 # Handle the case where there is no staffing entry for the department and position
-                raise ValidationError('No staffing entry found for the department and position.')
+                raise ValidationError('Не было найдено штатного расписания с указанными должностью и департаментом')
 
             # +1 to new job place in staffing table
             try:
@@ -37,7 +38,8 @@ def pre_save_position_info(sender, instance, **kwargs):
                 staffing_entry = StaffingTable.objects.get(department=instance.department, position=instance.position)
 
                 if staffing_entry.current_count + 1 > staffing_entry.max_count:
-                    raise ValidationError('Adding this position would exceed the maximum count for the department.')
+                    raise ValidationError('Добавление этой должности будет превышать максимальное количество для '
+                                          'департамента')
 
                 # Increment the current_count for the position in the staffing table
                 staffing_entry.current_count += 1
@@ -45,7 +47,7 @@ def pre_save_position_info(sender, instance, **kwargs):
 
             except StaffingTable.DoesNotExist:
                 # Handle the case where there is no staffing entry for the department and position
-                raise ValidationError('No staffing entry found for the department and position.')
+                raise ValidationError('Не было найдено штатного расписания с указанными должностью и департаментом')
 
             workingHistoryList = WorkingHistory.objects.filter(personId=person)
             print(workingHistoryList)
@@ -82,7 +84,8 @@ def position_info_pre_save(sender, instance, **kwargs):
 
             # Check if adding a new position exceeds the max_count
             if staffing_entry.current_count + 1 > staffing_entry.max_count:
-                raise ValidationError('Adding this position would exceed the maximum count for the department.')
+                raise ValidationError('Добавление этой должности будет превышать максимальное количество для '
+                                      'департамента')
 
             # Increment the current_count for the position in the staffing table
             staffing_entry.current_count += 1
@@ -90,7 +93,7 @@ def position_info_pre_save(sender, instance, **kwargs):
 
         except StaffingTable.DoesNotExist:
             # Handle the case where there is no staffing entry for the department and position
-            raise ValidationError('No staffing entry found for the department and position.')
+            raise ValidationError('Не было найдено штатного расписания с указанными должностью и департаментом')
 
     # If the instance is being updated, the logic can be adjusted accordingly
     # ...

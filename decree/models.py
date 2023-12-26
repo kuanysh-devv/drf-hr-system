@@ -56,4 +56,3 @@ class Investigation(models.Model):
     def __str__(self):
         return str(self.personId) + ' ' + self.investigation_decree_number
 
-

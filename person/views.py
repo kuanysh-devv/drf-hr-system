@@ -41,8 +41,8 @@ from .serializers import PersonSerializer, GenderSerializer, FamilyStatusSeriali
 def departments_persons(request, *args, **kwargs):
     try:
 
-        department = request.GET.get('department', None)
-        department = Department.objects.get(DepartmentName=department)
+        department = request.GET.get('departmentId', None)
+        department = Department.objects.get(pk=department)
         persons = Person.objects.filter(positionInfo__department=department)
 
         serializer = PersonSerializer(persons, many=True)
