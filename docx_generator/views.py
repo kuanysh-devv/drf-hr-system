@@ -1,7 +1,7 @@
 import base64
 import io
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from io import BytesIO
 
 from django.http import HttpResponse, JsonResponse
@@ -18,6 +18,7 @@ from decree.models import DecreeList
 from education.models import Education, AcademicDegree
 from education.serializers import EducationSerializer, AcademicDegreeSerializer
 from location.models import Department
+from military_rank.models import RankInfo
 from person.models import Person
 from photo.models import Photo
 from position.models import Position, PositionInfo
@@ -32,6 +33,8 @@ def generate_work_reference(request, person_id):
     birth_date = str(birth_info.birth_date)
     birth_date_format = datetime.strptime(birth_date, '%Y-%m-%d')
     formatted_date = birth_date_format.strftime('%d.%m.%Y')
+
+    rankInfo = RankInfo.objects.get(person=person)
 
     education_objects = Education.objects.filter(personId=person.id)
     education_data = EducationSerializer(education_objects, many=True).data
@@ -55,6 +58,39 @@ def generate_work_reference(request, person_id):
     photo_binary = base64.b64decode(photo_base64)
     image = io.BytesIO(photo_binary)
 
+    def calculate_experience(working_histories, type):
+        total_experience = timedelta()
+
+        if type == 'All':
+            for working_history in working_histories:
+                start_date = working_history.startDate
+                end_date = working_history.endDate or datetime.now().date()
+                experience = end_date - start_date
+                total_experience += experience
+
+        if type == 'PravoOhranka':
+            for working_history in working_histories:
+                if working_history.isPravoOhranka:
+                    start_date = working_history.startDate
+                    end_date = working_history.endDate or datetime.now().date()
+                    experience = end_date - start_date
+                    if working_history.HaveCoefficient:
+                        experience = experience * 1.5
+                    total_experience += experience
+
+        total_years = total_experience.days // 365
+        remaining_days = total_experience.days % 365
+        total_months = remaining_days // 30
+        remaining_days %= 30
+
+        overall_experience = {
+            'years': total_years,
+            'months': total_months,
+            'days': remaining_days
+        }
+
+        return overall_experience
+
     # Load the Word document template
     template_path = 'docx_generator/static/templates/spravka_template.docx'  # Update with the path to your template
     document = Document(template_path)
@@ -73,7 +109,7 @@ def generate_work_reference(request, person_id):
                         run1.font.size = Pt(12)  # Adjust the font size if needed
 
     # Replace placeholders with actual data
-    replace_placeholder('Name', f"{person.firstName}")
+    replace_placeholder('placeholder', f"{person.firstName}")
     replace_placeholder('surname', f"{person.surname}")
     replace_placeholder('patronymic', f"{person.patronymic}")
     replace_placeholder('nationality', f"{person.nationality}")
@@ -82,6 +118,8 @@ def generate_work_reference(request, person_id):
     replace_placeholder('birth_date', str(formatted_date))
     replace_placeholder('region', birth_info.region)
     replace_placeholder('city', birth_info.city)
+    replace_placeholder('rank', rankInfo.militaryRank.rankTitle)
+
     if len(education_data) == 0:
         replace_placeholder('education', "Не имеет")
     else:
@@ -98,6 +136,11 @@ def generate_work_reference(request, person_id):
 
     work_history = WorkingHistory.objects.filter(personId=person).order_by('startDate')
     education_history = Education.objects.filter(personId=person).order_by('educationDateIn')
+
+    pravo_experience = calculate_experience(working_histories=work_history,
+                                            type='PravoOhranka')
+
+    print(pravo_experience)
 
     # Create a new section in the document after a specific keyword
     keyword = "ДЕЯТЕЛЬНОСТЬ"  # Replace with the keyword you want to use
