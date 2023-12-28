@@ -25,12 +25,12 @@ def downloadStaffingTable(request, *args, **kwargs):
     location_name = request.GET.get('locationName')
     staffing_data = None
 
-    if location_name == 'ЦА':
+    if location_name == 'Весь Казахстан':
         # Retrieve information for all free vacations (positions)
-        staffing_data = StaffingTable.objects.filter(department__DepartmentName='ЦА')
-    elif location_name == 'Весь Казахстан':
-        # Retrieve information for each department separately
-        staffing_data = StaffingTable.objects.exclude(department__DepartmentName='ЦА')
+        staffing_data = StaffingTable.objects.all()
+    else:
+        LocationInstance = Location.objects.get(LocationName=location_name)
+        staffing_data = StaffingTable.objects.filter(department__Location=LocationInstance)
 
     df = pd.DataFrame.from_records(
         staffing_data.values('department__DepartmentName', 'position__positionTitle', 'current_count', 'max_count'))
