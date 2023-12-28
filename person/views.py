@@ -35,7 +35,7 @@ from .models import Person, Gender, FamilyStatus, Relative, FamilyComposition, C
 from .serializers import PersonSerializer, GenderSerializer, FamilyStatusSerializer, RelativeSerializer, \
     FamilyCompositionSerializer, ClassCategorySerializer, AutobiographySerializer, RewardSerializer, \
     LanguageSkillSerializer, SportSkillSerializer, RankArchiveSerializer
-
+from rest_framework.pagination import PageNumberPagination
 
 @csrf_exempt
 def departments_persons(request, *args, **kwargs):
@@ -56,6 +56,7 @@ class PersonViewSet(viewsets.ModelViewSet):
     queryset = Person.objects.all()
     serializer_class = PersonSerializer
     permission_classes = (IsAuthenticated,)
+    pagination_class = PageNumberPagination
 
     @action(detail=True, methods=['PATCH'])
     def update_family_status(self, request):
