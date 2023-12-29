@@ -78,12 +78,30 @@ class FamilyCompositionSerializer(serializers.ModelSerializer):
         fields = ['id', 'relName', 'relSurname', 'relPatronymic', 'relIin', 'relBirthDate', 'relJobPlace', 'personId',
                   'relativeType']
 
+    def create(self, validated_data):
+        # Extract the data for the nested serializer (RelativeSerializer)
+        print(validated_data)
+        relativeInstance = Relative.objects.get(relativeName=validated_data['relativeType']['relativeName'])
+
+        family_composition = FamilyComposition.objects.create(
+            relName=validated_data['relName'],
+            relSurname=validated_data['relSurname'],
+            relPatronymic=validated_data['relPatronymic'],
+            relIin=validated_data['relIin'],
+            relBirthDate=validated_data['relBirthDate'],
+            relJobPlace=validated_data['relJobPlace'],
+            personId=validated_data['personId'],
+            relativeType=relativeInstance
+        )
+
+        return family_composition
+
     @staticmethod
     def validate_relativeType(value):
         try:
             # Attempt to get the Relative object with the provided name
-            relative = Relative.objects.get(relativeName=value)
-            return relative
+            relative = Relative.objects.get(relativeName=value['relativeName'])
+            return relative.relativeName
         except Relative.DoesNotExist:
             raise serializers.ValidationError("Invalid relativeType. This relative does not exist.")
 

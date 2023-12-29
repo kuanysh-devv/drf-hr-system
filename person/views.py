@@ -340,14 +340,17 @@ class PersonViewSet(viewsets.ModelViewSet):
                         relatives_data = family_composition_data.get('relatives')
 
                         for relative_data in relatives_data:
-                            relative_serializer = FamilyCompositionSerializer(data=relative_data)
                             relativeTypeName = relative_data.get('relativeType')
-
-                            # Assuming 'Relative' is a model with a 'relativeName' field
                             relativeType = Relative.objects.get(relativeName=relativeTypeName)
+                            relative = {
+                                'id': relativeType.id,
+                                'relativeName': relativeType.relativeName
+                            }
+                            relative_data['relativeType'] = relative
 
+                            relative_serializer = FamilyCompositionSerializer(data=relative_data)
                             if relative_serializer.is_valid():
-                                relative_serializer.save(personId=person, relativeType=relativeType)
+                                relative_serializer.save(personId=person, relativeType=relative)
                                 print("family_composition done")
                             else:
                                 return Response(relative_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
