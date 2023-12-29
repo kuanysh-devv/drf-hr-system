@@ -859,6 +859,33 @@ class FamilyCompositionViewSet(viewsets.ModelViewSet):
     serializer_class = FamilyCompositionSerializer
     permission_classes = (IsAuthenticated,)
 
+    def create(self, request, *args, **kwargs):
+        # Extract the data for the nested serializer (RelativeSerializer)
+        relativeTypeName = request.data.get('relativeType')
+        relativeType = Relative.objects.get(relativeName=relativeTypeName)
+        relative = {
+            'id': relativeType.id,
+            'relativeName': relativeType.relativeName
+        }
+        request.data['relativeType'] = relative
+
+        relativeInstance = Relative.objects.get(relativeName=request.data['relativeType']['relativeName'])
+        personInstance = Person.objects.get(pk=request.data['personId'])
+        family_composition = FamilyComposition.objects.create(
+            relName=request.data['relName'],
+            relSurname=request.data['relSurname'],
+            relPatronymic=request.data['relPatronymic'],
+            relIin=request.data['relIin'],
+            relBirthDate=request.data['relBirthDate'],
+            relJobPlace=request.data['relJobPlace'],
+            personId=personInstance,
+            relativeType=relativeInstance
+        )
+
+        return Response(
+            {"message": "family_composition done", "data": FamilyCompositionSerializer(family_composition).data},
+            status=status.HTTP_201_CREATED)
+
 
 class ClassCategoryViewSet(viewsets.ModelViewSet):
     queryset = ClassCategory.objects.all()

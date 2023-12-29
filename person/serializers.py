@@ -80,7 +80,6 @@ class FamilyCompositionSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         # Extract the data for the nested serializer (RelativeSerializer)
-        print(validated_data)
         relativeInstance = Relative.objects.get(relativeName=validated_data['relativeType']['relativeName'])
 
         family_composition = FamilyComposition.objects.create(
