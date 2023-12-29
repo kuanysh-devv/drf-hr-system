@@ -71,11 +71,12 @@ class RelativeSerializer(serializers.ModelSerializer):
 
 
 class FamilyCompositionSerializer(serializers.ModelSerializer):
-    relativeType = serializers.CharField(write_only=True)
+    relativeType = RelativeSerializer()
 
     class Meta:
         model = FamilyComposition
-        fields = "__all__"
+        fields = ['id', 'relName', 'relSurname', 'relPatronymic', 'relIin', 'relBirthDate', 'relJobPlace', 'personId',
+                  'relativeType']
 
     @staticmethod
     def validate_relativeType(value):

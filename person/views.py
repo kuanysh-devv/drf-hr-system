@@ -37,6 +37,7 @@ from .serializers import PersonSerializer, GenderSerializer, FamilyStatusSeriali
     LanguageSkillSerializer, SportSkillSerializer, RankArchiveSerializer
 from rest_framework.pagination import PageNumberPagination
 
+
 @csrf_exempt
 def departments_persons(request, *args, **kwargs):
     try:
