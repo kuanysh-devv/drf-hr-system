@@ -548,7 +548,7 @@ def filter_data(request):
                 if filtered_field == 'relName':
                     try:
                         relativeTypeInstance = Relative.objects.get(relativeName=relativeTypeGlobal)
-                        familyInstance = FamilyComposition.objects.get(personId=p, relativeType=relativeTypeInstance,
+                        familyInstance = FamilyComposition.objects.filter(personId=p, relativeType=relativeTypeInstance,
                                                                        relName__icontains=value)
                         person_data[filtered_field] = familyInstance.relName
                     except Relative.DoesNotExist:

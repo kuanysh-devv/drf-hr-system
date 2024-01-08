@@ -609,31 +609,34 @@ def generate_rankup_decree(request):
                          'ш', 'щ']
             glasnie = ['а', 'е', 'ё', 'и', 'о', 'у', 'ы', 'э', 'ю', 'я']
 
-            changedSurname = None
-            changedFirstName = None
-            changedSurnameKaz = None
+            changedSurname = personInstance.surname
+            changedFirstName = personInstance.firstName
+            changedSurnameKaz = personInstance.surname
 
             if personInstance.gender.genderName == 'Мужской':
                 if personInstance.firstName[-1] in soglasnie:
-                    changedFirstName = personInstance.firstName + 'у'  # Қасымбаева Қуаныша Ахатұлы
+                    changedFirstName = personInstance.firstName + 'у'
                 else:
                     changedFirstName = personInstance.firstName
 
-                if personInstance.surname[-1] in soglasnie:
-                    changedSurname = personInstance.surname + 'у'  # Қасымбаева Қуаныша Ахатұлы
+                if personInstance.surname[-2:] == 'ев' or personInstance.surname[-2:] == 'ов':
+                    changedSurname = personInstance.surname + 'у'
                     changedSurnameKaz = personInstance.surname + 'қа'
                 else:
                     changedSurname = personInstance.surname
                     changedSurnameKaz = personInstance.surname
 
             if personInstance.gender.genderName == 'Женский':
-                if personInstance.firstName[-1] in glasnie:
-                    changedFirstName = personInstance.firstName
+                if personInstance.firstName[-1] == 'а':
+                    changedFirstName = personInstance.firstName[:-1]
+                    changedFirstName = changedFirstName + 'е'
                 else:
                     changedFirstName = personInstance.firstName
 
-                if personInstance.surname[-1] in glasnie:
-                    changedSurname = personInstance.surname
+                if personInstance.surname[-3:] == 'ева' or personInstance.surname[-3:] == 'ова':
+                    changedSurname = personInstance.surname[:-1]
+                    changedSurname = changedSurname + 'ой'
+                    changedSurnameKaz = personInstance.surname + 'ға'
                 else:
                     changedSurname = personInstance.surname
 
