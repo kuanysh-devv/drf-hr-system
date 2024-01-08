@@ -103,11 +103,18 @@ def filter_data(request):
             print(parts)
 
             if "Date" in field_name or "date" in field_name:
-
                 try:
-                    start_date_str, end_date_str = value.split('_')
+                    start_date_str = None
+                    end_date_str = None
+                    dates = value.split('_')
+                    if len(dates) == 1:
+                        start_date_str = value
+                        end_date_str = datetime.now().strftime('%Y-%m-%d')
+                    if len(dates) == 2:
+                        start_date_str, end_date_str = value.split('_')
                     start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
                     end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+
                     if start_date == end_date:
                         # If the start_date and end_date are the same, it's an exact date match
                         field_lookup = f"{model_name}__{field_name}__exact"

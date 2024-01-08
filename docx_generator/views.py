@@ -18,7 +18,7 @@ from decree.models import DecreeList
 from education.models import Education, AcademicDegree
 from education.serializers import EducationSerializer, AcademicDegreeSerializer
 from location.models import Department
-from military_rank.models import RankInfo
+from military_rank.models import RankInfo, MilitaryRank
 from person.models import Person
 from photo.models import Photo
 from position.models import Position, PositionInfo
@@ -440,12 +440,12 @@ def generate_transfer_decree(request):
 
             if personInstance.gender.genderName == 'Женский':
                 if personInstance.firstName[-1] in glasnie:
-                    changedFirstName = personInstance.firstName + 'у'  # Қасымбаеву Динару
+                    changedFirstName = personInstance.firstName  # Қасымбаеву Динару
                 else:
                     changedFirstName = personInstance.firstName
 
                 if personInstance.surname[-1] in glasnie:
-                    changedSurname = personInstance.surname + 'у'  # Қасымбаеву Динару
+                    changedSurname = personInstance.surname  # Қасымбаеву Динару
                 else:
                     changedSurname = personInstance.surname
 
@@ -563,6 +563,222 @@ def generate_transfer_decree(request):
                                     content_type='application/vnd.openxmlformats-officedocument.wordprocessingml'
                                                  '.document')
             response['Content-Disposition'] = f'attachment; filename=Приказ о перемещении.docx'
+
+            return response
+
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON data'}, status=400)
+
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+
+@csrf_exempt
+def generate_rankup_decree(request):
+    if request.method == 'POST':
+        try:
+            body = request.body.decode('utf-8')
+            data = json.loads(body)
+            # Extract variables from the parsed data
+            person_id = data.get('personId')
+            newRankTitle = data.get('newRank')
+            rankUpDate = data.get('rankUpDate')
+
+            personInstance = Person.objects.get(pk=person_id)
+
+            currentPosition = PositionInfo.objects.get(person=personInstance).position
+            currentDepartment = PositionInfo.objects.get(person=personInstance).department
+
+            try:
+                newRankInstance = MilitaryRank.objects.get(rankTitle=newRankTitle)
+            except json.JSONDecodeError:
+                return JsonResponse({'error': 'Invalid newRank data'}, status=400)
+
+            newRankTitle = newRankInstance.rankTitle.lower()
+
+            changedRankTitleKaz = newRankTitle
+            if newRankTitle == 'старший лейтенант':
+                changedRankTitleKaz = 'аға лейтенант'
+
+            DecreeList.objects.create(
+                decreeType="Присвоение звания",
+                decreeDate=timezone.datetime.now(),
+                personId=personInstance
+            )
+
+            soglasnie = ['б', 'в', 'г', 'д', 'ж', 'з', 'й', 'к', 'л', 'м', 'н', 'п', 'р', 'с', 'т', 'ф', 'х', 'ц', 'ч',
+                         'ш', 'щ']
+            glasnie = ['а', 'е', 'ё', 'и', 'о', 'у', 'ы', 'э', 'ю', 'я']
+
+            changedSurname = None
+            changedFirstName = None
+            changedSurnameKaz = None
+
+            if personInstance.gender.genderName == 'Мужской':
+                if personInstance.firstName[-1] in soglasnie:
+                    changedFirstName = personInstance.firstName + 'у'  # Қасымбаева Қуаныша Ахатұлы
+                else:
+                    changedFirstName = personInstance.firstName
+
+                if personInstance.surname[-1] in soglasnie:
+                    changedSurname = personInstance.surname + 'у'  # Қасымбаева Қуаныша Ахатұлы
+                    changedSurnameKaz = personInstance.surname + 'қа'
+                else:
+                    changedSurname = personInstance.surname
+                    changedSurnameKaz = personInstance.surname
+
+            if personInstance.gender.genderName == 'Женский':
+                if personInstance.firstName[-1] in glasnie:
+                    changedFirstName = personInstance.firstName
+                else:
+                    changedFirstName = personInstance.firstName
+
+                if personInstance.surname[-1] in glasnie:
+                    changedSurname = personInstance.surname
+                else:
+                    changedSurname = personInstance.surname
+
+            personsFIO = changedSurname + ' ' + changedFirstName + ' ' + personInstance.patronymic
+            personsFIOKaz = personInstance.firstName + ' ' + personInstance.patronymic + ' ' + changedSurnameKaz
+
+            changedCurrentDepartmentName = currentDepartment.DepartmentName
+            changedCurrentDepartmentNameKaz = currentDepartment.DepartmentNameKaz
+            changedCurrentPositionKaz = currentPosition.positionTitleKaz
+            changedCurrentPosition = currentPosition.positionTitle
+
+            words = currentDepartment.DepartmentName.split()
+            if words[0] == 'Управление':
+                words[0] = 'Управления'
+                changedCurrentDepartmentName = ' '.join(words)
+
+            if currentDepartment.DepartmentName == 'ЦА':
+                changedCurrentDepartmentName = 'Управления'
+
+            if currentDepartment.DepartmentName == 'ЦА':
+                currentDepartment.DepartmentName = 'Управление'
+
+            if currentDepartment.DepartmentNameKaz == 'Басқарма':
+                changedCurrentDepartmentNameKaz = 'Басқармасының'
+            else:
+                changedCurrentDepartmentNameKaz = currentDepartment.DepartmentNameKaz + 'ның'
+
+            if currentPosition.positionTitle == 'Руководитель департамента':
+                changedCurrentPosition = 'Руководителю департамента'
+
+            if currentPosition.positionTitle == 'Заместитель руководителя департамента':
+                changedCurrentPosition = 'Заместителю руководителя департамента'
+
+            if currentPosition.positionTitle == 'Руководитель управления':
+                changedCurrentPosition = 'Руководителю управления'
+
+            if currentPosition.positionTitle == 'Заместитель руководителя управления':
+                changedCurrentPosition = 'Заместителю руководителя управления'
+
+            if currentPosition.positionTitle == 'Оперуполномоченный по особо важным делам':
+                changedCurrentPosition = 'Оперуполномоченному по особо важным делам'
+
+            if currentPosition.positionTitle == 'Старший оперуполномоченный':
+                changedCurrentPosition = 'Старшему оперуполномоченному'
+
+            if currentPosition.positionTitle == 'Оперуполномоченный':
+                changedCurrentPosition = 'Оперуполномоченному'
+
+            if currentPosition.positionTitleKaz == 'Аға жедел уәкіл':
+                changedCurrentPositionKaz = 'Аға жедел уәкілі'
+            if currentPosition.positionTitleKaz == 'Жедел уәкіл':
+                changedCurrentPositionKaz = 'Жедел уәкілі'
+            if currentPosition.positionTitleKaz == 'Аса маңызды істер жөніндегі жедел уәкіл':
+                changedCurrentPositionKaz = 'Аса маңызды істер жөніндегі жедел уәкілі'
+
+            changedCurrentPosition = changedCurrentPosition.lower()
+            changedCurrentPositionKaz = changedCurrentPositionKaz.lower()
+
+            year, month, day = map(int, rankUpDate.split('-'))
+            day = int(day)
+            monthString = None
+            monthStringKaz = None
+
+            if month == 1:
+                monthString = 'января'
+                monthStringKaz = 'қантардан'
+            if month == 2:
+                monthString = 'февраля'
+                monthStringKaz = 'ақпаннан'
+            if month == 3:
+                monthString = 'марта'
+                monthStringKaz = 'наурыздан'
+            if month == 4:
+                monthString = 'апреля'
+                monthStringKaz = 'сәуірден'
+            if month == 5:
+                monthString = 'мая'
+                monthStringKaz = 'мамырдан'
+            if month == 6:
+                monthString = 'июня'
+                monthStringKaz = 'маусымнан'
+            if month == 7:
+                monthString = 'июля'
+                monthStringKaz = 'шілдеден'
+            if month == 8:
+                monthString = 'августа'
+                monthStringKaz = 'тамыздан'
+            if month == 9:
+                monthString = 'сентября'
+                monthStringKaz = 'қыркүйектен'
+            if month == 10:
+                monthString = 'октября'
+                monthStringKaz = 'қазаннан'
+            if month == 11:
+                monthString = 'ноября'
+                monthStringKaz = 'қарашадан'
+            if month == 12:
+                monthString = 'декабря'
+                monthStringKaz = 'желтоқсаннан'
+
+            changedDateKaz = str(year) + ' жылғы ' + str(day) + ' ' + monthStringKaz
+            changedDate = str(day) + ' ' + monthString + ' ' + str(year) + ' ' + 'года'
+
+            base = 'представление'
+            baseKaz = 'ұсыныс'
+
+            # Load the Word document template
+            template_path = 'docx_generator/static/templates/rankup_template.docx'  # Update with the path to your template
+            document = Document(template_path)
+
+            # Define a function to replace placeholders in the document
+            def replace_placeholder(placeholder, replacement):
+                for paragraph1 in document.paragraphs:
+                    if placeholder in paragraph1.text:
+
+                        for run1 in paragraph1.runs:
+                            if placeholder in run1.text:
+                                run1.text = run1.text.replace(placeholder, replacement)
+                                run1.font.size = Pt(14)  # Adjust the font size if needed
+                                run1.font.name = 'Times New Roman'
+
+            # Replace placeholders with actual data
+            replace_placeholder('NEWRANK', f"{changedRankTitleKaz}")
+            replace_placeholder('CURRENTD', f"{changedCurrentDepartmentNameKaz}")
+            replace_placeholder('CURRENTP', f"{changedCurrentPositionKaz}")
+            replace_placeholder('FIO', f"{personsFIOKaz}")
+            replace_placeholder('DATE', f"{changedDateKaz}")
+            replace_placeholder('BASE', baseKaz)
+
+            replace_placeholder('newrank', f"{newRankTitle}")
+            replace_placeholder('currentp', f"{changedCurrentPosition}")
+            replace_placeholder('currentd', f"{changedCurrentDepartmentName}")
+            replace_placeholder('fio', f"{personsFIO}")
+            replace_placeholder('date', f"{changedDate}")
+            replace_placeholder('base', base)
+
+            doc_stream = BytesIO()
+            document.save(doc_stream)
+            doc_stream.seek(0)
+
+            # Prepare the HTTP response with the modified document
+            response = HttpResponse(doc_stream.read(),
+                                    content_type='application/vnd.openxmlformats-officedocument.wordprocessingml'
+                                                 '.document')
+            response['Content-Disposition'] = f'attachment; filename=Приказ о присвоении.docx'
 
             return response
 
