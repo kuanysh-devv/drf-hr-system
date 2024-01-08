@@ -691,14 +691,23 @@ def generate_rankup_decree(request):
             if currentPosition.positionTitle == 'Заместитель руководителя управления':
                 changedCurrentPosition = 'Заместителю руководителя управления'
 
-            if currentPosition.positionTitle == 'Оперуполномоченный по особо важным делам':
+            if currentPosition.positionTitle == 'Оперуполномоченный по особо важным делам' and personInstance.gender.genderName == 'Мужской':
                 changedCurrentPosition = 'Оперуполномоченному по особо важным делам'
 
-            if currentPosition.positionTitle == 'Старший оперуполномоченный':
+            if currentPosition.positionTitle == 'Оперуполномоченный по особо важным делам' and personInstance.gender.genderName == 'Женский':
+                changedCurrentPosition = 'Оперуполномоченной по особо важным делам'
+
+            if currentPosition.positionTitle == 'Старший оперуполномоченный' and personInstance.gender.genderName == 'Мужской':
                 changedCurrentPosition = 'Старшему оперуполномоченному'
 
-            if currentPosition.positionTitle == 'Оперуполномоченный':
+            if currentPosition.positionTitle == 'Старший оперуполномоченный' and personInstance.gender.genderName == 'Женский':
+                changedCurrentPosition = 'Старшей оперуполномоченной'
+
+            if currentPosition.positionTitle == 'Оперуполномоченный' and personInstance.gender.genderName == 'Мужской':
                 changedCurrentPosition = 'Оперуполномоченному'
+
+            if currentPosition.positionTitle == 'Оперуполномоченный' and personInstance.gender.genderName == 'Женский':
+                changedCurrentPosition = 'Оперуполномоченной'
 
             if currentPosition.positionTitleKaz == 'Аға жедел уәкіл':
                 changedCurrentPositionKaz = 'Аға жедел уәкілі'
