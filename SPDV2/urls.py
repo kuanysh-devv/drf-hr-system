@@ -79,7 +79,9 @@ urlpatterns = [
     path('api/v1/pension-list-download/', pension_list_view_download, name='pension_list_view_download'),
     path('api/v1/get-decree-list', getDecreeList, name='getDecreeList'),
     path('api/v1/get-transfer-info', getTransferInfo, name='getTransferInfo'),
+    path('api/v1/get-rankup-info', getRankUpInfo, name='getRankUpInfo'),
     path('api/v1/cancel-transfer/', cancelTransfer, name='cancelTransfer'),
+    path('api/v1/cancel-rankup/', cancelRankUp, name='cancelRankUp'),
     path('api/v1/search_persons/', search_persons, name='search_persons'),
     path('api/v1/generate-rankup-decree/', generate_rankup_decree, name='generate_rankup_decree'),
 ]

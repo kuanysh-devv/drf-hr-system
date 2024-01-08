@@ -549,7 +549,7 @@ def filter_data(request):
                     try:
                         relativeTypeInstance = Relative.objects.get(relativeName=relativeTypeGlobal)
                         familyInstance = FamilyComposition.objects.filter(personId=p, relativeType=relativeTypeInstance,
-                                                                       relName__icontains=value)
+                                                                          relName__icontains=value).first()
                         person_data[filtered_field] = familyInstance.relName
                     except Relative.DoesNotExist:
                         return HttpResponseServerError("RelativeType {} does not exist.".format(value))
@@ -1225,12 +1225,16 @@ def pension_list_view(request):
                 'currentRank': person.rankInfo.militaryRank.rankTitle,
                 'photo': person.photo_set.first().photoBinary if person.photo_set.exists() else None,
                 'age': (date - person.birthinfo_set.first().birth_date).days // 365,
-                'pensionDate': (person.birthinfo_set.first().birth_date.replace(year=person.birthinfo_set.first().birth_date.year + person.rankInfo.militaryRank.pensionAge)).strftime('%Y-%m-%d'),
+                'pensionDate': (person.birthinfo_set.first().birth_date.replace(
+                    year=person.birthinfo_set.first().birth_date.year + person.rankInfo.militaryRank.pensionAge)).strftime(
+                    '%Y-%m-%d'),
             }
             for person in persons
             if (
-                person.birthinfo_set.first().birth_date <= date - relativedelta(years=person.rankInfo.militaryRank.pensionAge) <= date
-            ) and ((date - (relativedelta(years=person.rankInfo.militaryRank.pensionAge) + person.birthinfo_set.first().birth_date)).days <= 30)
+                       person.birthinfo_set.first().birth_date <= date - relativedelta(
+                   years=person.rankInfo.militaryRank.pensionAge) <= date
+               ) and ((date - (relativedelta(
+                years=person.rankInfo.militaryRank.pensionAge) + person.birthinfo_set.first().birth_date)).days <= 30)
         ]
 
         return JsonResponse({'data': data}, status=200)
@@ -1270,9 +1274,11 @@ def pension_list_view_download(request):
         for row_num, person in enumerate(persons, start=1):
             age = (date - person.birthinfo_set.first().birth_date).days // 365
             pension_age = person.rankInfo.militaryRank.pensionAge
-            pension_date = person.birthinfo_set.first().birth_date.replace(year=person.birthinfo_set.first().birth_date.year + pension_age)
+            pension_date = person.birthinfo_set.first().birth_date.replace(
+                year=person.birthinfo_set.first().birth_date.year + pension_age)
 
-            if person.birthinfo_set.first().birth_date <= date - relativedelta(years=pension_age) <= date and (date - pension_date).days <= 30:
+            if person.birthinfo_set.first().birth_date <= date - relativedelta(years=pension_age) <= date and (
+                    date - pension_date).days <= 30:
                 worksheet.write(row_num, 0, person.firstName)
                 worksheet.write(row_num, 1, person.surname)
                 worksheet.write(row_num, 2, person.patronymic)

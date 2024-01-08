@@ -7,6 +7,8 @@ from rest_framework import generics, viewsets
 from rest_framework.permissions import IsAuthenticated
 
 from location.models import Department
+from military_rank.models import MilitaryRank, RankInfo
+from person.models import RankArchive
 from photo.models import Photo
 from position.models import PositionInfo, Position
 from working_history.models import WorkingHistory
@@ -129,6 +131,88 @@ def cancelTransfer(request):
 
         except WorkingHistory.DoesNotExist:
             return JsonResponse({'error': 'Working history not found'})
+
+        except Exception as e:
+            # Handle other exceptions as needed
+            return JsonResponse({'error': f'An error occurred: {str(e)}'}, status=500)
+
+    else:
+        # Handling other HTTP methods (e.g., GET, PUT, etc.) if needed
+        return HttpResponse("Method not allowed", status=405)
+
+
+def getRankUpInfo(request):
+    decreeId = request.GET.get('decreeId')
+
+    try:
+        personInstance = DecreeList.objects.get(pk=decreeId).personId
+    except DecreeList.DoesNotExist:
+        return JsonResponse({'error': 'Decree not found'})
+
+    # Get the last two records from WorkingHistory
+    rank_archive_records = RankArchive.objects.filter(personId=personInstance).order_by('-id')[:2]
+
+    new_rank = rank_archive_records[0]
+    previous_rank = rank_archive_records[1]
+
+    transfer_info = [{
+        'newRank': new_rank.militaryRank.rankTitle,
+        'previousRank': previous_rank.militaryRank.rankTitle
+
+    }]
+
+    return JsonResponse({'rankUpInfo': transfer_info})
+
+
+@csrf_exempt
+def cancelRankUp(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+            decreeId = data.get('decreeId')
+
+            # Attempt to get the DecreeList and personInstance
+            decree_instance = DecreeList.objects.get(pk=decreeId)
+            personInstance = decree_instance.personId
+
+            # Get the last two records from WorkingHistory
+            rank_archive_records = RankArchive.objects.filter(personId=personInstance).order_by('-id')[:2]
+
+            new_rank = rank_archive_records[0]
+            previous_rank = rank_archive_records[1]
+
+            previous_rank.endDate = None
+            previous_rank.save()
+
+            previousRank = MilitaryRank.objects.get(rankTitle=previous_rank.militaryRank.rankTitle)
+
+            rankInfoInstance = RankInfo.objects.get(person=personInstance)
+            rankInfoInstance.militaryRank = previousRank
+            rankInfoInstance.receivedDate = previous_rank.startDate
+            rankInfoInstance.save()
+
+            new_rank.delete()
+
+            rank_archive_duplicate = RankArchive.objects.filter(personId=personInstance).order_by('-id').first()
+            rank_archive_duplicate.delete()
+
+            decree_instance.delete()
+
+            response_data = {'status': 'success', 'message': 'RankUp canceled successfully'}
+            response_json = json.dumps(response_data)
+            return HttpResponse(response_json, content_type='application/json')
+
+        except DecreeList.DoesNotExist:
+            return JsonResponse({'error': 'Decree not found'})
+
+        except RankInfo.DoesNotExist:
+            return JsonResponse({'error': 'RankInfo not found'})
+
+        except MilitaryRank.DoesNotExist:
+            return JsonResponse({'error': 'MilitaryRank not found'})
+
+        except RankArchive.DoesNotExist:
+            return JsonResponse({'error': 'RankArchive not found'})
 
         except Exception as e:
             # Handle other exceptions as needed

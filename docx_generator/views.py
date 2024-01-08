@@ -588,12 +588,23 @@ def generate_rankup_decree(request):
             currentPosition = PositionInfo.objects.get(person=personInstance).position
             currentDepartment = PositionInfo.objects.get(person=personInstance).department
 
+            personsRankInfo = RankInfo.objects.get(person=personInstance)
+            personsPositionInfo = PositionInfo.objects.get(person=personInstance)
+
             try:
                 newRankInstance = MilitaryRank.objects.get(rankTitle=newRankTitle)
             except json.JSONDecodeError:
-                return JsonResponse({'error': 'Invalid newRank data'}, status=400)
+                return JsonResponse({'error': 'Неправильное звание'}, status=400)
 
-            newRankTitle = newRankInstance.rankTitle.lower()
+            if personsPositionInfo.position.maxRank.order >= newRankInstance.order:
+                newRankTitle = newRankInstance.rankTitle.lower()
+            else:
+                return JsonResponse({'error': 'Новое звание превышает максимальное звание должности'}, status=400)
+
+            if personsRankInfo.militaryRank.order < newRankInstance.order:
+                print('continue')
+            else:
+                return JsonResponse({'error': 'Новое звание должно быть выше нынешного звания'}, status=400)
 
             changedRankTitleKaz = newRankTitle
             if newRankTitle == 'старший лейтенант':
@@ -604,6 +615,10 @@ def generate_rankup_decree(request):
                 decreeDate=timezone.datetime.now(),
                 personId=personInstance
             )
+
+            personsRankInfo.militaryRank = newRankInstance
+            personsRankInfo.receivedDate = datetime.strptime(rankUpDate, '%Y-%m-%d')
+            personsRankInfo.save()
 
             soglasnie = ['б', 'в', 'г', 'д', 'ж', 'з', 'й', 'к', 'л', 'м', 'н', 'п', 'р', 'с', 'т', 'ф', 'х', 'ц', 'ч',
                          'ш', 'щ']
