@@ -454,21 +454,25 @@ def generate_transfer_decree(request):
             currentPosition = PositionInfo.objects.get(person=personInstance).position
             currentDepartment = PositionInfo.objects.get(person=personInstance).department
 
-            decree_list_instance = DecreeList.objects.create(
-                decreeType="Перемещение",
-                decreeDate=datetime.strptime(decreeDate, '%Y-%m-%d').date(),
-                personId=personInstance
-            )
+            if not DecreeList.objects.filter(personId=personInstance, decreeType="Перемещение",
+                                             isConfirmed=False).first():
 
-            TransferInfo.objects.create(
-                previousDepartment=currentDepartment,
-                previousPosition=currentPosition,
-                newDepartment=newDepartmentInstance,
-                newPosition=newPositionInstance,
-                transferBase=base,
-                decreeId=decree_list_instance
-            )
+                decree_list_instance = DecreeList.objects.create(
+                    decreeType="Перемещение",
+                    decreeDate=datetime.strptime(decreeDate, '%Y-%m-%d').date(),
+                    personId=personInstance
+                )
 
+                TransferInfo.objects.create(
+                    previousDepartment=currentDepartment,
+                    previousPosition=currentPosition,
+                    newDepartment=newDepartmentInstance,
+                    newPosition=newPositionInstance,
+                    transferBase=base,
+                    decreeId=decree_list_instance
+                )
+            else:
+                return JsonResponse({'error': 'У сотрудника уже имеется приказ о перемещении который не согласован'}, status=400)
             soglasnie = ['б', 'в', 'г', 'д', 'ж', 'з', 'й', 'к', 'л', 'м', 'н', 'п', 'р', 'с', 'т', 'ф', 'х', 'ц', 'ч',
                          'ш', 'щ']
             glasnie = ['а', 'е', 'ё', 'и', 'о', 'у', 'ы', 'э', 'ю', 'я']
@@ -662,22 +666,24 @@ def generate_rankup_decree(request):
             if newRankTitle == 'старший лейтенант':
                 changedRankTitleKaz = 'аға лейтенант'
 
-            decreeInstance = DecreeList.objects.create(
-                decreeType="Присвоение звания",
-                decreeDate=datetime.strptime(rankUpDate, "%Y-%m-%d").date(),
-                personId=personInstance
-            )
+            if not DecreeList.objects.filter(personId=personInstance, decreeType="Присвоение звания",
+                                             isConfirmed=False).first():
 
-            RankUpInfo.objects.create(
-                previousRank=personsRankInfo.militaryRank,
-                newRank=newRankInstance,
-                receivedType=receivedType,
-                decreeId=decreeInstance
-            )
+                decreeInstance = DecreeList.objects.create(
+                    decreeType="Присвоение звания",
+                    decreeDate=datetime.strptime(rankUpDate, "%Y-%m-%d").date(),
+                    personId=personInstance
+                )
 
-            # personsRankInfo.militaryRank = newRankInstance
-            # personsRankInfo.receivedDate = datetime.strptime(rankUpDate, '%Y-%m-%d')
-            # personsRankInfo.save()
+                RankUpInfo.objects.create(
+                    previousRank=personsRankInfo.militaryRank,
+                    newRank=newRankInstance,
+                    receivedType=receivedType,
+                    decreeId=decreeInstance
+                )
+            else:
+                return JsonResponse({'error': 'У сотрудника уже имеется приказ о присвоении звания который не '
+                                              'согласован'}, status=400)
 
             soglasnie = ['б', 'в', 'г', 'д', 'ж', 'з', 'й', 'к', 'л', 'м', 'н', 'п', 'р', 'с', 'т', 'ф', 'х', 'ц', 'ч',
                          'ш', 'щ']
