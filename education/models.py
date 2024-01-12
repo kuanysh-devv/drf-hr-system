@@ -11,7 +11,7 @@ class Education(models.Model):
     educationDateIn = models.DateField(verbose_name=_("Education Start Date"))
     educationDateOut = models.DateField(verbose_name=_("Education End Date"))
     speciality = models.CharField(max_length=255, verbose_name=_("Speciality"))
-    diplomaNumber = models.CharField(max_length=255, verbose_name=_("Diploma Number"))
+    educationForm = models.CharField(max_length=255, verbose_name=_("educationForm"), default="Очное")
     personId = models.ForeignKey(Person, on_delete=models.CASCADE, default=1, verbose_name=_("Person"))
 
     def __str__(self):

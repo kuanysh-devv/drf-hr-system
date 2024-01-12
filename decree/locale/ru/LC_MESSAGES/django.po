@@ -29,8 +29,16 @@ msgid "Decree Type"
 msgstr "Тип приказа"
 
 #: .\decree\models.py:8
-msgid "Decree SubType"
-msgstr "Сабтип приказа"
+msgid "Decree Number"
+msgstr "Номер приказа"
+
+#: .\decree\models.py:8
+msgid "isConfirmed"
+msgstr "Согласован"
+
+#: .\decree\models.py:8
+msgid "isCanceled"
+msgstr "Отменён"
 
 #: .\decree\models.py:9
 msgid "Decree Date"
@@ -48,6 +56,70 @@ msgstr "Приказ"
 #: .\decree\models.py:14
 msgid "Decree Lists"
 msgstr "Список приказов"
+
+#: .\decree\models.py:14
+msgid "AppointmentInfo"
+msgstr "Архив назначений"
+
+msgid "AppointmentInfos"
+msgstr "Архивы назначений"
+
+msgid "Appointment Department"
+msgstr "Назначен в управление"
+
+msgid "Appointment Position"
+msgstr "Назначен на должность"
+
+msgid "Appointment Probation"
+msgstr "Испытательный срок"
+
+msgid "Appointment Base"
+msgstr "Основание назначения"
+
+msgid "Appointment Type"
+msgstr "Тип назначения"
+
+msgid "Decree id"
+msgstr "Приказ"
+
+msgid "TransferInfo"
+msgstr "Архив перемещений"
+
+msgid "TransferInfos"
+msgstr "Архивы перемещений"
+
+msgid "Previous Department"
+msgstr "Предыдущее управление"
+
+msgid "Previous Position"
+msgstr "Предыдущая должность"
+
+msgid "New Department"
+msgstr "Новое управление"
+
+msgid "New Position"
+msgstr "Новая должность"
+
+msgid "Transfer Base"
+msgstr "Основание перемещения"
+
+msgid "RankUpInfo"
+msgstr "Архив присвоении звания"
+
+msgid "RankUpInfos"
+msgstr "Архивы присвоении звания"
+
+msgid "Previous Rank"
+msgstr "Предыдущее звание"
+
+msgid "New Rank"
+msgstr "Новое звание"
+
+msgid "Received Type"
+msgstr "Вид присвоения"
+
+msgid "Received Date"
+msgstr "Дата присвоения"
 
 #: .\decree\models.py:21
 msgid "Document Number"

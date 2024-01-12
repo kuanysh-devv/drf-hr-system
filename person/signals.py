@@ -18,7 +18,8 @@ def person_pre_delete(sender, instance, **kwargs):
         user.delete()
 
         instance.positionInfo.delete()
-        instance.rankInfo.delete()
+        if instance.rankInfo is not None:
+            instance.rankInfo.delete()
 
     except get_user_model().DoesNotExist:
         pass  # User doesn't exist, no need to delete

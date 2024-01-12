@@ -31,3 +31,16 @@ class RankInfo(models.Model):
         verbose_name = _("Rank Info")
         verbose_name_plural = _("Rank Infos")
 
+    def create_rank_info_instance_after_minutes(self, minute_count):
+        # Calculate the date after the specified number of minutes
+        next_promotion_date = datetime.now() + timedelta(minutes=minute_count)
+
+        # Create RankInfo instance
+        RankInfo.objects.create(
+            militaryRank=self.militaryRank,
+            receivedType=self.receivedType,
+            decreeNumber=self.decreeNumber,
+            receivedDate=datetime.now().date(),
+            nextPromotionDate=next_promotion_date.date(),
+            needPositionUp=self.needPositionUp
+        )

@@ -24,9 +24,9 @@ msgstr ""
 msgid "staffing_table_ru"
 msgstr "Штатное расписание"
 
-#: .\staffing_table\models.py:8
+#: .\staffing_table\models.py:8Должность
 msgid "Position"
-msgstr "Должность"
+msgstr ""
 
 #: .\staffing_table\models.py:9
 msgid "Department"

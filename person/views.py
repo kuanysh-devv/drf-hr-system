@@ -207,8 +207,7 @@ class PersonViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         # Deserialize the request data using the PersonSerializer
         posSerializer = PositionInfoSerializer(data=request.data.get('PositionInfo'))
-        rankSerializer = RankInfoSerializer(data=request.data.get('RankInfo'))
-        if posSerializer.is_valid() and rankSerializer.is_valid():
+        if posSerializer.is_valid():
             # Create the Person instance
             positionInfoData = request.data.get('PositionInfo')
 
@@ -218,19 +217,28 @@ class PersonViewSet(viewsets.ModelViewSet):
             departmentName = positionInfoData.get('department')
             departmentInstance = Department.objects.get(DepartmentName=departmentName)
 
-            rankInfoData = request.data.get('RankInfo')
-            rankName = rankInfoData.get('militaryRank')
-            receivedType = rankInfoData.get('receivedType')
-            receivedDate = rankInfoData.get('receivedDate')
-            rankInstance = MilitaryRank.objects.get(rankTitle=rankName)
-            rank_info_data = {
-                'militaryRank': rankInstance,
-                'receivedType': receivedType,
-                'receivedDate': receivedDate,
-            }
+            rankInfo = None
 
+            try:
+                rankSerializer = RankInfoSerializer(data=request.data.get('RankInfo'))
+                rankInfoData = request.data.get('RankInfo')
+                rankName = rankInfoData.get('militaryRank')
+                receivedType = rankInfoData.get('receivedType')
+                receivedDate = rankInfoData.get('receivedDate')
+                rankInstance = MilitaryRank.objects.get(rankTitle=rankName)
+
+                rank_info_data = {
+                    'militaryRank': rankInstance,
+                    'receivedType': receivedType,
+                    'receivedDate': receivedDate,
+                }
+
+                rankInfo = rankSerializer.create(validated_data=rank_info_data)
+
+            except Exception as e:
+                # Handle other exceptions if necessary
+                print(f"Person have no Rank ok: {e}")
             # Use create method instead of save
-            rankInfo = rankSerializer.create(validated_data=rank_info_data)
             posInfo = posSerializer.save(position=positionInstance, department=departmentInstance)
 
             person_data = request.data.get('Person')
@@ -242,7 +250,8 @@ class PersonViewSet(viewsets.ModelViewSet):
             person_serializer = PersonSerializer(data=person_data)
 
             if person_serializer.is_valid():
-                person = person_serializer.save(positionInfo=posInfo, rankInfo=rankInfo, gender=genderInstance,
+                person = person_serializer.save(positionInfo=posInfo, gender=genderInstance,
+                                                rankInfo=rankInfo,
                                                 familyStatus=familyStatusInstance)
             else:
                 return Response(person_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -541,15 +550,15 @@ class PersonViewSet(viewsets.ModelViewSet):
                 organizationAddress="Бейбітшілік 10"
                 # Add other fields from PositionInfo as needed
             )
-
-            RankArchive.objects.create(
-                personId=person,
-                militaryRank=rankInfo.militaryRank,
-                receivedType=rankInfo.receivedType,
-                decreeNumber=rankInfo.decreeNumber,
-                startDate=rankInfo.receivedDate,
-                endDate=None
-            )
+            if rankInfo is not None:
+                RankArchive.objects.create(
+                    personId=person,
+                    militaryRank=rankInfo.militaryRank,
+                    receivedType=rankInfo.receivedType,
+                    decreeNumber=rankInfo.decreeNumber,
+                    startDate=rankInfo.receivedDate,
+                    endDate=None
+                )
 
             # SpecCheckInfo
             try:

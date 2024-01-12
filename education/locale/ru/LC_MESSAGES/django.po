@@ -45,8 +45,8 @@ msgid "Speciality"
 msgstr "Специальность"
 
 #: .\education\models.py:14
-msgid "Diploma Number"
-msgstr "Номер диплома"
+msgid "educationForm"
+msgstr "Форма обучения"
 
 #: .\education\models.py:15 .\education\models.py:32 .\education\models.py:47
 #: .\education\models.py:77

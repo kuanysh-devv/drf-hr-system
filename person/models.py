@@ -15,7 +15,7 @@ class Person(models.Model):
     nationality = models.CharField(max_length=255, verbose_name=_("Nationality"))
     familyStatus = models.ForeignKey('FamilyStatus', on_delete=models.CASCADE, verbose_name=_("Family Status"))
     positionInfo = models.ForeignKey(PositionInfo, on_delete=models.CASCADE, verbose_name=_("Position Info"))
-    rankInfo = models.ForeignKey(RankInfo, on_delete=models.CASCADE, verbose_name=_("Rank Info"))
+    rankInfo = models.ForeignKey(RankInfo, on_delete=models.CASCADE, null=True, blank=True, verbose_name=_("Rank Info"))
     isFired = models.BooleanField(default=False, verbose_name=_("isFired"))
     role = models.CharField(max_length=255, default='User', verbose_name=_("Role"))
 

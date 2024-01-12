@@ -3,7 +3,6 @@ import io
 import json
 from datetime import datetime, timedelta
 from io import BytesIO
-
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -14,7 +13,7 @@ from docx.shared import Inches
 from docx.shared import Pt
 
 from birth_info.models import BirthInfo
-from decree.models import DecreeList
+from decree.models import DecreeList, TransferInfo, RankUpInfo, AppointmentInfo
 from education.models import Education, AcademicDegree
 from education.serializers import EducationSerializer, AcademicDegreeSerializer
 from location.models import Department
@@ -23,6 +22,7 @@ from person.models import Person
 from photo.models import Photo
 from position.models import Position, PositionInfo
 from working_history.models import WorkingHistory
+from military_rank.tasks import create_rank_info_after_months
 
 
 @csrf_exempt
@@ -260,49 +260,90 @@ def generate_appointment_decree(request):
             data = json.loads(body)
 
             # Extract variables from the parsed data
-            firstName = data.get('firstName')
-            surname = data.get('surname')
-            patronymic = data.get('patronymic')
-            gender = data.get('gender')
-            positionTitle = data.get('position')
-            departmentName = data.get('department')
+            personId = data.get('personId')
             month_count = data.get('monthCount')
             base = data.get('base')
+            appointmentType = data.get('appointmentType')
 
-            departmentInstance = Department.objects.get(DepartmentName=departmentName)
-            positionInstance = Position.objects.get(positionTitle=positionTitle)
+            # Get model instances
+            personInstance = Person.objects.get(pk=personId)
+            departmentInstance = personInstance.positionInfo.department
+            positionInstance = personInstance.positionInfo.position
+            positionTitle = positionInstance.positionTitle
+            departmentName = departmentInstance.DepartmentName
+            # Create required model instances...
+            if not DecreeList.objects.filter(personId=personInstance, decreeType="Назначение",
+                                             isConfirmed=False).first():
+                decree_list_instance = DecreeList.objects.create(
+                    decreeType="Назначение",
+                    decreeDate=timezone.datetime.now(),
+                    personId=personInstance
+                )
+                if appointmentType == 'Впервые принятый':
+                    AppointmentInfo.objects.create(
+                        appointmentDepartment=departmentInstance,
+                        appointmentPosition=positionInstance,
+                        appointmentProbation=int(month_count),
+                        appointmentBase=base,
+                        appointmentType=appointmentType,
+                        decreeId=decree_list_instance
+                    )
+                if appointmentType == 'Вновь принятый':
+                    AppointmentInfo.objects.create(
+                        appointmentDepartment=departmentInstance,
+                        appointmentPosition=positionInstance,
+                        appointmentProbation=None,
+                        appointmentBase=base,
+                        appointmentType=appointmentType,
+                        decreeId=decree_list_instance
+                    )
 
+                if appointmentType == 'Впервые принятый':
+                    three_months_later = timezone.now() + timedelta(days=int(month_count) * 30 + 1)
+                    if personInstance.rankInfo is None:
+                        task = create_rank_info_after_months.apply_async(
+                            args=(int(month_count), decree_list_instance.decreeNumber), eta=three_months_later)
+                    else:
+                        return JsonResponse(
+                            {'error': 'Сотрудник уже имеет звание'}, status=400)
+
+            else:
+                return JsonResponse({'error': 'У сотрудника уже имеется приказ о назначении который не согласован'}, status=400)
+
+            # Для склонения
             soglasnie = ['б', 'в', 'г', 'д', 'ж', 'з', 'й', 'к', 'л', 'м', 'н', 'п', 'р', 'с', 'т', 'ф', 'х', 'ц', 'ч',
                          'ш', 'щ']
             glasnie = ['а', 'е', 'ё', 'и', 'о', 'у', 'ы', 'э', 'ю', 'я']
 
-            changedSurname = None
-            changedFirstName = None
+            changedSurname = personInstance.surname
+            changedFirstName = personInstance.firstName
 
-            if gender == 'Мужской':
-                if firstName[-1] in soglasnie:
-                    changedFirstName = firstName + 'а'  # Қасымбаева Қуаныша Ахатұлы
+            if personInstance.gender.genderName == 'Мужской':
+                if personInstance.firstName[-1] in soglasnie:
+                    changedFirstName = personInstance.firstName + 'а'
                 else:
-                    changedFirstName = firstName
+                    changedFirstName = personInstance.firstName
 
-                if surname[-1] in soglasnie:
-                    changedSurname = surname + 'а'  # Қасымбаева Қуаныша Ахатұлы
+                if personInstance.surname[-2:] == 'ев' or personInstance.surname[-2:] == 'ов':
+                    changedSurname = personInstance.surname + 'а'
                 else:
-                    changedSurname = surname
+                    changedSurname = personInstance.surname
 
-            if gender == 'Женский':
-                if firstName[-1] in glasnie:
-                    changedFirstName = firstName + 'у'  # Қасымбаеву Динару
+            if personInstance.gender.genderName == 'Женский':
+                if personInstance.firstName[-1] == 'а' and personInstance.firstName[-2] in soglasnie:
+                    changedFirstName = personInstance.firstName[:-1]
+                    changedFirstName = changedFirstName + 'у'
                 else:
-                    changedFirstName = firstName
+                    changedFirstName = personInstance.firstName
 
-                if surname[-1] in glasnie:
-                    changedSurname = surname + 'у'  # Қасымбаеву Динару
+                if personInstance.surname[-3:] == 'ева' or personInstance.surname[-3:] == 'ова':
+                    changedSurname = personInstance.surname[:-1]
+                    changedSurname = changedSurname + 'у'
                 else:
-                    changedSurname = surname
+                    changedSurname = personInstance.surname
 
-            personsFIO = changedSurname + ' ' + changedFirstName + ' ' + patronymic
-            personsFIOKaz = firstName + ' ' + patronymic + ' ' + surname
+            personsFIO = changedSurname + ' ' + changedFirstName + ' ' + personInstance.patronymic
+            personsFIOKaz = personInstance.firstName + ' ' + personInstance.patronymic + ' ' + personInstance.surname
             changedPositionTitle = positionTitle
 
             if positionTitle == 'Руководитель департамента':
@@ -340,8 +381,12 @@ def generate_appointment_decree(request):
                 baseKaz = 'хаттама'
 
             # Load the Word document template
-            template_path = 'docx_generator/static/templates/appointment_template.docx'  # Update with the path to your template
-            document = Document(template_path)
+            if appointmentType == 'Впервые принятый':
+                template_path = 'docx_generator/static/templates/appointment_template.docx'  # Update with the path to your template
+                document = Document(template_path)
+            if appointmentType == 'Вновь принятый':
+                template_path = 'docx_generator/static/templates/appointment_template_secondly.docx'  # Update with the path to your template
+                document = Document(template_path)
 
             # Define a function to replace placeholders in the document
             def replace_placeholder(placeholder, replacement):
@@ -349,7 +394,6 @@ def generate_appointment_decree(request):
                     if placeholder in paragraph1.text:
 
                         for run1 in paragraph1.runs:
-                            print(run1.text)
                             if placeholder in run1.text:
                                 run1.text = run1.text.replace(placeholder, replacement)
                                 run1.font.size = Pt(14)  # Adjust the font size if needed
@@ -405,19 +449,22 @@ def generate_transfer_decree(request):
             newDepartmentInstance = Department.objects.get(DepartmentName=newDepartmentName)
             newPositionInstance = Position.objects.get(positionTitle=newPositionTitle)
 
-            personsPositionInfo = PositionInfo.objects.get(person=personInstance)
             currentPosition = PositionInfo.objects.get(person=personInstance).position
             currentDepartment = PositionInfo.objects.get(person=personInstance).department
 
-            personsPositionInfo.department = newDepartmentInstance
-            personsPositionInfo.position = newPositionInstance
-            personsPositionInfo.receivedDate = timezone.datetime.now()
-            personsPositionInfo.save()
-
-            DecreeList.objects.create(
+            decree_list_instance = DecreeList.objects.create(
                 decreeType="Перемещение",
                 decreeDate=timezone.datetime.now(),
                 personId=personInstance
+            )
+
+            TransferInfo.objects.create(
+                previousDepartment=currentDepartment,
+                previousPosition=currentPosition,
+                newDepartment=newDepartmentInstance,
+                newPosition=newPositionInstance,
+                transferBase=base,
+                decreeId=decree_list_instance
             )
 
             soglasnie = ['б', 'в', 'г', 'д', 'ж', 'з', 'й', 'к', 'л', 'м', 'н', 'п', 'р', 'с', 'т', 'ф', 'х', 'ц', 'ч',
@@ -433,19 +480,21 @@ def generate_transfer_decree(request):
                 else:
                     changedFirstName = personInstance.firstName
 
-                if personInstance.surname[-1] in soglasnie:
+                if personInstance.surname[-2:] == 'ев' or personInstance.surname[-2:] == 'ов':
                     changedSurname = personInstance.surname + 'а'  # Қасымбаева Қуаныша Ахатұлы
                 else:
                     changedSurname = personInstance.surname
 
             if personInstance.gender.genderName == 'Женский':
-                if personInstance.firstName[-1] in glasnie:
-                    changedFirstName = personInstance.firstName  # Қасымбаеву Динару
+                if personInstance.firstName[-1] == 'а' and personInstance.firstName[-2] in soglasnie:
+                    changedFirstName = personInstance.firstName[:-1]
+                    changedFirstName = changedFirstName + 'у'
                 else:
                     changedFirstName = personInstance.firstName
 
-                if personInstance.surname[-1] in glasnie:
-                    changedSurname = personInstance.surname  # Қасымбаеву Динару
+                if personInstance.surname[-3:] == 'ева' or personInstance.surname[-3:] == 'ова':
+                    changedSurname = personInstance.surname[:-1]
+                    changedSurname = changedSurname + 'у'
                 else:
                     changedSurname = personInstance.surname
 
@@ -582,6 +631,7 @@ def generate_rankup_decree(request):
             person_id = data.get('personId')
             newRankTitle = data.get('newRank')
             rankUpDate = data.get('rankUpDate')
+            receivedType = data.get('receivedType')
 
             personInstance = Person.objects.get(pk=person_id)
 
@@ -610,15 +660,22 @@ def generate_rankup_decree(request):
             if newRankTitle == 'старший лейтенант':
                 changedRankTitleKaz = 'аға лейтенант'
 
-            DecreeList.objects.create(
+            decreeInstance = DecreeList.objects.create(
                 decreeType="Присвоение звания",
-                decreeDate=timezone.datetime.now(),
+                decreeDate=datetime.strptime(rankUpDate, "%Y-%m-%d").date(),
                 personId=personInstance
             )
 
-            personsRankInfo.militaryRank = newRankInstance
-            personsRankInfo.receivedDate = datetime.strptime(rankUpDate, '%Y-%m-%d')
-            personsRankInfo.save()
+            RankUpInfo.objects.create(
+                previousRank=personsRankInfo.militaryRank,
+                newRank=newRankInstance,
+                receivedType=receivedType,
+                decreeId=decreeInstance
+            )
+
+            # personsRankInfo.militaryRank = newRankInstance
+            # personsRankInfo.receivedDate = datetime.strptime(rankUpDate, '%Y-%m-%d')
+            # personsRankInfo.save()
 
             soglasnie = ['б', 'в', 'г', 'д', 'ж', 'з', 'й', 'к', 'л', 'м', 'н', 'п', 'р', 'с', 'т', 'ф', 'х', 'ц', 'ч',
                          'ш', 'щ']
@@ -627,6 +684,7 @@ def generate_rankup_decree(request):
             changedSurname = personInstance.surname
             changedFirstName = personInstance.firstName
             changedSurnameKaz = personInstance.surname
+            changedPatronymic = personInstance.patronymic
 
             if personInstance.gender.genderName == 'Мужской':
                 if personInstance.firstName[-1] in soglasnie:
@@ -655,7 +713,13 @@ def generate_rankup_decree(request):
                 else:
                     changedSurname = personInstance.surname
 
-            personsFIO = changedSurname + ' ' + changedFirstName + ' ' + personInstance.patronymic
+                if personInstance.patronymic[-4:] == 'евна' or personInstance.patronymic[-4:] == 'овна':
+                    changedPatronymic = personInstance.patronymic[:-1]
+                    changedPatronymic = changedPatronymic + 'е'
+                else:
+                    changedPatronymic = personInstance.patronymic
+
+            personsFIO = changedSurname + ' ' + changedFirstName + ' ' + changedPatronymic
             personsFIOKaz = personInstance.firstName + ' ' + personInstance.patronymic + ' ' + changedSurnameKaz
 
             changedCurrentDepartmentName = currentDepartment.DepartmentName
@@ -691,23 +755,14 @@ def generate_rankup_decree(request):
             if currentPosition.positionTitle == 'Заместитель руководителя управления':
                 changedCurrentPosition = 'Заместителю руководителя управления'
 
-            if currentPosition.positionTitle == 'Оперуполномоченный по особо важным делам' and personInstance.gender.genderName == 'Мужской':
+            if currentPosition.positionTitle == 'Оперуполномоченный по особо важным делам':
                 changedCurrentPosition = 'Оперуполномоченному по особо важным делам'
 
-            if currentPosition.positionTitle == 'Оперуполномоченный по особо важным делам' and personInstance.gender.genderName == 'Женский':
-                changedCurrentPosition = 'Оперуполномоченной по особо важным делам'
-
-            if currentPosition.positionTitle == 'Старший оперуполномоченный' and personInstance.gender.genderName == 'Мужской':
+            if currentPosition.positionTitle == 'Старший оперуполномоченный':
                 changedCurrentPosition = 'Старшему оперуполномоченному'
 
-            if currentPosition.positionTitle == 'Старший оперуполномоченный' and personInstance.gender.genderName == 'Женский':
-                changedCurrentPosition = 'Старшей оперуполномоченной'
-
-            if currentPosition.positionTitle == 'Оперуполномоченный' and personInstance.gender.genderName == 'Мужской':
+            if currentPosition.positionTitle == 'Оперуполномоченный':
                 changedCurrentPosition = 'Оперуполномоченному'
-
-            if currentPosition.positionTitle == 'Оперуполномоченный' and personInstance.gender.genderName == 'Женский':
-                changedCurrentPosition = 'Оперуполномоченной'
 
             if currentPosition.positionTitleKaz == 'Аға жедел уәкіл':
                 changedCurrentPositionKaz = 'Аға жедел уәкілі'

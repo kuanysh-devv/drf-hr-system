@@ -6,3 +6,6 @@ class DecreeConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'decree'
     verbose_name = _("decree_ru")
+
+    def ready(self):
+        import decree.signals
