@@ -10,7 +10,6 @@ from time import sleep
 @shared_task(bind=True, base=AbortableTask)
 def create_rank_info_after_months(self, month_count, decreenumber):
     # Calculate the receivedDate by adding the specified number of months to today's date
-    received_date = datetime.now() + relativedelta(minutes=int(month_count))
     decreeInstance = None
 
     try:
@@ -23,6 +22,7 @@ def create_rank_info_after_months(self, month_count, decreenumber):
     decreeInfo = AppointmentInfo.objects.get(decreeId=decreeInstance)
     person = decreeInstance.personId
 
+    received_date = decreeInstance.decreeDate + relativedelta(minutes=int(month_count))
     if decreeInfo.appointmentType == 'Впервые принятый':
         # Create a dictionary representing the RankInfo instance
         new_rank_info_data = {

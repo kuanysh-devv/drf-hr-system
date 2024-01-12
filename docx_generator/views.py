@@ -264,6 +264,7 @@ def generate_appointment_decree(request):
             month_count = data.get('monthCount')
             base = data.get('base')
             appointmentType = data.get('appointmentType')
+            decreeDate = data.get('decreeDate')
 
             # Get model instances
             personInstance = Person.objects.get(pk=personId)
@@ -276,7 +277,7 @@ def generate_appointment_decree(request):
                                              isConfirmed=False).first():
                 decree_list_instance = DecreeList.objects.create(
                     decreeType="Назначение",
-                    decreeDate=timezone.datetime.now(),
+                    decreeDate=datetime.strptime(decreeDate, '%Y-%m-%d').date(),
                     personId=personInstance
                 )
                 if appointmentType == 'Впервые принятый':
@@ -299,7 +300,7 @@ def generate_appointment_decree(request):
                     )
 
                 if appointmentType == 'Впервые принятый':
-                    three_months_later = timezone.now() + timedelta(days=int(month_count) * 30 + 1)
+                    three_months_later = datetime.strptime(decreeDate, '%Y-%m-%d').date() + timedelta(days=int(month_count) * 30 + 1)
                     if personInstance.rankInfo is None:
                         task = create_rank_info_after_months.apply_async(
                             args=(int(month_count), decree_list_instance.decreeNumber), eta=three_months_later)
@@ -443,6 +444,7 @@ def generate_transfer_decree(request):
             person_id = data.get('personId')
             newPositionTitle = data.get('newPosition')
             newDepartmentName = data.get('newDepartment')
+            decreeDate = data.get('decreeDate')
             base = data.get('base')
 
             personInstance = Person.objects.get(pk=person_id)
@@ -454,7 +456,7 @@ def generate_transfer_decree(request):
 
             decree_list_instance = DecreeList.objects.create(
                 decreeType="Перемещение",
-                decreeDate=timezone.datetime.now(),
+                decreeDate=datetime.strptime(decreeDate, '%Y-%m-%d').date(),
                 personId=personInstance
             )
 
