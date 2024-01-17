@@ -835,7 +835,8 @@ def search_persons(request):
                 'firstName': person.firstName,
                 'surname': person.surname,
                 'patronymic': person.patronymic,
-                'photo': person.photo_set.first().photoBinary if person.photo_set.exists() else None
+                'photo': person.photo_set.first().photoBinary if person.photo_set.exists() else None,
+                'currentRank': person.rankInfo.militaryRank.rankTitle
             }
             for person in persons
         ]
