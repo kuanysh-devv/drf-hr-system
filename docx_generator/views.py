@@ -650,17 +650,17 @@ def generate_rankup_decree(request):
             try:
                 newRankInstance = MilitaryRank.objects.get(rankTitle=newRankTitle)
             except json.JSONDecodeError:
-                return JsonResponse({'message': 'Неправильное звание'}, status=400)
+                return JsonResponse({'error': 'Неправильное звание'}, status=400)
 
             if personsPositionInfo.position.maxRank.order >= newRankInstance.order:
                 newRankTitle = newRankInstance.rankTitle.lower()
             else:
-                return JsonResponse({'message': 'Новое звание превышает максимальное звание должности'}, status=400)
+                return JsonResponse({'error': 'Новое звание превышает максимальное звание должности'}, status=400)
 
             if personsRankInfo.militaryRank.order < newRankInstance.order:
                 print('continue')
             else:
-                return JsonResponse({'message': 'Новое звание должно быть выше нынешного звания'}, status=400)
+                return JsonResponse({'error': 'Новое звание должно быть выше нынешного звания'}, status=400)
 
             changedRankTitleKaz = newRankTitle
             if newRankTitle == 'старший лейтенант':
@@ -873,6 +873,6 @@ def generate_rankup_decree(request):
             return response
 
         except json.JSONDecodeError:
-            return JsonResponse({'message': 'Invalid JSON data'}, status=400)
+            return JsonResponse({'error': 'Invalid JSON data'}, status=400)
 
-    return JsonResponse({'message': 'Invalid request method'}, status=405)
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
