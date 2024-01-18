@@ -78,6 +78,29 @@ def getDecreeInfo(request):
     else:
         person_data['photo'] = None
 
+    if decreeInstance.decreeType == 'Назначение':
+        decreeInfo = AppointmentInfo.objects.get(decreeId=decreeInstance)
+
+        appointmentInfo = [{
+            'decreeInfo': {
+                'decreeId': decreeInstance.id,
+                'decreeType': decreeInstance.decreeType,
+                'decreeNumber': decreeInstance.decreeNumber,
+                'decreeDate': decreeInstance.decreeDate,
+                'person': person_data,
+            },
+            'newPosition': {
+                'newDepartment': decreeInfo.appointmentDepartment.DepartmentName,
+                'newPosition': decreeInfo.appointmentPosition.positionTitle,
+                'probationMonthCount': decreeInfo.appointmentProbation,
+                'base': decreeInfo.appointmentBase,
+                'appointmentType': decreeInfo.appointmentType
+            }
+
+        }]
+
+        return JsonResponse({'appointmentInfo': appointmentInfo})
+
     if decreeInstance.decreeType == 'Перемещение':
 
         decreeInfo = TransferInfo.objects.get(decreeId=decreeInstance)
@@ -132,6 +155,14 @@ def decreeConfirmation(request):
 
         decree_instance = DecreeList.objects.get(pk=decreeId)
         personInstance = decree_instance.personId
+
+        if decree_instance.decreeType == 'Назначение':
+            decree_instance.isConfirmed = True
+            decree_instance.save()
+
+            response_data = {'status': 'success', 'message': 'Приказ о назначении согласован'}
+            response_json = json.dumps(response_data)
+            return HttpResponse(response_json, content_type='application/json')
 
         if decree_instance.decreeType == 'Перемещение':
 
