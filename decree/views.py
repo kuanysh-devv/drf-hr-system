@@ -45,6 +45,7 @@ def getDecreeList(request):
             'decreeType': decree.decreeType,
             'decreeNumber': decree.decreeNumber,
             'decreeDate': decree.decreeDate,
+            'decreeIsConfirmed': decree.isConfirmed,
             'person': person_data,
         })
 
