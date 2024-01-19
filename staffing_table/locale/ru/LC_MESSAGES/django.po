@@ -47,3 +47,15 @@ msgstr "Штатное расписание"
 #: .\staffing_table\models.py:18
 msgid "Staffing Tables"
 msgstr "Штатные расписания"
+
+msgid "Vacancy"
+msgstr "Вакансия"
+
+msgid "Vacancies"
+msgstr "Вакансии"
+
+msgid "Available Date"
+msgstr "Дата образования вакансии"
+
+msgid "Vacancy List"
+msgstr "Список вакансий"

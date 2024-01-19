@@ -30,10 +30,10 @@ def downloadStaffingTable(request, *args, **kwargs):
         staffing_data = StaffingTable.objects.all()
     else:
         LocationInstance = Location.objects.get(LocationName=location_name)
-        staffing_data = StaffingTable.objects.filter(department__Location=LocationInstance)
+        staffing_data = StaffingTable.objects.filter(staffing_table_department__Location=LocationInstance)
 
     df = pd.DataFrame.from_records(
-        staffing_data.values('department__DepartmentName', 'position__positionTitle', 'current_count', 'max_count'))
+        staffing_data.values('staffing_table_department__DepartmentName', 'staffing_table_position__positionTitle', 'current_count', 'max_count'))
     df['available_count'] = df['max_count'] - df['current_count']
     df = df.drop(['current_count', 'max_count'], axis=1)
 
@@ -44,15 +44,15 @@ def downloadStaffingTable(request, *args, **kwargs):
 
     current_row = 0  # Initialize current_row to 0
 
-    for department_data in staffing_data.values('department__DepartmentName').distinct():
+    for department_data in staffing_data.values('staffing_table_department__DepartmentName').distinct():
         # Extract the department name
-        department_name = department_data['department__DepartmentName']
+        department_name = department_data['staffing_table_department__DepartmentName']
 
         # Filter data for the current department
         department_df = pd.DataFrame.from_records(
             staffing_data.filter(
-                department__DepartmentName=department_name
-            ).values('position__positionTitle', 'current_count', 'max_count')
+                staffing_table_department__DepartmentName=department_name
+            ).values('staffing_table_position__positionTitle', 'current_count', 'max_count')
         )
 
         department_df['available_count'] = department_df['max_count'] - department_df['current_count']
@@ -114,20 +114,20 @@ def getStaffingTable(request, *args, **kwargs):
         departments = Department.objects.filter(Location=location)
         data = {'Departments': []}
         for department in departments:
-            DistinctPositionInfosToGetPositions = PositionInfo.objects.filter(department=department).distinct(
-                'position')
+            StaffingTableInstances = StaffingTable.objects.filter(staffing_table_department=department).distinct(
+                'staffing_table_position')
             # GlavExpertDc
             # ExpertDC
             positionList = []
-            for posinfo in DistinctPositionInfosToGetPositions:
-                position_data = PositionSerializer(posinfo.position).data
-                currentPositionInfos = PositionInfo.objects.filter(position=posinfo.position)
+            for staffTable in StaffingTableInstances:
+                position_data = PositionSerializer(staffTable.staffing_table_position).data
+                currentPositionInfos = PositionInfo.objects.filter(position=staffTable.staffing_table_position, department=staffTable.staffing_table_department)
                 personsOnPosition = Person.objects.filter(positionInfo__in=currentPositionInfos)
                 position_data['persons'] = PersonSerializer(personsOnPosition, many=True).data
 
                 staffing_table_entry = StaffingTable.objects.filter(
-                    position=posinfo.position,
-                    department=department
+                    staffing_table_position=staffTable.staffing_table_position,
+                    staffing_table_department=department
                 ).first()
 
                 if staffing_table_entry:

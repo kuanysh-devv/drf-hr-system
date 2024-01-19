@@ -5,7 +5,7 @@ from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import generics, viewsets
 from rest_framework.permissions import IsAuthenticated
-
+from staffing_table.models import StaffingTable, Vacancy
 from location.models import Department
 from military_rank.models import MilitaryRank, RankInfo
 from person.models import RankArchive
@@ -149,7 +149,7 @@ def getDecreeInfo(request):
 @csrf_exempt
 def decreeConfirmation(request):
     if request.method == 'POST':
-
+        # 1 L 2 K 3 O 4 P/D
         data = json.loads(request.body.decode('utf-8'))
         decreeId = data.get('decreeId')
 
@@ -157,8 +157,13 @@ def decreeConfirmation(request):
         personInstance = decree_instance.personId
 
         if decree_instance.decreeType == 'Назначение':
+            decreeInfo = AppointmentInfo.objects.get(decreeId=decree_instance)
             decree_instance.isConfirmed = True
             decree_instance.save()
+
+            staffingTableInstance = StaffingTable.objects.get(staffing_table_department=decreeInfo.appointmentDepartment, staffing_table_position=decreeInfo.appointmentPosition)
+            Vacancy.delete(staffingTableInstance.vacancy_list.first())
+            staffingTableInstance.save()
 
             response_data = {'status': 'success', 'message': 'Приказ о назначении согласован'}
             response_json = json.dumps(response_data)
@@ -168,11 +173,22 @@ def decreeConfirmation(request):
 
             decreeInfo = TransferInfo.objects.get(decreeId=decree_instance)
             personsPositionInfo = PositionInfo.objects.get(person=personInstance)
+            OldStaffingTableInstance = StaffingTable.objects.get(staffing_table_department=personsPositionInfo.department, staffing_table_position=personsPositionInfo.position)
+            NewStaffingTableInstance = StaffingTable.objects.get(staffing_table_department=decreeInfo.newDepartment, staffing_table_position=decreeInfo.newPosition)
+
+            Vacancy.delete(NewStaffingTableInstance.vacancy_list.first())
+            NewStaffingTableInstance.save()
 
             personsPositionInfo.department = decreeInfo.newDepartment
             personsPositionInfo.position = decreeInfo.newPosition
             personsPositionInfo.receivedDate = decree_instance.decreeDate
             personsPositionInfo.save()
+
+            Vacancy.objects.create(
+                position=OldStaffingTableInstance.staffing_table_position,
+                department=OldStaffingTableInstance.staffing_table_department,
+                available_date=decree_instance.decreeDate
+            )
 
             decree_instance.isConfirmed = True
             decree_instance.save()
