@@ -20,9 +20,12 @@ def pre_save_position_info(sender, instance, **kwargs):
 
             # -1 to old job place in staffing table
             try:
-                # Retrieve the staffing table entry for the department and position
-                staffing_entry = StaffingTable.objects.get(staffing_table_department=original_instance.department,
-                                                           staffing_table_position=original_instance.position)
+                if original_instance.department is not None:
+
+                    staffing_entry = StaffingTable.objects.get(staffing_table_department=original_instance.department,
+                                                               staffing_table_position=original_instance.position)
+                else:
+                    staffing_entry = StaffingTable.objects.get(staffing_table_position=original_instance.position)
 
                 if staffing_entry.current_count > 0:
                     staffing_entry.current_count -= 1
@@ -34,10 +37,15 @@ def pre_save_position_info(sender, instance, **kwargs):
 
             # +1 to new job place in staffing table
             try:
-                # Retrieve the staffing table entry for the department and position
-                staffing_entry = StaffingTable.objects.get(staffing_table_department=instance.department, staffing_table_position=instance.position)
+                if original_instance.department is not None:
+
+                    staffing_entry = StaffingTable.objects.get(staffing_table_department=original_instance.department,
+                                                               staffing_table_position=original_instance.position)
+                else:
+                    staffing_entry = StaffingTable.objects.get(staffing_table_position=original_instance.position)
 
                 if staffing_entry.current_count + 1 > staffing_entry.max_count:
+
                     raise ValidationError('Добавление этой должности будет превышать максимальное количество для '
                                           'департамента')
 
@@ -77,10 +85,14 @@ def position_info_pre_save(sender, instance, **kwargs):
         # Get the associated department and position
         department = instance.department
         position = instance.position
-
         try:
             # Retrieve the staffing table entry for the department and position
-            staffing_entry = StaffingTable.objects.get(staffing_table_department=department, staffing_table_position=position)
+            if department is not None:
+                staffing_entry = StaffingTable.objects.get(staffing_table_department=department,
+                                                           staffing_table_position=position)
+            else:
+
+                staffing_entry = StaffingTable.objects.get(staffing_table_position=position, staffing_table_department=None)
 
             # Check if adding a new position exceeds the max_count
             if staffing_entry.current_count + 1 > staffing_entry.max_count:
@@ -105,7 +117,8 @@ def position_info_pre_delete(sender, instance, **kwargs):
     if instance.department and instance.position:
         try:
             # Retrieve the staffing table entry for the department and position
-            staffing_entry = StaffingTable.objects.get(staffing_table_department=instance.department, staffing_table_position=instance.position)
+            staffing_entry = StaffingTable.objects.get(staffing_table_department=instance.department,
+                                                       staffing_table_position=instance.position)
             print(staffing_entry)
             # Ensure that the current_count is greater than zero before decrementing
             if staffing_entry.current_count > 0:

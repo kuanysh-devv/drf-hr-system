@@ -20,11 +20,14 @@ class Position(models.Model):
 
 class PositionInfo(models.Model):
     position = models.ForeignKey(Position, on_delete=models.CASCADE, verbose_name=_("Position"))
-    department = models.ForeignKey(Department, models.CASCADE, default=1, verbose_name=_("Department"))
+    department = models.ForeignKey(Department, models.CASCADE, default=1, blank=True, null=True, verbose_name=_("Department"))
     receivedDate = models.DateField(verbose_name=_("Received Date"))
 
     def __str__(self):
-        return str(self.position) + ' ' + str(self.department.DepartmentName)
+        if self.department is not None:
+            return str(self.position) + ' ' + str(self.department.DepartmentName)
+        else:
+            return str(self.position)
 
     class Meta:
         verbose_name = _("Position Info")

@@ -20,19 +20,24 @@ class Vacancy(models.Model):
 
 class StaffingTable(models.Model):
     staffing_table_position = models.ForeignKey(Position, on_delete=models.CASCADE, verbose_name=_("Position"))
-    staffing_table_department = models.ForeignKey(Department, on_delete=models.CASCADE, verbose_name=_("Department"))
+    staffing_table_department = models.ForeignKey(Department, blank=True, null=True, on_delete=models.CASCADE,
+                                                  verbose_name=_("Department"))
     vacancy_list = models.ManyToManyField('Vacancy', verbose_name=_("Vacancy List"), blank=True)
     current_count = models.IntegerField(default=0, verbose_name=_("Current Count"))
     max_count = models.IntegerField(verbose_name=_("Max Count"))
 
     def __str__(self):
-        if self.vacancy_list.exists():
-            first_vacancy = self.vacancy_list.first()
-            return str("Штатное расписание - ") + str(first_vacancy.department.DepartmentName) + " - " + str(
-                first_vacancy.position.positionTitle)
+        if self.staffing_table_department is not None:
+            if self.vacancy_list.exists():
+                first_vacancy = self.vacancy_list.first()
+                return str("Штатное расписание - ") + str(first_vacancy.department.DepartmentName) + " - " + str(
+                    first_vacancy.position.positionTitle)
+            else:
+                return str("Штатное расписание - ") + str(self.staffing_table_department.DepartmentName) + " - " + str(
+                    self.staffing_table_position.positionTitle)
         else:
-            return str("Штатное расписание - ") + str(self.staffing_table_department.DepartmentName) + " - " + str(
-                self.staffing_table_position.positionTitle)
+            return str("Штатное расписание - ") + str(
+                    self.staffing_table_position.positionTitle)
 
     class Meta:
         verbose_name = _("Staffing Table")

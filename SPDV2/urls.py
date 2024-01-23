@@ -18,7 +18,7 @@ from position.views import *
 from resident_info.views import *
 from rest_framework import routers
 
-from staffing_table.views import StaffingTableViewSet, getStaffingTable, downloadStaffingTable
+from staffing_table.views import StaffingTableViewSet
 from working_history.views import WorkingHistoryViewSet
 
 router = routers.DefaultRouter()
@@ -65,14 +65,14 @@ urlpatterns = [
     path('api/v1/generate-appointment-decree/', generate_appointment_decree, name='generate_appointment_decree'),
     path('api/v1/generate-transfer-decree/', generate_transfer_decree, name='generate_transfer_decree'),
     path('api/v1/persons_by_department/', departments_persons, name='persons_by_department'),
-    path('api/v1/staffing_table/', getStaffingTable, name='staffing_table'),
+    path('api/v1/staffing_table/getStaffingTable', StaffingTableViewSet.as_view({'get': 'getStaffingTable'}), name='staffing_table'),
     path('api/v1/location_departments/<str:location_name>/', departments_by_location, name='departments_by_location'),
     path('api/v1/positions_departments/<int:department_id>/', positions_by_department, name='positions_by_department'),
     path('api/v1/close_attestations/', attestation_list_view, name='attestation-list'),
     path('api/v1/close_attestations_download/', attestation_list_view_download, name='attestation-list_download'),
     path('api/v1/rank-up-list/', rankUps_list_view, name='rankUps_list_view'),
     path('api/v1/rank-up-list-download/', rankUps_list_view_download, name='rankUps_list_view_download'),
-    path('api/v1/download-staffing-table/', downloadStaffingTable, name='downloadStaffingTable'),
+    path('api/v1/staffing-table/downloadStaffingTable', StaffingTableViewSet.as_view({'get': 'downloadStaffingTable'}), name='downloadStaffingTable'),
     path('api/v1/get-rank-up-info/', get_rank_up_info, name='get_rank_up_info'),
     path('api/v1/get-available-pin/', getAvailableLastPin, name='getAvailableLastPin'),
     path('api/v1/pension-list-view/', pension_list_view, name='pension_list_view'),

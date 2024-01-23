@@ -215,7 +215,10 @@ class PersonViewSet(viewsets.ModelViewSet):
             positionInstance = Position.objects.get(positionTitle=positionName)
 
             departmentName = positionInfoData.get('department')
-            departmentInstance = Department.objects.get(DepartmentName=departmentName)
+            try:
+                departmentInstance = Department.objects.get(DepartmentName=departmentName)
+            except Department.DoesNotExist:
+                departmentInstance = None
 
             rankInfo = None
 
@@ -239,7 +242,10 @@ class PersonViewSet(viewsets.ModelViewSet):
                 # Handle other exceptions if necessary
                 print(f"Person have no Rank ok: {e}")
             # Use create method instead of save
-            posInfo = posSerializer.save(position=positionInstance, department=departmentInstance)
+            if departmentInstance is not None:
+                posInfo = posSerializer.save(position=positionInstance, department=departmentInstance)
+            else:
+                posInfo = posSerializer.save(position=positionInstance, department=None)
 
             person_data = request.data.get('Person')
             genderName = person_data.get('gender')
@@ -540,16 +546,26 @@ class PersonViewSet(viewsets.ModelViewSet):
             except Exception as e:
                 # Handle other exceptions if necessary
                 print(f"An error occurred: {e}")
-
-            WorkingHistory.objects.create(
-                positionName=str(posInfo.position.positionTitle),
-                startDate=posInfo.receivedDate,
-                personId=person,
-                department=posInfo.department.DepartmentName,
-                organizationName="АФМ",
-                organizationAddress="Бейбітшілік 10"
-                # Add other fields from PositionInfo as needed
-            )
+            if posInfo.department is not None:
+                WorkingHistory.objects.create(
+                    positionName=str(posInfo.position.positionTitle),
+                    startDate=posInfo.receivedDate,
+                    personId=person,
+                    department=posInfo.department.DepartmentName,
+                    organizationName="АФМ",
+                    organizationAddress="Бейбітшілік 10"
+                    # Add other fields from PositionInfo as needed
+                )
+            else:
+                WorkingHistory.objects.create(
+                    positionName=str(posInfo.position.positionTitle),
+                    startDate=posInfo.receivedDate,
+                    personId=person,
+                    department=None,
+                    organizationName="АФМ",
+                    organizationAddress="Бейбітшілік 10"
+                    # Add other fields from PositionInfo as needed
+                )
             if rankInfo is not None:
                 RankArchive.objects.create(
                     personId=person,

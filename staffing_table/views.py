@@ -1,18 +1,31 @@
 import io
-
+from docx.shared import Pt
+from docx.shared import RGBColor
 from django.http import JsonResponse, HttpResponse
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from xlsxwriter import Workbook
 import pandas as pd
+from staffing_table.models import Vacancy, StaffingTable
 from location.models import Location, Department
 from location.serializers import DepartmentSerializer
 from person.models import Person
 from person.serializers import PersonSerializer
-from position.models import PositionInfo
+from position.models import PositionInfo, Position
 from position.serializers import PositionSerializer
 from staffing_table.models import StaffingTable
-from staffing_table.serializers import StaffingTableSerializer
+from staffing_table.serializers import StaffingTableSerializer, VacancySerializer
+from django.http import HttpResponse
+from docx import Document
+from docx.enum.table import WD_ALIGN_VERTICAL
+from docx.enum.section import WD_ORIENT
+from datetime import date
+from docx.oxml.ns import nsdecls
+from docx.oxml import parse_xml
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.decorators import action
 
 
 class StaffingTableViewSet(viewsets.ModelViewSet):
@@ -20,100 +33,344 @@ class StaffingTableViewSet(viewsets.ModelViewSet):
     serializer_class = StaffingTableSerializer
     permission_classes = (IsAuthenticated,)
 
+    @action(detail=False, methods=['get'])
+    def downloadStaffingTable(self, request, *args, **kwargs):
+        departmentChosen = request.GET.get('department')
 
-def downloadStaffingTable(request, *args, **kwargs):
-    location_name = request.GET.get('locationName')
-    staffing_data = None
+        doc = Document()
+        doc.add_paragraph('')
+        # Set the paper orientation to landscape
+        section = doc.sections[0]
+        new_width, new_height = section.page_height, section.page_width
+        section.orientation = WD_ORIENT.LANDSCAPE
+        section.page_width = new_width
+        section.page_height = new_height
 
-    if location_name == 'Весь Казахстан':
-        # Retrieve information for all free vacations (positions)
-        staffing_data = StaffingTable.objects.all()
-    else:
-        LocationInstance = Location.objects.get(LocationName=location_name)
-        staffing_data = StaffingTable.objects.filter(staffing_table_department__Location=LocationInstance)
+        section.left_margin = Pt(50)  # Set left margin in points
+        section.right_margin = Pt(50)
 
-    df = pd.DataFrame.from_records(
-        staffing_data.values('staffing_table_department__DepartmentName', 'staffing_table_position__positionTitle', 'current_count', 'max_count'))
-    df['available_count'] = df['max_count'] - df['current_count']
-    df = df.drop(['current_count', 'max_count'], axis=1)
+        # Add the title and date
+        title_paragraph = doc.add_paragraph("СПИСОК", 'Normal')
+        for run in title_paragraph.runs:
+            run.font.name = 'Times New Roman'
+            run.font.size = Pt(13)
+            run.font.bold = True
+            run.font.color.rgb = RGBColor(0, 0, 0)  # Black color
+        title_paragraph.paragraph_format.alignment = 1  # Center alignment
+        title_paragraph.paragraph_format.line_spacing = Pt(10)  # Set line spacing
 
-    # Create a new workbook and add a worksheet
-    output = io.BytesIO()
-    workbook = Workbook(output)
-    worksheet = workbook.add_worksheet()
+        subtitle_paragraph = doc.add_paragraph("сотрудников департамента АФМ РК на ", 'Normal')
+        for run in subtitle_paragraph.runs:
+            run.font.name = 'Times New Roman'
+            run.font.size = Pt(13)
+            run.font.color.rgb = RGBColor(0, 0, 0)  # Black color
+        subtitle_paragraph.paragraph_format.alignment = 1  # Center alignment
+        subtitle_paragraph.paragraph_format.line_spacing = Pt(10)  # Set line spacing
 
-    current_row = 0  # Initialize current_row to 0
+        # Add date with custom font and size
+        formatted_date = date.today().strftime("%d.%m.%Y г.")
+        run = subtitle_paragraph.add_run(formatted_date)
+        font = run.font
+        font.name = 'Times New Roman'
+        font.size = Pt(13)
+        font.bold = True
+        font.color.rgb = RGBColor(0, 0, 0)  # Black color
 
-    for department_data in staffing_data.values('staffing_table_department__DepartmentName').distinct():
-        # Extract the department name
-        department_name = department_data['staffing_table_department__DepartmentName']
+        try:
+            rukDep = Person.objects.get(positionInfo__position__positionTitle__exact="Руководитель департамента")
+            zamRukDep = Person.objects.get(
+                positionInfo__position__positionTitle__exact="Заместитель руководителя департамента")
+        except Person.DoesNotExist:
+            rukDep = None
+            zamRukDep = None
 
-        # Filter data for the current department
-        department_df = pd.DataFrame.from_records(
-            staffing_data.filter(
-                staffing_table_department__DepartmentName=department_name
-            ).values('staffing_table_position__positionTitle', 'current_count', 'max_count')
-        )
+        table = doc.add_table(rows=1, cols=3)
+        table.style = 'TableGrid'
+        header_cells = table.rows[0].cells
+        header_cells[0].text = '№'
+        header_cells[1].text = 'Наименование должности'
+        header_cells[2].text = 'Ф.И.О. сотрудника'
 
-        department_df['available_count'] = department_df['max_count'] - department_df['current_count']
-        department_df = department_df.drop(['current_count', 'max_count'], axis=1)
+        header_cells[0].width = Pt(1.0)
+        header_cells[1].width = Pt(350.0)
+        header_cells[2].width = Pt(600.0)
 
-        # Write the header for the department
-        bold_format = workbook.add_format({'bold': True})
-        worksheet.merge_range(current_row, 0, current_row, 1, department_name, bold_format)
-        current_row += 1  # Increment current_row
+        header_row = table.rows[0]
+        shading_elm_1 = parse_xml(r'<w:shd {} w:fill="CCC0D9"/>'.format(nsdecls('w')))
+        header_row.cells[0]._tc.get_or_add_tcPr().append(shading_elm_1)
+        shading_elm_1 = parse_xml(r'<w:shd {} w:fill="CCC0D9"/>'.format(nsdecls('w')))
+        header_row.cells[1]._tc.get_or_add_tcPr().append(shading_elm_1)
+        shading_elm_1 = parse_xml(r'<w:shd {} w:fill="CCC0D9"/>'.format(nsdecls('w')))
+        header_row.cells[2]._tc.get_or_add_tcPr().append(shading_elm_1)
 
-        # Write the column headers with bold formatting
-        headers = ['Должность', 'Доступно вакансий']
-        for col_num, value in enumerate(headers):
-            worksheet.write(current_row, col_num, value)
+        for cell in header_cells:
+            for paragraph in cell.paragraphs:
+                for run in paragraph.runs:
+                    run.font.name = 'Times New Roman'
+                    run.font.size = Pt(13)
+                    run.font.bold = True
+                paragraph.alignment = 1  # Center alignment
+                paragraph.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
 
-        current_row += 1  # Increment current_row for data
+        if rukDep is not None and zamRukDep is not None:
 
-        # Write the data from the DataFrame
-        for row_num, row_data in enumerate(department_df.itertuples(index=False), start=current_row):
-            for col_num, value in enumerate(row_data):
-                worksheet.write(row_num, col_num, value)
+            cells = table.add_row().cells
+            cells[0].text = str(1) + '.'
+            cells[1].text = rukDep.positionInfo.position.positionTitle
+            full_name = f"{rukDep.firstName} {rukDep.surname} {rukDep.patronymic}"
+            cells[2].text = full_name
+            cells[0].width = Pt(1.0)
+            cells[1].width = Pt(300.0)
+            cells[2].width = Pt(500.0)
 
-        # Increment current_row for the next department
-        current_row += len(department_df)
+            for cell in cells:
+                for run in cell.paragraphs[0].runs:
+                    run.font.name = 'Times New Roman'
+                    run.font.size = Pt(13)
+                    run.font.color.rgb = RGBColor(0, 0, 0)  # Black color
 
-        # Write the sum of 'Доступно вакансий' at the end of each department's data
-        worksheet.merge_range(current_row, 0, current_row, 1, 'Итого', bold_format)
-        worksheet.write_formula(current_row, 2, f'SUM(B{current_row - len(department_df) + 1}:B{current_row})')
+            cells = table.add_row().cells
+            cells[0].text = str(2) + '.'
+            cells[1].text = zamRukDep.positionInfo.position.positionTitle
+            full_name = f"{zamRukDep.firstName} {zamRukDep.surname} {zamRukDep.patronymic}"
+            cells[2].text = full_name
+            cells[0].width = Pt(1.0)
+            cells[1].width = Pt(300.0)
+            cells[2].width = Pt(500.0)
 
-        # Increment current_row for the next department's sum row
-        current_row += 1
+            for cell in cells:
+                for run in cell.paragraphs[0].runs:
+                    run.font.name = 'Times New Roman'
+                    run.font.size = Pt(13)
+                    run.font.color.rgb = RGBColor(0, 0, 0)  # Black color
 
-    overall_sum_row = current_row + 1
-    bold_format = workbook.add_format({'bold': True})
-    worksheet.merge_range(overall_sum_row, 0, current_row, 1, 'Итого по всем управлениям', bold_format)
-    worksheet.write_formula(overall_sum_row, 2, f'SUM(C2:C{overall_sum_row - 1})')
-    # Set the column widths based on the maximum content length
-    for i, col in enumerate(df.columns, 1):
-        max_len = max(df[col].astype(str).apply(len).max(), len(col))
-        worksheet.set_column(i, i, max_len)
+        # Iterate over each department and create a table
+        allEmployeeCount = Person.objects.all().count() - 2
+        allVacanciesCount = Vacancy.objects.all().count()
 
-    # Save the Excel file
-    workbook.close()
+        if departmentChosen == "Все управления":
+            for department in Department.objects.all():
+                # Add a row for the department name
+                row = table.add_row()
+                row.cells[0].text = department.DepartmentName
+                shading_elm_1 = parse_xml(r'<w:shd {} w:fill="FFFF00"/>'.format(nsdecls('w')))
+                row.cells[0]._tc.get_or_add_tcPr().append(shading_elm_1)
 
-    # Create the HttpResponse with the Excel file
-    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    response['Content-Disposition'] = 'attachment; filename=staffing_table.xlsx'
-    output.seek(0)
-    response.write(output.getvalue())
-    return response
+                for cell in row.cells:
+                    for paragraph in cell.paragraphs:
+                        for run in paragraph.runs:
+                            run.font.name = 'Times New Roman'
+                            run.font.size = Pt(13)
+                            run.font.bold = True
+                        paragraph.alignment = 1  # Center alignment
+                        paragraph.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+                row.cells[0].merge(row.cells[-1])
 
+                # Get positions in the current department from StaffingTable
+                positions_in_department = StaffingTable.objects.filter(
+                    staffing_table_department=department).values_list(
+                    'staffing_table_position', flat=True).order_by(
+                    '-staffing_table_position__order')
 
-def getStaffingTable(request, *args, **kwargs):
-    location_id = request.GET.get('location_id')
+                employee_count = Person.objects.filter(positionInfo__department=department).count()
 
-    try:
-        location = Location.objects.get(pk=location_id)
+                # Get the count of available vacancies for the current department
+                vacancy_count = Vacancy.objects.filter(department=department).count()
 
-        departments = Department.objects.filter(Location=location)
-        data = {'Departments': []}
-        for department in departments:
+                # Determine the maximum count between employees and vacancies
+                max_count = employee_count + vacancy_count
+                # Iterate through positions in the department
+                num = 1
+                for position_id in positions_in_department:
+                    position = Position.objects.get(pk=position_id)
+
+                    # Filter employees for the current department and position
+                    employees_in_department = Person.objects.filter(positionInfo__department=department,
+                                                                    positionInfo__position=position)
+                    # Filter vacancies for the current department and position
+                    vacancies_for_position = Vacancy.objects.filter(department=department, position=position)
+
+                    # Add employee data to the table
+                    for employee in employees_in_department:
+
+                        cells = table.add_row().cells
+                        cells[0].text = str(num) + '.'
+                        cells[1].text = employee.positionInfo.position.positionTitle
+                        full_name = f"{employee.firstName} {employee.surname} {employee.patronymic}"
+                        cells[2].text = full_name
+                        cells[0].width = Pt(1.0)
+                        cells[1].width = Pt(300.0)
+                        cells[2].width = Pt(500.0)
+
+                        for cell in cells:
+                            for run in cell.paragraphs[0].runs:
+                                run.font.name = 'Times New Roman'
+                                run.font.size = Pt(13)
+                                run.font.color.rgb = RGBColor(0, 0, 0)  # Black color
+                        num = num + 1
+                    # Add vacancy data to the table
+                    for vacancy in vacancies_for_position:
+
+                        cells = table.add_row().cells
+                        cells[0].text = str(num) + '.'
+                        cells[1].text = vacancy.position.positionTitle
+                        # Format the date in the desired format
+                        formatted_date = "Вакансия " + vacancy.available_date.strftime("%d.%m.%Y г.")
+                        cells[2].text = formatted_date
+                        cells[0].width = Pt(1.0)
+                        cells[1].width = Pt(300.0)
+                        cells[2].width = Pt(500.0)
+
+                        for cell in cells:
+                            for run in cell.paragraphs[0].runs:
+                                run.font.name = 'Times New Roman'
+                                run.font.size = Pt(13)
+                                run.font.color.rgb = RGBColor(0, 0, 0)  # Black color
+                                run.font.italic = True
+                                run.font.bold = True
+
+                        shading_elm_1 = parse_xml(r'<w:shd {} w:fill="BFBFBF"/>'.format(nsdecls('w')))
+                        cells[0]._tc.get_or_add_tcPr().append(shading_elm_1)
+                        shading_elm_1 = parse_xml(r'<w:shd {} w:fill="BFBFBF"/>'.format(nsdecls('w')))
+                        cells[1]._tc.get_or_add_tcPr().append(shading_elm_1)
+                        shading_elm_1 = parse_xml(r'<w:shd {} w:fill="BFBFBF"/>'.format(nsdecls('w')))
+                        cells[2]._tc.get_or_add_tcPr().append(shading_elm_1)
+                        num = num + 1
+            row = table.add_row()
+            row.cells[0].text = "Всего по департаменту"
+            row.cells[2].text = str(allEmployeeCount + allVacanciesCount)
+            shading_elm_1 = parse_xml(r'<w:shd {} w:fill="FFC000"/>'.format(nsdecls('w')))
+            row.cells[0]._tc.get_or_add_tcPr().append(shading_elm_1)
+            shading_elm_1 = parse_xml(r'<w:shd {} w:fill="FFC000"/>'.format(nsdecls('w')))
+            row.cells[2]._tc.get_or_add_tcPr().append(shading_elm_1)
+            for cell in row.cells:
+                for paragraph in cell.paragraphs:
+                    for run in paragraph.runs:
+                        run.font.name = 'Times New Roman'
+                        run.font.size = Pt(13)
+                        run.font.bold = True
+                    paragraph.alignment = 1  # Center alignment
+                    paragraph.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+            row.cells[0].merge(row.cells[1])
+        else:
+            department = Department.objects.get(DepartmentName=departmentChosen)
+            allEmployeeCount = Person.objects.filter(positionInfo__department=department).count()
+            allVacanciesCount = Vacancy.objects.filter(department=department).count()
+            row = table.add_row()
+            row.cells[0].text = department.DepartmentName
+            shading_elm_1 = parse_xml(r'<w:shd {} w:fill="FFFF00"/>'.format(nsdecls('w')))
+            row.cells[0]._tc.get_or_add_tcPr().append(shading_elm_1)
+
+            for cell in row.cells:
+                for paragraph in cell.paragraphs:
+                    for run in paragraph.runs:
+                        run.font.name = 'Times New Roman'
+                        run.font.size = Pt(13)
+                        run.font.bold = True
+                    paragraph.alignment = 1  # Center alignment
+                    paragraph.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+            row.cells[0].merge(row.cells[-1])
+
+            # Get positions in the current department from StaffingTable
+            positions_in_department = StaffingTable.objects.filter(staffing_table_department=department).values_list(
+                'staffing_table_position', flat=True).order_by(
+                '-staffing_table_position__order')
+
+            employee_count = Person.objects.filter(positionInfo__department=department).count()
+
+            # Get the count of available vacancies for the current department
+            vacancy_count = Vacancy.objects.filter(department=department).count()
+
+            # Determine the maximum count between employees and vacancies
+            max_count = employee_count + vacancy_count
+            # Iterate through positions in the department
+            num = 1
+            for position_id in positions_in_department:
+                position = Position.objects.get(pk=position_id)
+
+                # Filter employees for the current department and position
+                employees_in_department = Person.objects.filter(positionInfo__department=department,
+                                                                positionInfo__position=position)
+                # Filter vacancies for the current department and position
+                vacancies_for_position = Vacancy.objects.filter(department=department, position=position)
+
+                # Add employee data to the table
+                for employee in employees_in_department:
+
+                    cells = table.add_row().cells
+                    cells[0].text = str(num) + '.'
+                    cells[1].text = employee.positionInfo.position.positionTitle
+                    full_name = f"{employee.firstName} {employee.surname} {employee.patronymic}"
+                    cells[2].text = full_name
+                    cells[0].width = Pt(1.0)
+                    cells[1].width = Pt(300.0)
+                    cells[2].width = Pt(500.0)
+
+                    for cell in cells:
+                        for run in cell.paragraphs[0].runs:
+                            run.font.name = 'Times New Roman'
+                            run.font.size = Pt(13)
+                            run.font.color.rgb = RGBColor(0, 0, 0)  # Black color
+                    num = num + 1
+                # Add vacancy data to the table
+                for vacancy in vacancies_for_position:
+
+                    cells = table.add_row().cells
+                    cells[0].text = str(num) + '.'
+                    cells[1].text = vacancy.position.positionTitle
+                    # Format the date in the desired format
+                    formatted_date = "Вакансия " + vacancy.available_date.strftime("%d.%m.%Y г.")
+                    cells[2].text = formatted_date
+                    cells[0].width = Pt(1.0)
+                    cells[1].width = Pt(300.0)
+                    cells[2].width = Pt(500.0)
+
+                    for cell in cells:
+                        for run in cell.paragraphs[0].runs:
+                            run.font.name = 'Times New Roman'
+                            run.font.size = Pt(13)
+                            run.font.color.rgb = RGBColor(0, 0, 0)  # Black color
+                            run.font.italic = True
+                            run.font.bold = True
+
+                    shading_elm_1 = parse_xml(r'<w:shd {} w:fill="BFBFBF"/>'.format(nsdecls('w')))
+                    cells[0]._tc.get_or_add_tcPr().append(shading_elm_1)
+                    shading_elm_1 = parse_xml(r'<w:shd {} w:fill="BFBFBF"/>'.format(nsdecls('w')))
+                    cells[1]._tc.get_or_add_tcPr().append(shading_elm_1)
+                    shading_elm_1 = parse_xml(r'<w:shd {} w:fill="BFBFBF"/>'.format(nsdecls('w')))
+                    cells[2]._tc.get_or_add_tcPr().append(shading_elm_1)
+                    num = num + 1
+            row = table.add_row()
+            row.cells[0].text = "Всего по управлению"
+            row.cells[2].text = str(allEmployeeCount + allVacanciesCount)
+            shading_elm_1 = parse_xml(r'<w:shd {} w:fill="FFC000"/>'.format(nsdecls('w')))
+            row.cells[0]._tc.get_or_add_tcPr().append(shading_elm_1)
+            shading_elm_1 = parse_xml(r'<w:shd {} w:fill="FFC000"/>'.format(nsdecls('w')))
+            row.cells[2]._tc.get_or_add_tcPr().append(shading_elm_1)
+            for cell in row.cells:
+                for paragraph in cell.paragraphs:
+                    for run in paragraph.runs:
+                        run.font.name = 'Times New Roman'
+                        run.font.size = Pt(13)
+                        run.font.bold = True
+                    paragraph.alignment = 1  # Center alignment
+                    paragraph.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+            row.cells[0].merge(row.cells[1])
+
+        # Create a response with the Word document
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+        response['Content-Disposition'] = 'attachment; filename=staffing_table.docx'
+        doc.save(response)
+
+        return response
+
+    @action(detail=False, methods=['get'])
+    def getStaffingTable(self, request, *args, **kwargs):
+        department_id = request.GET.get('department_id')
+
+        try:
+            department = Department.objects.get(pk=department_id)
+
             StaffingTableInstances = StaffingTable.objects.filter(staffing_table_department=department).distinct(
                 'staffing_table_position')
             # GlavExpertDc
@@ -121,7 +378,8 @@ def getStaffingTable(request, *args, **kwargs):
             positionList = []
             for staffTable in StaffingTableInstances:
                 position_data = PositionSerializer(staffTable.staffing_table_position).data
-                currentPositionInfos = PositionInfo.objects.filter(position=staffTable.staffing_table_position, department=staffTable.staffing_table_department)
+                currentPositionInfos = PositionInfo.objects.filter(position=staffTable.staffing_table_position,
+                                                                   department=staffTable.staffing_table_department)
                 personsOnPosition = Person.objects.filter(positionInfo__in=currentPositionInfos)
                 position_data['persons'] = PersonSerializer(personsOnPosition, many=True).data
 
@@ -131,16 +389,16 @@ def getStaffingTable(request, *args, **kwargs):
                 ).first()
 
                 if staffing_table_entry:
-                    available_slots = staffing_table_entry.max_count - staffing_table_entry.current_count
-                    position_data['available_slots'] = available_slots
+                    vacancies = Vacancy.objects.filter(department=department,
+                                                       position=staffTable.staffing_table_position)
+                    position_data['vacancies'] = VacancySerializer(vacancies, many=True).data
                 positionList.append(position_data)
-            print(positionList)
 
             departamentSerialized = DepartmentSerializer(department).data
             departamentSerialized['positionList'] = positionList
-            data['Departments'].append(departamentSerialized)
+            data = departamentSerialized
 
-        return JsonResponse(data)
+            return JsonResponse(data)
 
-    except Location.DoesNotExist:
-        return JsonResponse({'error': 'Location not found'}, status=404)
+        except Location.DoesNotExist:
+            return JsonResponse({'error': 'Location not found'}, status=404)
