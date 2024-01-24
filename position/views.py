@@ -5,7 +5,8 @@ from rest_framework.permissions import IsAuthenticated
 
 from location.models import Department
 from person.models import Person
-from staffing_table.models import StaffingTable
+from staffing_table.models import StaffingTable, Vacancy
+from staffing_table.serializers import VacancySerializer
 from .models import Position, PositionInfo
 from .serializers import PositionSerializer, PositionInfoSerializer
 
@@ -32,14 +33,15 @@ def positions_by_department(request, department_id):
         print(staffing_info)
         serialized_positions = []
         for staffing_entry in staffing_info:
-            position = staffing_entry.position
+            position = staffing_entry.staffing_table_position
 
             # Create a dictionary with position data
             position_data = PositionSerializer(position).data
 
             # Calculate available count by subtracting current count from max count
-            available_count = staffing_entry.max_count - staffing_entry.current_count
-            position_data['available_count'] = available_count
+            vacancies = Vacancy.objects.filter(department=department,
+                                               position=position)
+            position_data['vacancies'] = VacancySerializer(vacancies, many=True).data
 
             # Get persons for the current position
             persons = Person.objects.filter(positionInfo__position=position, positionInfo__department=department)
