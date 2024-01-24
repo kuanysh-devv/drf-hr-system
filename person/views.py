@@ -1008,6 +1008,7 @@ def get_rank_up_info(request):
     rank_up_data = []
     for person in persons_to_rank_up:
         person_data = {
+            'personId': person.id,
             'firstName': person.firstName,
             'surname': person.surname,
             'patronymic': person.patronymic,
