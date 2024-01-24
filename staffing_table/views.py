@@ -400,5 +400,5 @@ class StaffingTableViewSet(viewsets.ModelViewSet):
 
             return JsonResponse(data)
 
-        except Location.DoesNotExist:
-            return JsonResponse({'error': 'Location not found'}, status=404)
+        except Department.DoesNotExist:
+            return JsonResponse({'error': 'Управление не найдено'}, status=404)

@@ -50,7 +50,7 @@ def departments_persons(request, *args, **kwargs):
 
         return JsonResponse({'persons': serializer.data})
     except Department.DoesNotExist:
-        return JsonResponse({'error': 'Department not found'}, status=404)
+        return JsonResponse({'error': 'Управление не найдено'}, status=404)
 
 
 class PersonViewSet(viewsets.ModelViewSet):
@@ -67,7 +67,7 @@ class PersonViewSet(viewsets.ModelViewSet):
 
             # Check if family_status_id is provided
             if family_status_name is None:
-                return Response({'error': 'family_status is required'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'error': 'Семейное положение обязательное поле'}, status=status.HTTP_400_BAD_REQUEST)
 
             family_status = FamilyStatus.objects.get(statusName=family_status_name)
 
@@ -78,9 +78,9 @@ class PersonViewSet(viewsets.ModelViewSet):
             serializer = PersonSerializer(person)
             return Response(serializer.data)
         except Person.DoesNotExist:
-            return Response({'error': 'Person not found'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'Сотрудник не найден'}, status=status.HTTP_404_NOT_FOUND)
         except FamilyStatus.DoesNotExist:
-            return Response({'error': 'Family status not found'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'Семейное положение в базе данных не найдено'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -97,7 +97,7 @@ class PersonViewSet(viewsets.ModelViewSet):
             try:
                 gender_instance = Gender.objects.get(genderName=gender_name)
             except Gender.DoesNotExist:
-                return Response({'error': 'Gender not found'}, status=status.HTTP_404_NOT_FOUND)
+                return JsonResponse({'error': 'Пол в базе данных не найден'}, status=status.HTTP_404_NOT_FOUND)
 
             # Update the gender field
             person.gender = gender_instance
@@ -108,7 +108,7 @@ class PersonViewSet(viewsets.ModelViewSet):
             return Response(serializer.data)
 
         except Person.DoesNotExist:
-            return Response({'error': 'Person not found'}, status=status.HTTP_404_NOT_FOUND)
+            return JsonResponse({'error': 'Сотрудник в базе данных не найден'}, status=status.HTTP_404_NOT_FOUND)
 
     def retrieve(self, request, *args, **kwargs):
         person = self.get_object()
@@ -260,7 +260,7 @@ class PersonViewSet(viewsets.ModelViewSet):
                                                 rankInfo=rankInfo,
                                                 familyStatus=familyStatusInstance)
             else:
-                return Response(person_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                return JsonResponse({'error': 'Ошибка в введенных данных сотрудника'}, status=status.HTTP_404_NOT_FOUND)
 
             birth_info_data = request.data.get('BirthInfo')
             birth_info_serializer = BirthInfoSerializer(data=birth_info_data)
@@ -268,7 +268,7 @@ class PersonViewSet(viewsets.ModelViewSet):
                 birth_info_serializer.save(personId=person)
                 print("BirthInfo done")
             else:
-                return Response(birth_info_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                return JsonResponse({'error': 'Ошибка в введенных данных - места рождения'}, status=status.HTTP_404_NOT_FOUND)
 
             identity_card_info_data = request.data.get('IdentityCardInfo')
             identity_card_info_serializer = IdentityCardInfoSerializer(data=identity_card_info_data)
@@ -276,7 +276,7 @@ class PersonViewSet(viewsets.ModelViewSet):
                 identity_card_info_serializer.save(personId=person)
                 print("IdentityCardInfo done")
             else:
-                return Response(identity_card_info_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                return JsonResponse({'error': 'Ошибка в введенных данных - удостоверение личности'}, status=status.HTTP_404_NOT_FOUND)
 
             # Photo
             try:
@@ -292,7 +292,8 @@ class PersonViewSet(viewsets.ModelViewSet):
                             photo_serializer.save(personId=person)
                             print("Photo done")
                         else:
-                            return Response(photo_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                            return JsonResponse({'error': 'Некорректный формат изображения'},
+                                                status=status.HTTP_404_NOT_FOUND)
                     else:
                         # 'photoBinary' is empty or not present
                         print("No photoBinary provided. Using default PNG photo.")
@@ -312,7 +313,8 @@ class PersonViewSet(viewsets.ModelViewSet):
                             photo_serializer.save(personId=person)
                             print("Default Photo saved")
                         else:
-                            return Response(photo_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                            return JsonResponse({'error': 'Ошибка в введенных данных - фотография'},
+                                                status=status.HTTP_404_NOT_FOUND)
                 else:
                     # 'Photo' key is not present
                     print("Photo not provided. Using default PNG photo.")
@@ -332,7 +334,8 @@ class PersonViewSet(viewsets.ModelViewSet):
                         default_photo_serializer.save()
                         print("Default Photo saved")
                     else:
-                        return Response(default_photo_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                        return JsonResponse({'error': 'Ошибка в стандартном изображении профиля'},
+                                            status=status.HTTP_404_NOT_FOUND)
 
             except Exception as e:
                 # Handle other exceptions if necessary
@@ -345,7 +348,7 @@ class PersonViewSet(viewsets.ModelViewSet):
                 resident_info_serializer.save(personId=person)
                 print("ResidentInfo done")
             else:
-                return Response(resident_info_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                return JsonResponse({'error': 'Ошибка в введенных данных - резидент'}, status=status.HTTP_404_NOT_FOUND)
 
             # FamilyComposition
             try:
@@ -368,7 +371,8 @@ class PersonViewSet(viewsets.ModelViewSet):
                                 relative_serializer.save(personId=person, relativeType=relative)
                                 print("family_composition done")
                             else:
-                                return Response(relative_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                                return JsonResponse({'error': 'Ошибка в введенных данных - Состав семьи'},
+                                                    status=status.HTTP_404_NOT_FOUND)
                     else:
                         print("No relatives provided")
                 else:
@@ -388,7 +392,8 @@ class PersonViewSet(viewsets.ModelViewSet):
                                 education_serializer.save(personId=person)
                                 print("education done")
                             else:
-                                return Response(education_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                                return JsonResponse({'error': 'Ошибка в введенных данных - Образование'},
+                                                    status=status.HTTP_404_NOT_FOUND)
                     else:
                         print("No educations provided")
                 else:
@@ -414,7 +419,8 @@ class PersonViewSet(viewsets.ModelViewSet):
                                 language_skill_serializer.save(personId=person)
                                 print("language_skill done")
                             else:
-                                return Response(language_skill_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                                return JsonResponse({'error': 'Ошибка в введенных данных - Владение языками'},
+                                                    status=status.HTTP_404_NOT_FOUND)
                     else:
                         # Handle the case where 'languageSkills' key is not present
                         print("No languageSkills provided")
@@ -444,7 +450,8 @@ class PersonViewSet(viewsets.ModelViewSet):
                                 academic_degree_serializer.save(personId=person)
                                 print("academic_degree done")
                             else:
-                                return Response(academic_degree_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                                return JsonResponse({'error': 'Ошибка в введенных данных - Академические степени'},
+                                                    status=status.HTTP_404_NOT_FOUND)
                     else:
                         # Handle the case where 'academicDegrees' key is not present
                         print("No academicDegrees provided")
@@ -474,7 +481,8 @@ class PersonViewSet(viewsets.ModelViewSet):
                                 course_serializer.save(personId=person)
                                 print("course done")
                             else:
-                                return Response(course_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                                return JsonResponse({'error': 'Ошибка в введенных данных - Курсы подготовки'},
+                                                    status=status.HTTP_404_NOT_FOUND)
                     else:
                         # Handle the case where 'courses' key is not present
                         print("No courses provided")
@@ -504,7 +512,8 @@ class PersonViewSet(viewsets.ModelViewSet):
                                 sport_skill_serializer.save(personId=person)
                                 print("sport_skill done")
                             else:
-                                return Response(sport_skill_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                                return JsonResponse({'error': 'Ошибка в введенных данных - Отношение к спорту'},
+                                                    status=status.HTTP_404_NOT_FOUND)
                     else:
                         # Handle the case where 'sportSkills' key is not present
                         print("No sportSkills provided")
@@ -534,7 +543,8 @@ class PersonViewSet(viewsets.ModelViewSet):
                                 working_history_serializer.save(personId=person)
                                 print("working_history done")
                             else:
-                                return Response(working_history_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                                return JsonResponse({'error': 'Ошибка в введенных данных - трудовая деятельность'},
+                                                    status=status.HTTP_404_NOT_FOUND)
                     else:
                         # Handle the case where 'workingHistories' key is not present
                         print("No workingHistories provided")
@@ -593,7 +603,8 @@ class PersonViewSet(viewsets.ModelViewSet):
                                 spec_check_serializer.save(personId=person)
                                 print("spec check done")
                             else:
-                                return Response(spec_check_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                                return JsonResponse({'error': 'Ошибка в введенных данных - Спец проверка'},
+                                                    status=status.HTTP_404_NOT_FOUND)
                     else:
                         # Handle the case where 'specChecks' key is not present
                         print("No specChecks provided")
@@ -623,7 +634,8 @@ class PersonViewSet(viewsets.ModelViewSet):
                                 attestation_serializer.save(personId=person)
                                 print("attestations done")
                             else:
-                                return Response(attestation_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                                return JsonResponse({'error': 'Ошибка в введенных данных - Аттестация'},
+                                                    status=status.HTTP_404_NOT_FOUND)
                     else:
                         # Handle the case where 'attestations' key is not present
                         print("No attestations provided")
@@ -653,7 +665,8 @@ class PersonViewSet(viewsets.ModelViewSet):
                                 category_serializer.save(personId=person)
                                 print("classCategories done")
                             else:
-                                return Response(category_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                                return JsonResponse({'error': 'Ошибка в введенных данных - Классные категории'},
+                                                    status=status.HTTP_404_NOT_FOUND)
                     else:
                         # Handle the case where 'classCategories' key is not present
                         print("No classCategories provided")
@@ -683,7 +696,8 @@ class PersonViewSet(viewsets.ModelViewSet):
                                 auto_serializer.save(personId=person)
                                 print("autobiographies done")
                             else:
-                                return Response(auto_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                                return JsonResponse({'error': 'Ошибка в введенных данных - Автобиография'},
+                                                    status=status.HTTP_404_NOT_FOUND)
                     else:
                         # Handle the case where 'autobiographies' key is not present
                         print("No autobiographies provided")
@@ -713,7 +727,8 @@ class PersonViewSet(viewsets.ModelViewSet):
                                 rewards_serializer.save(personId=person)
                                 print("rewards done")
                             else:
-                                return Response(rewards_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                                return JsonResponse({'error': 'Ошибка в введенных данных - Поощрения/Награды'},
+                                                    status=status.HTTP_404_NOT_FOUND)
                     else:
                         # Handle the case where 'rewards' key is not present
                         print("No rewards provided")
@@ -743,7 +758,8 @@ class PersonViewSet(viewsets.ModelViewSet):
                                 sick_leaves_serializer.save(personId=person)
                                 print("sickLeaves done")
                             else:
-                                return Response(sick_leaves_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                                return JsonResponse({'error': 'Ошибка в введенных данных - Больничные'},
+                                                    status=status.HTTP_404_NOT_FOUND)
                     else:
                         # Handle the case where 'sickLeaves' key is not present
                         print("No sickLeaves provided")
@@ -773,7 +789,8 @@ class PersonViewSet(viewsets.ModelViewSet):
                                 inv_serializer.save(personId=person)
                                 print("investigations done")
                             else:
-                                return Response(inv_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                                return JsonResponse({'error': 'Ошибка в введенных данных - Взыскания'},
+                                                    status=status.HTTP_404_NOT_FOUND)
                     else:
                         # Handle the case where 'investigations' key is not present
                         print("No investigations provided")
@@ -803,7 +820,8 @@ class PersonViewSet(viewsets.ModelViewSet):
                                 dec_serializer.save(personId=person)
                                 print("decrees done")
                             else:
-                                return Response(dec_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                                return JsonResponse({'error': 'Ошибка в введенных данных - Список приказов'},
+                                                    status=status.HTTP_404_NOT_FOUND)
                     else:
                         # Handle the case where 'decrees' key is not present
                         print("No decrees provided")
@@ -981,10 +999,10 @@ def get_rank_up_info(request):
     test_date_param = request.GET.get('test_date')
     test_date = datetime.strptime(test_date_param, '%Y-%m-%d').date() if test_date_param else date.today()
 
-    # Get persons who need to rank up
+    # Get persons who need to rank up, ordered by the closest nextPromotionDate
     persons_to_rank_up = Person.objects.filter(
         rankInfo__nextPromotionDate__lte=test_date + timedelta(days=30)
-    )
+    ).order_by('rankInfo__nextPromotionDate')
 
     # Extract relevant information for response
     rank_up_data = []
@@ -994,6 +1012,7 @@ def get_rank_up_info(request):
             'surname': person.surname,
             'patronymic': person.patronymic,
             'photo': person.photo_set.first().photoBinary if person.photo_set.exists() else None,
+            'rankUpDate': person.rankInfo.nextPromotionDate.strftime("%d.%m.%Y")
             # Assuming 'photo' is a FileField
         }
         rank_up_data.append(person_data)
