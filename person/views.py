@@ -860,6 +860,9 @@ def search_persons(request):
             for field in search_fields:
                 query |= Q(**{field: term})
 
+        # Add the condition for isFired=False
+        query &= Q(isFired=False)
+
         persons = Person.objects.filter(query)
 
         # You can serialize the persons to JSON and return it
@@ -1001,7 +1004,8 @@ def get_rank_up_info(request):
 
     # Get persons who need to rank up, ordered by the closest nextPromotionDate
     persons_to_rank_up = Person.objects.filter(
-        rankInfo__nextPromotionDate__lte=test_date + timedelta(days=30)
+        rankInfo__nextPromotionDate__lte=test_date + timedelta(days=30),
+        isFired=False
     ).order_by('rankInfo__nextPromotionDate')
 
     # Extract relevant information for response
