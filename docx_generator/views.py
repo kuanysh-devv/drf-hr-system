@@ -425,9 +425,9 @@ def generate_appointment_decree(request):
             return response
 
         except json.JSONDecodeError:
-            return JsonResponse({'error': 'Invalid JSON data'}, status=400)
+            return JsonResponse({'error': 'Неправильные JSON данные'}, status=400)
 
-    return JsonResponse({'error': 'Invalid request method'}, status=405)
+    return JsonResponse({'error': 'Неправильный метод запроса'}, status=405)
 
 
 @csrf_exempt
@@ -652,15 +652,16 @@ def generate_rankup_decree(request):
             except json.JSONDecodeError:
                 return JsonResponse({'error': 'Неправильное звание'}, status=400)
 
-            if personsPositionInfo.position.maxRank.order >= newRankInstance.order:
-                newRankTitle = newRankInstance.rankTitle.lower()
-            else:
-                return JsonResponse({'error': 'Новое звание превышает максимальное звание должности'}, status=400)
+            newRankTitle = newRankInstance.rankTitle.lower()
 
-            if personsRankInfo.militaryRank.order < newRankInstance.order:
-                print('continue')
-            else:
+            if personsRankInfo.militaryRank.order > newRankInstance.order:
                 return JsonResponse({'error': 'Новое звание должно быть выше нынешного звания'}, status=400)
+
+            if personsRankInfo.militaryRank.order + 1 != newRankInstance.order:
+                return JsonResponse({'error': 'Новое звание должно быть следующим званием а не выше чем на 2 звания'}, status=400)
+
+            if receivedType != 'Досрочное' and personsPositionInfo.position.maxRank.order >= newRankInstance.order:
+                return JsonResponse({'error': 'Новое звание превышает максимальное звание должности'}, status=400)
 
             changedRankTitleKaz = newRankTitle
             if newRankTitle == 'старший лейтенант':
@@ -669,18 +670,28 @@ def generate_rankup_decree(request):
             if not DecreeList.objects.filter(personId=personInstance, decreeType="Присвоение звания",
                                              isConfirmed=False).first():
 
-                decreeInstance = DecreeList.objects.create(
-                    decreeType="Присвоение звания",
-                    decreeDate=datetime.strptime(rankUpDate, "%Y-%m-%d").date(),
-                    personId=personInstance
-                )
+                if receivedType == 'Досрочное':
+                    time_difference = datetime.strptime(rankUpDate, "%Y-%m-%d").date() - personsRankInfo.receivedDate
+                    half_promotion_days = personsRankInfo.militaryRank.nextPromotionDateInDays / 2
+                    if time_difference >= timedelta(days=half_promotion_days):
+                        decreeInstance = DecreeList.objects.create(
+                            decreeType="Присвоение звания",
+                            decreeDate=datetime.strptime(rankUpDate, "%Y-%m-%d").date(),
+                            personId=personInstance
+                        )
 
-                RankUpInfo.objects.create(
-                    previousRank=personsRankInfo.militaryRank,
-                    newRank=newRankInstance,
-                    receivedType=receivedType,
-                    decreeId=decreeInstance
-                )
+                        RankUpInfo.objects.create(
+                            previousRank=personsRankInfo.militaryRank,
+                            newRank=newRankInstance,
+                            receivedType=receivedType,
+                            decreeId=decreeInstance
+                        )
+                    else:
+                        return JsonResponse({'error': 'Ошибка досрочного повышения: Дата повышения не равно или не '
+                                                      'превышает половины даты'
+                                                      ' последующего повышения'}, status=400)
+
+
             else:
                 return JsonResponse({'error': 'У сотрудника уже имеется приказ о присвоении звания который не '
                                               'согласован'}, status=400)

@@ -227,8 +227,10 @@ class PersonViewSet(viewsets.ModelViewSet):
                 rankInfoData = request.data.get('RankInfo')
                 rankName = rankInfoData.get('militaryRank')
                 receivedType = rankInfoData.get('receivedType')
-                receivedDate = rankInfoData.get('receivedDate')
+                receivedDate_str = rankInfoData.get('receivedDate')
                 rankInstance = MilitaryRank.objects.get(rankTitle=rankName)
+
+                receivedDate = datetime.strptime(receivedDate_str, '%Y-%m-%d')
 
                 rank_info_data = {
                     'militaryRank': rankInstance,
