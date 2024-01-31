@@ -2,6 +2,7 @@ import base64
 import io
 import json
 from datetime import datetime, timedelta
+import pytz
 from io import BytesIO
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404
@@ -11,7 +12,7 @@ from docx import Document
 from docx.enum.table import WD_ALIGN_VERTICAL
 from docx.shared import Inches
 from docx.shared import Pt
-
+from staffing_table.models import StaffingTable, Vacancy
 from birth_info.models import BirthInfo
 from decree.models import DecreeList, TransferInfo, RankUpInfo, AppointmentInfo
 from education.models import Education, AcademicDegree
@@ -272,46 +273,6 @@ def generate_appointment_decree(request):
             positionInstance = personInstance.positionInfo.position
             positionTitle = positionInstance.positionTitle
             departmentName = departmentInstance.DepartmentName
-            # Create required model instances...
-            if not DecreeList.objects.filter(personId=personInstance, decreeType="Назначение",
-                                             isConfirmed=False).first():
-                decree_list_instance = DecreeList.objects.create(
-                    decreeType="Назначение",
-                    decreeDate=datetime.strptime(decreeDate, '%Y-%m-%d').date(),
-                    personId=personInstance
-                )
-                if appointmentType == 'Впервые принятый':
-                    AppointmentInfo.objects.create(
-                        appointmentDepartment=departmentInstance,
-                        appointmentPosition=positionInstance,
-                        appointmentProbation=int(month_count),
-                        appointmentBase=base,
-                        appointmentType=appointmentType,
-                        decreeId=decree_list_instance
-                    )
-                if appointmentType == 'Вновь принятый':
-                    AppointmentInfo.objects.create(
-                        appointmentDepartment=departmentInstance,
-                        appointmentPosition=positionInstance,
-                        appointmentProbation=None,
-                        appointmentBase=base,
-                        appointmentType=appointmentType,
-                        decreeId=decree_list_instance
-                    )
-
-                if appointmentType == 'Впервые принятый':
-                    three_months_later = datetime.strptime(decreeDate, '%Y-%m-%d').date() + timedelta(
-                        days=int(month_count) * 30 + 1)
-                    if personInstance.rankInfo is None:
-                        task = create_rank_info_after_months.apply_async(
-                            args=(int(month_count), decree_list_instance.decreeNumber), eta=three_months_later)
-                    else:
-                        return JsonResponse(
-                            {'error': 'Сотрудник уже имеет звание'}, status=400)
-
-            else:
-                return JsonResponse({'error': 'У сотрудника уже имеется приказ о назначении который не согласован'},
-                                    status=400)
 
             # Для склонения
             soglasnie = ['б', 'в', 'г', 'д', 'ж', 'з', 'й', 'к', 'л', 'м', 'н', 'п', 'р', 'с', 'т', 'ф', 'х', 'ц', 'ч',
@@ -424,8 +385,66 @@ def generate_appointment_decree(request):
                                                  '.document')
             response['Content-Disposition'] = f'attachment; filename=Приказ о назначении.docx'
 
-            return response
+            try:
+                staffing_table_instance = StaffingTable.objects.get(staffing_table_position=positionInstance,
+                                                                    staffing_table_department=departmentInstance)
+            except StaffingTable.DoesNotExist:
+                # If StaffingTable instance doesn't exist, there are no vacancies
+                return False
 
+            vacancies_count = staffing_table_instance.vacancy_list.filter(position=positionInstance,
+                                                                          department=departmentInstance).count()
+
+            # Create required model instances...
+            if vacancies_count > 0:
+                if not DecreeList.objects.filter(personId=personInstance, decreeType="Назначение",
+                                                 isConfirmed=False).first():
+                    decree_list_instance = DecreeList.objects.create(
+                        decreeType="Назначение",
+                        decreeDate=datetime.strptime(decreeDate, '%Y-%m-%d').date(),
+                        personId=personInstance
+                    )
+                    if appointmentType == 'Впервые принятый':
+                        AppointmentInfo.objects.create(
+                            appointmentDepartment=departmentInstance,
+                            appointmentPosition=positionInstance,
+                            appointmentProbation=int(month_count),
+                            appointmentBase=base,
+                            appointmentType=appointmentType,
+                            decreeId=decree_list_instance
+                        )
+                        tz = pytz.timezone('Etc/GMT-6')
+
+                        three_months_later = datetime.strptime(decreeDate, '%Y-%m-%d').date() + timedelta(
+                            days=int(month_count) * 30 + 1)
+                        print(three_months_later)
+                        if personInstance.rankInfo is None:
+                            task = create_rank_info_after_months.apply_async(
+                                args=(int(month_count), decree_list_instance.decreeNumber), eta=three_months_later)
+
+                            return response
+                        else:
+                            return JsonResponse(
+                                {'error': 'Сотрудник уже имеет звание'}, status=400)
+
+                    if appointmentType == 'Вновь принятый':
+                        AppointmentInfo.objects.create(
+                            appointmentDepartment=departmentInstance,
+                            appointmentPosition=positionInstance,
+                            appointmentProbation=None,
+                            appointmentBase=base,
+                            appointmentType=appointmentType,
+                            decreeId=decree_list_instance
+                        )
+
+                        return response
+
+                else:
+                    return JsonResponse({'error': 'У сотрудника уже имеется приказ о назначении который не согласован'},
+                                        status=400)
+            else:
+                return JsonResponse({'error': 'Нет свободных вакансий для назначения'},
+                                    status=400)
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Неправильные JSON данные'}, status=400)
 

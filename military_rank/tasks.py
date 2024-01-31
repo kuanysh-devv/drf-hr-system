@@ -22,7 +22,7 @@ def create_rank_info_after_months(self, month_count, decreenumber):
     decreeInfo = AppointmentInfo.objects.get(decreeId=decreeInstance)
     person = decreeInstance.personId
 
-    received_date = decreeInstance.decreeDate + relativedelta(minutes=int(month_count))
+    received_date = decreeInstance.decreeDate + relativedelta(days=int(month_count) * 30 + 1)
     if decreeInfo.appointmentType == 'Впервые принятый':
         # Create a dictionary representing the RankInfo instance
         new_rank_info_data = {

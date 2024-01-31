@@ -16,8 +16,10 @@ def rankInfo_pre_save(sender, instance, **kwargs):
         if instance.militaryRank.rankTitle == 'Полковник':
             instance.nextPromotionDate = None
         else:
-            received_date = instance.receivedDate
+            received_date_string = instance.receivedDate
             next_promotion_days = instance.militaryRank.nextPromotionDateInDays
+            received_date = datetime.strptime(received_date_string, '%Y-%m-%d')
+            next_promotion_days = int(next_promotion_days)
             new_next_promotion_date = received_date + timedelta(days=next_promotion_days)
             instance.nextPromotionDate = new_next_promotion_date
     else:
