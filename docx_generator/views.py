@@ -300,7 +300,8 @@ def generate_appointment_decree(request):
                     )
 
                 if appointmentType == 'Впервые принятый':
-                    three_months_later = datetime.strptime(decreeDate, '%Y-%m-%d').date() + timedelta(days=int(month_count) * 30 + 1)
+                    three_months_later = datetime.strptime(decreeDate, '%Y-%m-%d').date() + timedelta(
+                        days=int(month_count) * 30 + 1)
                     if personInstance.rankInfo is None:
                         task = create_rank_info_after_months.apply_async(
                             args=(int(month_count), decree_list_instance.decreeNumber), eta=three_months_later)
@@ -309,7 +310,8 @@ def generate_appointment_decree(request):
                             {'error': 'Сотрудник уже имеет звание'}, status=400)
 
             else:
-                return JsonResponse({'error': 'У сотрудника уже имеется приказ о назначении который не согласован'}, status=400)
+                return JsonResponse({'error': 'У сотрудника уже имеется приказ о назначении который не согласован'},
+                                    status=400)
 
             # Для склонения
             soglasnie = ['б', 'в', 'г', 'д', 'ж', 'з', 'й', 'к', 'л', 'м', 'н', 'п', 'р', 'с', 'т', 'ф', 'х', 'ц', 'ч',
@@ -472,7 +474,8 @@ def generate_transfer_decree(request):
                     decreeId=decree_list_instance
                 )
             else:
-                return JsonResponse({'error': 'У сотрудника уже имеется приказ о перемещении который не согласован'}, status=400)
+                return JsonResponse({'error': 'У сотрудника уже имеется приказ о перемещении который не согласован'},
+                                    status=400)
             soglasnie = ['б', 'в', 'г', 'д', 'ж', 'з', 'й', 'к', 'л', 'м', 'н', 'п', 'р', 'с', 'т', 'ф', 'х', 'ц', 'ч',
                          'ш', 'щ']
             glasnie = ['а', 'е', 'ё', 'и', 'о', 'у', 'ы', 'э', 'ю', 'я']
@@ -657,44 +660,19 @@ def generate_rankup_decree(request):
             if personsRankInfo.militaryRank.order > newRankInstance.order:
                 return JsonResponse({'error': 'Новое звание должно быть выше нынешного звания'}, status=400)
 
-            if personsRankInfo.militaryRank.order + 1 != newRankInstance.order:
-                return JsonResponse({'error': 'Новое звание должно быть следующим званием а не выше чем на 2 звания'}, status=400)
+            if receivedType != 'Внеочередное' and personsRankInfo.militaryRank.order + 1 != newRankInstance.order:
+                return JsonResponse({'error': 'Новое звание должно быть следующим званием а не выше чем на 2 звания'},
+                                    status=400)
 
-            if receivedType != 'Досрочное' and personsPositionInfo.position.maxRank.order >= newRankInstance.order:
+            print(personsPositionInfo.position.maxRank.order)
+            if receivedType == 'На одну ступень выше специального звания' and personsPositionInfo.position.maxRank.order < newRankInstance.order:
                 return JsonResponse({'error': 'Новое звание превышает максимальное звание должности'}, status=400)
 
             changedRankTitleKaz = newRankTitle
             if newRankTitle == 'старший лейтенант':
                 changedRankTitleKaz = 'аға лейтенант'
 
-            if not DecreeList.objects.filter(personId=personInstance, decreeType="Присвоение звания",
-                                             isConfirmed=False).first():
-
-                if receivedType == 'Досрочное':
-                    time_difference = datetime.strptime(rankUpDate, "%Y-%m-%d").date() - personsRankInfo.receivedDate
-                    half_promotion_days = personsRankInfo.militaryRank.nextPromotionDateInDays / 2
-                    if time_difference >= timedelta(days=half_promotion_days):
-                        decreeInstance = DecreeList.objects.create(
-                            decreeType="Присвоение звания",
-                            decreeDate=datetime.strptime(rankUpDate, "%Y-%m-%d").date(),
-                            personId=personInstance
-                        )
-
-                        RankUpInfo.objects.create(
-                            previousRank=personsRankInfo.militaryRank,
-                            newRank=newRankInstance,
-                            receivedType=receivedType,
-                            decreeId=decreeInstance
-                        )
-                    else:
-                        return JsonResponse({'error': 'Ошибка досрочного повышения: Дата повышения не равно или не '
-                                                      'превышает половины даты'
-                                                      ' последующего повышения'}, status=400)
-
-
-            else:
-                return JsonResponse({'error': 'У сотрудника уже имеется приказ о присвоении звания который не '
-                                              'согласован'}, status=400)
+            # Generating document
 
             soglasnie = ['б', 'в', 'г', 'д', 'ж', 'з', 'й', 'к', 'л', 'м', 'н', 'п', 'р', 'с', 'т', 'ф', 'х', 'ц', 'ч',
                          'ш', 'щ']
@@ -881,7 +859,112 @@ def generate_rankup_decree(request):
                                                  '.document')
             response['Content-Disposition'] = f'attachment; filename=Приказ о присвоении.docx'
 
-            return response
+            # Checking for received type
+
+            if not DecreeList.objects.filter(personId=personInstance, decreeType="Присвоение звания",
+                                             isConfirmed=False).first():
+
+                if receivedType == 'Досрочное':
+                    time_difference = datetime.strptime(rankUpDate, "%Y-%m-%d").date() - personsRankInfo.receivedDate
+                    half_promotion_days = personsRankInfo.militaryRank.nextPromotionDateInDays / 2
+                    if time_difference >= timedelta(days=half_promotion_days):
+                        decreeInstance = DecreeList.objects.create(
+                            decreeType="Присвоение звания",
+                            decreeDate=datetime.strptime(rankUpDate, "%Y-%m-%d").date(),
+                            personId=personInstance
+                        )
+
+                        RankUpInfo.objects.create(
+                            previousRank=personsRankInfo.militaryRank,
+                            newRank=newRankInstance,
+                            receivedType=receivedType,
+                            decreeId=decreeInstance
+                        )
+
+                        return response
+
+                    else:
+                        return JsonResponse({'error': 'Ошибка досрочного повышения: Дата повышения не равно или не '
+                                                      'превышает половины даты'
+                                                      ' последующего повышения'}, status=400)
+
+                if receivedType == 'Внеочередное':
+                    if personsRankInfo.militaryRank.rankTitle != 'Подполковник' or personsRankInfo.militaryRank.rankTitle != 'Полковник':
+                        rankUpDate_dateformat = datetime.strptime(rankUpDate, "%Y-%m-%d").date()
+                        # Checking if rankUpDate is crossed over
+                        if personsRankInfo.nextPromotionDate <= rankUpDate_dateformat:
+                            # Taking promotion days count from current and next rank to get how many days needed to
+                            # RankUp Внеочередное
+                            current_promotion_days = personsRankInfo.militaryRank.nextPromotionDateInDays
+                            next_one_step_rank = MilitaryRank.objects.get(order=personsRankInfo.militaryRank.order + 1)
+                            one_step_promotion_days = next_one_step_rank.nextPromotionDateInDays
+                            oneStepRankUpDate = personsRankInfo.receivedDate + timedelta(
+                                days=current_promotion_days + one_step_promotion_days)
+                            # Checking if given rank is greater than one step of next rank
+                            if next_one_step_rank.order + 1 == newRankInstance.order:
+                                # Checking if rankUpDate with 2 ranks is allowed with given date in request
+                                if oneStepRankUpDate <= rankUpDate_dateformat:
+                                    print(oneStepRankUpDate)
+                                    decreeInstance = DecreeList.objects.create(
+                                        decreeType="Присвоение звания",
+                                        decreeDate=datetime.strptime(rankUpDate, "%Y-%m-%d").date(),
+                                        personId=personInstance
+                                    )
+
+                                    RankUpInfo.objects.create(
+                                        previousRank=personsRankInfo.militaryRank,
+                                        newRank=newRankInstance,
+                                        receivedType=receivedType,
+                                        decreeId=decreeInstance
+                                    )
+
+                                    return response
+                                else:
+                                    return JsonResponse(
+                                        {'error': f'Дата внеочередного повышения должна соответствовать требованиям: '
+                                                  f'предпологаемая дата повышения {oneStepRankUpDate}'},
+                                        status=400)
+                            else:
+                                return JsonResponse({'error': 'Новое звание должно быть через одну ступень после '
+                                                              'нынешного звания'},
+                                                    status=400)
+                        else:
+                            return JsonResponse({'error': 'Дата повышения в приказе должна быть после даты следующего '
+                                                          'повышения'},
+                                                status=400)
+                    else:
+                        return JsonResponse({'error': 'Нету доступа получения внеочередного повышения'},
+                                            status=400)
+
+                if receivedType == 'На одну ступень выше специального звания':
+                    if personsRankInfo.militaryRank.order + 1 == newRankInstance.order:
+                        rankUpDate_dateformat = datetime.strptime(rankUpDate, "%Y-%m-%d").date()
+                        if personsRankInfo.nextPromotionDate <= rankUpDate_dateformat:
+
+                            decreeInstance = DecreeList.objects.create(
+                                decreeType="Присвоение звания",
+                                decreeDate=datetime.strptime(rankUpDate, "%Y-%m-%d").date(),
+                                personId=personInstance
+                            )
+
+                            RankUpInfo.objects.create(
+                                previousRank=personsRankInfo.militaryRank,
+                                newRank=newRankInstance,
+                                receivedType=receivedType,
+                                decreeId=decreeInstance
+                            )
+
+                            return response
+                        else:
+                            return JsonResponse({'error': 'Данная дата не подходит с датой следующего повышения'},
+                                                status=400)
+                    else:
+                        return JsonResponse({'error': 'Новое звание должно быть следующим после нынешного звания'},
+                                            status=400)
+
+            else:
+                return JsonResponse({'error': 'У сотрудника уже имеется приказ о присвоении звания который не '
+                                              'согласован'}, status=400)
 
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Invalid JSON data'}, status=400)

@@ -37,7 +37,6 @@ def rankInfo_pre_save(sender, instance, **kwargs):
         # Check if militaryRank has changed
         if original_instance.militaryRank != instance.militaryRank and original_instance.receivedDate != instance.receivedDate:
             # Update the existing RankArchive for the old militaryRank
-            print("les goo")
             person_instance = Person.objects.get(rankInfo=instance)
             try:
                 # Try to get the existing RankArchive
@@ -62,20 +61,22 @@ def rankInfo_pre_save(sender, instance, **kwargs):
 
         try:
             rankUpDecree = DecreeList.objects.filter(personId=person_instance, decreeType="Присвоение звания",
-                                                     isConfirmed=False).first()
+                                                    isConfirmed=False).first()
             rankUpInfo = RankUpInfo.objects.get(decreeId=rankUpDecree)
+            print(rankUpInfo.receivedType)
+            if (rankUpInfo.receivedType == 'Досрочное' or rankUpInfo.receivedType == 'Внеочередное') and instance.militaryRank in non_valid_ranks:
 
-            if rankUpInfo.receivedType != 'Досрочное' and instance.militaryRank in non_valid_ranks:
-                instance.militaryRank = max_rank
-                next_promotion_days = instance.militaryRank.nextPromotionDateInDays
-                new_next_promotion_date = instance.receivedDate + timedelta(days=next_promotion_days)
-                instance.nextPromotionDate = new_next_promotion_date
-
-            else:
                 next_promotion_days = instance.militaryRank.nextPromotionDateInDays
                 new_next_promotion_date = instance.receivedDate + timedelta(days=next_promotion_days)
                 instance.needPositionUp = False
                 instance.nextPromotionDate = new_next_promotion_date
+                instance.decreeNumber = rankUpDecree.decreeNumber
+
+            else:
+                next_promotion_days = instance.militaryRank.nextPromotionDateInDays
+                new_next_promotion_date = instance.receivedDate + timedelta(days=next_promotion_days)
+                instance.nextPromotionDate = new_next_promotion_date
+                instance.decreeNumber = rankUpDecree.decreeNumber
         except (RankUpInfo.DoesNotExist, DecreeList.DoesNotExist):
 
             if instance.militaryRank not in valid_ranks:
