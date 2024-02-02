@@ -83,4 +83,5 @@ urlpatterns = [
     path('api/v1/search_persons/', search_persons, name='search_persons'),
     path('api/v1/generate-rankup-decree/', generate_rankup_decree, name='generate_rankup_decree'),
     path('api/v1/generate-firing-decree/', generate_firing_decree, name='generate_firing_decree'),
+    path('api/v1/generate-komandirovka-decree/', generate_komandirovka_decree, name='generate_komandirovka_decree'),
 ]

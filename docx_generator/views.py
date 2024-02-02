@@ -1180,3 +1180,25 @@ def generate_firing_decree(request):
 
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Invalid JSON data'}, status=400)
+
+@csrf_exempt
+def generate_komandirovka_decree(request):
+    if request.method == 'POST':
+        try:
+            body = request.body.decode('utf-8')
+            data = json.loads(body)
+            # Extract variables from the parsed data
+            persons = data.get('persons', [])
+
+            # Extract personIds from the list of persons
+            person_ids = [person.get('personId') for person in persons]
+
+            decreeDate = data.get('decreeDate')
+
+            personInstance = Person.objects.get(pk=person_ids[0])
+            print(personInstance)
+
+
+
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON data'}, status=400)

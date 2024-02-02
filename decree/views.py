@@ -144,6 +144,15 @@ def getDecreeInfo(request):
         }]
 
         return JsonResponse({'rankUpInfo': rank_up_info})
+    if decreeInstance.decreeType == 'Увольнение':
+        firing_info = [
+            {
+                'decreeInfo': {
+                    'person': person_data
+                }
+            }
+        ]
+        return JsonResponse({'firingInfo': firing_info})
 
 
 @csrf_exempt
