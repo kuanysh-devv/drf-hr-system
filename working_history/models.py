@@ -12,6 +12,8 @@ class WorkingHistory(models.Model):
     organizationAddress = models.CharField(max_length=492, null=True, verbose_name=_("Organization Address"))
     isPravoOhranka = models.BooleanField(default=False, verbose_name=_("Is Pravo Ohranka"))
     HaveCoefficient = models.BooleanField(default=False, verbose_name=_("Have Coefficient"))
+    personType = models.CharField(max_length=255, null=True, blank=True, default="", verbose_name=_("personType"))
+    personSubType = models.CharField(max_length=255, null=True, blank=True, default="", verbose_name=_("personSubType"))
     personId = models.ForeignKey(Person, on_delete=models.CASCADE, default=1, verbose_name=_("Person"))
 
     def __str__(self):

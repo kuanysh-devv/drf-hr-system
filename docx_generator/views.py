@@ -19,7 +19,7 @@ from education.models import Education, AcademicDegree
 from education.serializers import EducationSerializer, AcademicDegreeSerializer
 from location.models import Department
 from military_rank.models import RankInfo, MilitaryRank
-from person.models import Person
+from person.models import Person, Vacation
 from photo.models import Photo
 from position.models import Position, PositionInfo
 from working_history.models import WorkingHistory
@@ -390,7 +390,8 @@ def generate_appointment_decree(request):
                                                                     staffing_table_department=departmentInstance)
             except StaffingTable.DoesNotExist:
                 # If StaffingTable instance doesn't exist, there are no vacancies
-                return False
+                return JsonResponse(
+                    {'error': 'В базе данных нету штатного расписания с этим департаментом и должностью'}, status=400)
 
             vacancies_count = staffing_table_instance.vacancy_list.filter(position=positionInstance,
                                                                           department=departmentInstance).count()
@@ -475,26 +476,6 @@ def generate_transfer_decree(request):
             currentPosition = PositionInfo.objects.get(person=personInstance).position
             currentDepartment = PositionInfo.objects.get(person=personInstance).department
 
-            if not DecreeList.objects.filter(personId=personInstance, decreeType="Перемещение",
-                                             isConfirmed=False).first():
-
-                decree_list_instance = DecreeList.objects.create(
-                    decreeType="Перемещение",
-                    decreeDate=datetime.strptime(decreeDate, '%Y-%m-%d').date(),
-                    personId=personInstance
-                )
-
-                TransferInfo.objects.create(
-                    previousDepartment=currentDepartment,
-                    previousPosition=currentPosition,
-                    newDepartment=newDepartmentInstance,
-                    newPosition=newPositionInstance,
-                    transferBase=base,
-                    decreeId=decree_list_instance
-                )
-            else:
-                return JsonResponse({'error': 'У сотрудника уже имеется приказ о перемещении который не согласован'},
-                                    status=400)
             soglasnie = ['б', 'в', 'г', 'д', 'ж', 'з', 'й', 'к', 'л', 'м', 'н', 'п', 'р', 'с', 'т', 'ф', 'х', 'ц', 'ч',
                          'ш', 'щ']
             glasnie = ['а', 'е', 'ё', 'и', 'о', 'у', 'ы', 'э', 'ю', 'я']
@@ -641,8 +622,28 @@ def generate_transfer_decree(request):
                                                  '.document')
             response['Content-Disposition'] = f'attachment; filename=Приказ о перемещении.docx'
 
-            return response
+            if not DecreeList.objects.filter(personId=personInstance, decreeType="Перемещение",
+                                             isConfirmed=False).first():
 
+                decree_list_instance = DecreeList.objects.create(
+                    decreeType="Перемещение",
+                    decreeDate=datetime.strptime(decreeDate, '%Y-%m-%d').date(),
+                    personId=personInstance
+                )
+
+                TransferInfo.objects.create(
+                    previousDepartment=currentDepartment,
+                    previousPosition=currentPosition,
+                    newDepartment=newDepartmentInstance,
+                    newPosition=newPositionInstance,
+                    transferBase=base,
+                    decreeId=decree_list_instance
+                )
+
+                return response
+            else:
+                return JsonResponse({'error': 'У сотрудника уже имеется приказ о перемещении который не согласован'},
+                                    status=400)
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Invalid JSON data'}, status=400)
 
@@ -989,3 +990,193 @@ def generate_rankup_decree(request):
             return JsonResponse({'error': 'Invalid JSON data'}, status=400)
 
     return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+
+@csrf_exempt
+def generate_firing_decree(request):
+    if request.method == 'POST':
+        try:
+            body = request.body.decode('utf-8')
+            data = json.loads(body)
+            # Extract variables from the parsed data
+            person_id = data.get('personId')
+            decreeDate = data.get('decreeDate')
+
+            personInstance = Person.objects.get(pk=person_id)
+
+            currentPosition = PositionInfo.objects.get(person=personInstance).position
+            currentDepartment = PositionInfo.objects.get(person=personInstance).department
+
+            personsRankInfo = RankInfo.objects.get(person=personInstance)
+            personsPositionInfo = PositionInfo.objects.get(person=personInstance)
+
+            positionTitle = personsPositionInfo.position.positionTitle
+            departmentName = personsPositionInfo.department.DepartmentName
+
+            date_object = datetime.strptime(decreeDate, "%Y-%m-%d")
+
+            dayCount = Vacation.objects.get(personId=personInstance, year=date_object.year).daysCount
+
+            soglasnie = ['б', 'в', 'г', 'д', 'ж', 'з', 'й', 'к', 'л', 'м', 'н', 'п', 'р', 'с', 'т', 'ф', 'х', 'ц', 'ч',
+                         'ш', 'щ']
+            glasnie = ['а', 'е', 'ё', 'и', 'о', 'у', 'ы', 'э', 'ю', 'я']
+
+            # Kassymbayeva Kuanysh Akhatuly
+            changedSurname = personInstance.surname
+            changedFirstName = personInstance.firstName
+            changedPatronymic = personInstance.patronymic
+
+            # Kassymbayevu Kuanyshu Akhatuly
+            changedSurname2 = personInstance.surname
+            changedFirstName2 = personInstance.firstName
+            changedPatronymic2 = personInstance.patronymic
+
+            if personInstance.gender.genderName == 'Мужской':
+                if personInstance.firstName[-1] in soglasnie:
+                    changedFirstName = personInstance.firstName + 'а'
+                    changedFirstName2 = personInstance.firstName + 'у'
+
+                if personInstance.surname[-2:] == 'ев' or personInstance.surname[-2:] == 'ов':
+                    changedSurname = personInstance.surname + 'а'
+                    changedSurname2 = personInstance.surname + 'у'
+
+                if personInstance.patronymic[-3:] == 'вич':
+                    changedPatronymic = personInstance.patronymic + 'а'
+                    changedPatronymic2 = personInstance.patronymic + 'у'
+
+            if personInstance.gender.genderName == 'Женский':
+                if personInstance.firstName[-1] == 'а' and personInstance.firstName[-2] in soglasnie:
+                    changedFirstName = personInstance.firstName[:-1]
+                    changedFirstName2 = personInstance.firstName[:-1]
+
+                    changedFirstName = changedFirstName + 'у'
+                    changedFirstName2 = changedFirstName2 + 'е'
+
+                if personInstance.surname[-3:] == 'ева' or personInstance.surname[-3:] == 'ова':
+                    changedSurname = personInstance.surname[:-1]
+                    changedSurname2 = personInstance.surname[:-1]
+
+                    changedSurname = changedSurname + 'у'
+                    changedSurname2 = changedSurname2 + 'е'
+
+                if personInstance.patronymic[-4:] == 'овна' or personInstance.patronymic[-4:] == 'евна':
+                    changedPatronymic = personInstance.patronymic[:-1]
+                    changedPatronymic2 = personInstance.patronymic[:-1]
+
+                    changedPatronymic = changedPatronymic + 'у'
+                    changedPatronymic2 = changedPatronymic2 + 'е'
+
+            personsFIO = changedSurname + ' ' + changedFirstName + ' ' + changedPatronymic
+            personsFIOKaz = personInstance.firstName + ' ' + personInstance.patronymic + ' ' + personInstance.surname
+
+            personsFIO2 = changedSurname2 + ' ' + changedFirstName2 + ' ' + changedPatronymic2
+
+            changedPositionTitle = positionTitle
+            if positionTitle == 'Руководитель департамента':
+                changedPositionTitle = 'Руководителя департамента'
+            if positionTitle == 'Заместитель руководителя департамента':
+                changedPositionTitle = 'Заместителя руководителя департамента'
+            if positionTitle == 'Руководитель управления':
+                changedPositionTitle = 'Руководителя управления'
+            if positionTitle == 'Заместитель руководителя управления':
+                changedPositionTitle = 'Заместителя руководителя управления'
+            if positionTitle == 'Оперуполномоченный по особо важным делам':
+                changedPositionTitle = 'Оперуполномоченного по особо важным делам'
+            if positionTitle == 'Старший оперуполномоченный':
+                changedPositionTitle = 'Старшего оперуполномоченного'
+            if positionTitle == 'Оперуполномоченный':
+                changedPositionTitle = 'Оперуполномоченного'
+
+            changedDepartmentName = departmentName
+            changedDepartmentNameKaz = personsPositionInfo.department.DepartmentNameKaz
+            words = departmentName.split()
+            wordsKaz = changedDepartmentNameKaz.split()
+            if words[0] == 'Управление':
+                words[0] = 'управления'
+                changedDepartmentName = ' '.join(words)
+            if departmentName == 'ЦА':
+                changedDepartmentName = 'управления'
+            if departmentName == 'ЦА':
+                departmentName = 'управление'
+
+            changedDepartmentName2 = departmentName
+            words = departmentName.split()
+            if words[0] == 'Управление':
+                words[0] = 'Управлению'
+                changedDepartmentName2 = ' '.join(words)
+            if departmentName == 'ЦА':
+                changedDepartmentName2 = 'Управлению'
+            if departmentName == 'ЦА':
+                departmentName = 'Управление'
+
+            if wordsKaz[-1] == 'басқармасы':
+                wordsKaz[-1] = wordsKaz[-1] + 'ның'
+                changedDepartmentNameKaz = ' '.join(wordsKaz)
+
+            base = 'рапорт'
+            baseKaz = 'баянат'
+
+            template_path = 'docx_generator/static/templates/firing_template.docx'
+            document = Document(template_path)
+
+            def replace_placeholder(placeholder, replacement):
+                for paragraph1 in document.paragraphs:
+                    if placeholder in paragraph1.text:
+
+                        for run1 in paragraph1.runs:
+                            if placeholder in run1.text:
+                                run1.text = run1.text.replace(placeholder, replacement)
+                                run1.font.size = Pt(14)  # Adjust the font size if needed
+                                run1.font.name = 'Times New Roman'
+
+                # Replace placeholders with actual data
+
+            # replace_placeholder('departmentName', f"{departmentName}")
+            replace_placeholder('PERSONSFIO', f"{personsFIO}")
+            replace_placeholder('POSITIONTITLE', f"{changedPositionTitle.lower()}")
+            replace_placeholder('CHANGEDDEPARTMENTNAME', f"{changedDepartmentName}")
+            replace_placeholder('UPRAVLENIE', f"{changedDepartmentName2}")
+            replace_placeholder('EMPLOYEE', f"{personsFIO2}")
+            replace_placeholder('DAYCOUNT', f"{dayCount}")
+            replace_placeholder('YEAR', f"{date_object.year}")
+            replace_placeholder('BASE', base)
+
+            replace_placeholder('personsfio', f"{personsFIOKaz}")
+            replace_placeholder('changeddepartmentname', f"{changedDepartmentNameKaz}")
+            replace_placeholder('positiontitle', f"{personsPositionInfo.position.positionTitleKaz.lower()}")
+            replace_placeholder('upravlenie', f"{personsPositionInfo.department.DepartmentNameKaz}")
+            replace_placeholder('employee', f"{personsFIOKaz}")
+            replace_placeholder('daycount', f"{dayCount}")
+            replace_placeholder('year', f"{date_object.year}")
+            replace_placeholder('base', baseKaz)
+
+            doc_stream = BytesIO()
+            document.save(doc_stream)
+            doc_stream.seek(0)
+
+            # Prepare the HTTP response with the modified document
+            response = HttpResponse(doc_stream.read(),
+                                    content_type='application/vnd.openxmlformats-officedocument.wordprocessingml'
+                                                 '.document')
+            response['Content-Disposition'] = f'attachment; filename=Приказ об увольнении.docx'
+
+            if not DecreeList.objects.filter(personId=personInstance, decreeType="Увольнение",
+                                             isConfirmed=False).first():
+                if not personInstance.isFired:
+                    decree_list_instance = DecreeList.objects.create(
+                        decreeType="Увольнение",
+                        decreeDate=datetime.strptime(decreeDate, '%Y-%m-%d').date(),
+                        personId=personInstance
+                    )
+
+                    return response
+                else:
+                    return JsonResponse(
+                        {'error': 'Сотрудник уже уволен'},
+                        status=400)
+            else:
+                return JsonResponse({'error': 'У сотрудника уже имеется приказ об увольнении который не согласован'},
+                                    status=400)
+
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON data'}, status=400)

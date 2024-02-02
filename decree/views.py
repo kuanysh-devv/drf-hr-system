@@ -8,7 +8,7 @@ from rest_framework.permissions import IsAuthenticated
 from staffing_table.models import StaffingTable, Vacancy
 from location.models import Department
 from military_rank.models import MilitaryRank, RankInfo
-from person.models import RankArchive
+from person.models import RankArchive, Vacation
 from photo.models import Photo
 from position.models import PositionInfo, Position
 from working_history.models import WorkingHistory
@@ -165,6 +165,12 @@ def decreeConfirmation(request):
             Vacancy.delete(staffingTableInstance.vacancy_list.first())
             staffingTableInstance.save()
 
+            Vacation.objects.create(
+                personId=personInstance,
+                year=decree_instance.decreeDate.year,
+                daysCount=0
+            )
+
             response_data = {'status': 'success', 'message': 'Приказ о назначении согласован'}
             response_json = json.dumps(response_data)
             return HttpResponse(response_json, content_type='application/json')
@@ -210,6 +216,27 @@ def decreeConfirmation(request):
             decree_instance.save()
 
             response_data = {'status': 'success', 'message': 'Приказ о присвоении звания согласован'}
+            response_json = json.dumps(response_data)
+            return HttpResponse(response_json, content_type='application/json')
+
+        if decree_instance.decreeType == 'Увольнение':
+
+            personInstance.isFired = True
+            personInstance.save()
+
+            try:
+                vacation = Vacation.objects.get(personId=personInstance, year=decree_instance.decreeDate.year)
+                vacation.daysCount = 0
+                vacation.save()
+
+            except Vacation.DoesNotExist:
+                return JsonResponse({'error': 'У сотрудника не имеется объект отпускных дней'},
+                                    status=400)
+
+            decree_instance.isConfirmed = True
+            decree_instance.save()
+
+            response_data = {'status': 'success', 'message': 'Приказ об увольнении согласован'}
             response_json = json.dumps(response_data)
             return HttpResponse(response_json, content_type='application/json')
 

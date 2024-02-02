@@ -1271,6 +1271,14 @@ msgstr "Правоохранительный орган"
 msgid "Have Coefficient"
 msgstr "Имеет коэффициент"
 
+#: .\working_history\models.py:14
+msgid "personType"
+msgstr "Тип сотрудника"
+
+#: .\working_history\models.py:14
+msgid "personSubType"
+msgstr "Подтип сотрудника"
+
 #: .\working_history\models.py:15
 msgid "Person"
 msgstr "ИИН Сотрудника"

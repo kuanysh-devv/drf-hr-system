@@ -3,6 +3,7 @@ from django.db import models, IntegrityError
 from django.utils.translation import gettext_lazy as _
 from military_rank.models import RankInfo, MilitaryRank
 from position.models import PositionInfo
+from datetime import datetime
 
 
 class Person(models.Model):
@@ -192,3 +193,16 @@ class RankArchive(models.Model):
     class Meta:
         verbose_name = _("RankArchive")
         verbose_name_plural = _("RankArchives")
+
+
+class Vacation(models.Model):
+    year = models.IntegerField(default=datetime.now().year, verbose_name=_("Vacation year"))
+    daysCount = models.IntegerField(default=0, verbose_name=_("Vacation days count"))
+    personId = models.ForeignKey('Person', on_delete=models.CASCADE, default=1, verbose_name=_("Person"))
+
+    def __str__(self):
+        return str(self.personId.iin) + " - " + str(self.daysCount) + "(" + str(self.year) + ")"
+
+    class Meta:
+        verbose_name = _("Vacation")
+        verbose_name_plural = _("Vacations")
