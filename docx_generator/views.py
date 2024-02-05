@@ -3,13 +3,16 @@ import io
 import json
 from datetime import datetime, timedelta
 import pytz
+from minio import Minio
 from io import BytesIO
+from dotenv import load_dotenv
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from docx import Document
 from docx.enum.table import WD_ALIGN_VERTICAL
+from uuid import uuid4
 from docx.shared import Inches
 from docx.shared import Pt
 from staffing_table.models import StaffingTable, Vacancy
@@ -24,6 +27,15 @@ from photo.models import Photo
 from position.models import Position, PositionInfo
 from working_history.models import WorkingHistory
 from military_rank.tasks import create_rank_info_after_months
+import os
+
+load_dotenv()
+
+MINIO_ENDPOINT = os.getenv('MINIO_ENDPOINT')
+MINIO_ACCESS_KEY = os.getenv('MINIO_ACCESS_KEY')
+MINIO_SECRET_KEY = os.getenv('MINIO_SECRET_KEY')
+MINIO_SECURE = os.getenv('MINIO_SECURE') == 'True'
+MINIO_BUCKET_NAME = os.getenv('MINIO_BUCKET_NAME')
 
 
 @csrf_exempt
@@ -400,26 +412,46 @@ def generate_appointment_decree(request):
             if vacancies_count > 0:
                 if not DecreeList.objects.filter(personId=personInstance, decreeType="Назначение",
                                                  isConfirmed=False).first():
-                    decree_list_instance = DecreeList.objects.create(
-                        decreeType="Назначение",
-                        decreeDate=datetime.strptime(decreeDate, '%Y-%m-%d').date(),
-                        personId=personInstance
-                    )
+
                     if appointmentType == 'Впервые принятый':
-                        AppointmentInfo.objects.create(
-                            appointmentDepartment=departmentInstance,
-                            appointmentPosition=positionInstance,
-                            appointmentProbation=int(month_count),
-                            appointmentBase=base,
-                            appointmentType=appointmentType,
-                            decreeId=decree_list_instance
-                        )
+
                         tz = pytz.timezone('Etc/GMT-6')
 
                         three_months_later = datetime.strptime(decreeDate, '%Y-%m-%d').date() + timedelta(
                             days=int(month_count) * 30 + 1)
                         print(three_months_later)
                         if personInstance.rankInfo is None:
+
+                            doc_stream.seek(0)
+                            document_id = str(uuid4())
+                            document_name = f"document_{document_id}.docx"
+
+                            minio_client = Minio(MINIO_ENDPOINT,
+                                                 access_key=MINIO_ACCESS_KEY,
+                                                 secret_key=MINIO_SECRET_KEY,
+                                                 secure=False)
+
+                            minio_client.put_object(MINIO_BUCKET_NAME, document_name, data=doc_stream,
+                                                    length=len(doc_stream.getvalue()))
+                            document_url = f"{MINIO_ENDPOINT}/{MINIO_BUCKET_NAME}/{document_name}"
+                            print(document_url)
+
+                            decree_list_instance = DecreeList.objects.create(
+                                decreeType="Назначение",
+                                decreeDate=datetime.strptime(decreeDate, '%Y-%m-%d').date(),
+                                personId=personInstance,
+                                minioDocName=document_name
+                            )
+
+                            AppointmentInfo.objects.create(
+                                appointmentDepartment=departmentInstance,
+                                appointmentPosition=positionInstance,
+                                appointmentProbation=int(month_count),
+                                appointmentBase=base,
+                                appointmentType=appointmentType,
+                                decreeId=decree_list_instance
+                            )
+
                             task = create_rank_info_after_months.apply_async(
                                 args=(int(month_count), decree_list_instance.decreeNumber), eta=three_months_later)
 
@@ -429,6 +461,27 @@ def generate_appointment_decree(request):
                                 {'error': 'Сотрудник уже имеет звание'}, status=400)
 
                     if appointmentType == 'Вновь принятый':
+                        doc_stream.seek(0)
+                        document_id = str(uuid4())
+                        document_name = f"document_{document_id}.docx"
+
+                        minio_client = Minio(MINIO_ENDPOINT,
+                                             access_key=MINIO_ACCESS_KEY,
+                                             secret_key=MINIO_SECRET_KEY,
+                                             secure=False)
+
+                        minio_client.put_object(MINIO_BUCKET_NAME, document_name, data=doc_stream,
+                                                length=len(doc_stream.getvalue()))
+                        document_url = f"{MINIO_ENDPOINT}/{MINIO_BUCKET_NAME}/{document_name}"
+                        print(document_url)
+
+                        decree_list_instance = DecreeList.objects.create(
+                            decreeType="Назначение",
+                            decreeDate=datetime.strptime(decreeDate, '%Y-%m-%d').date(),
+                            personId=personInstance,
+                            minioDocName=document_name
+                        )
+
                         AppointmentInfo.objects.create(
                             appointmentDepartment=departmentInstance,
                             appointmentPosition=positionInstance,
@@ -625,9 +678,24 @@ def generate_transfer_decree(request):
             if not DecreeList.objects.filter(personId=personInstance, decreeType="Перемещение",
                                              isConfirmed=False).first():
 
+                doc_stream.seek(0)
+                document_id = str(uuid4())
+                document_name = f"document_{document_id}.docx"
+
+                minio_client = Minio(MINIO_ENDPOINT,
+                                     access_key=MINIO_ACCESS_KEY,
+                                     secret_key=MINIO_SECRET_KEY,
+                                     secure=False)
+
+                minio_client.put_object(MINIO_BUCKET_NAME, document_name, data=doc_stream,
+                                        length=len(doc_stream.getvalue()))
+                document_url = f"{MINIO_ENDPOINT}/{MINIO_BUCKET_NAME}/{document_name}"
+                print(document_url)
+
                 decree_list_instance = DecreeList.objects.create(
                     decreeType="Перемещение",
                     decreeDate=datetime.strptime(decreeDate, '%Y-%m-%d').date(),
+                    minioDocName=document_name,
                     personId=personInstance
                 )
 
@@ -888,9 +956,25 @@ def generate_rankup_decree(request):
                     time_difference = datetime.strptime(rankUpDate, "%Y-%m-%d").date() - personsRankInfo.receivedDate
                     half_promotion_days = personsRankInfo.militaryRank.nextPromotionDateInDays / 2
                     if time_difference >= timedelta(days=half_promotion_days):
+
+                        doc_stream.seek(0)
+                        document_id = str(uuid4())
+                        document_name = f"document_{document_id}.docx"
+
+                        minio_client = Minio(MINIO_ENDPOINT,
+                                             access_key=MINIO_ACCESS_KEY,
+                                             secret_key=MINIO_SECRET_KEY,
+                                             secure=False)
+
+                        minio_client.put_object(MINIO_BUCKET_NAME, document_name, data=doc_stream,
+                                                length=len(doc_stream.getvalue()))
+                        document_url = f"{MINIO_ENDPOINT}/{MINIO_BUCKET_NAME}/{document_name}"
+                        print(document_url)
+
                         decreeInstance = DecreeList.objects.create(
                             decreeType="Присвоение звания",
                             decreeDate=datetime.strptime(rankUpDate, "%Y-%m-%d").date(),
+                            minioDocName=document_name,
                             personId=personInstance
                         )
 
@@ -925,9 +1009,25 @@ def generate_rankup_decree(request):
                                 # Checking if rankUpDate with 2 ranks is allowed with given date in request
                                 if oneStepRankUpDate <= rankUpDate_dateformat:
                                     print(oneStepRankUpDate)
+
+                                    doc_stream.seek(0)
+                                    document_id = str(uuid4())
+                                    document_name = f"document_{document_id}.docx"
+
+                                    minio_client = Minio(MINIO_ENDPOINT,
+                                                         access_key=MINIO_ACCESS_KEY,
+                                                         secret_key=MINIO_SECRET_KEY,
+                                                         secure=False)
+
+                                    minio_client.put_object(MINIO_BUCKET_NAME, document_name, data=doc_stream,
+                                                            length=len(doc_stream.getvalue()))
+                                    document_url = f"{MINIO_ENDPOINT}/{MINIO_BUCKET_NAME}/{document_name}"
+                                    print(document_url)
+
                                     decreeInstance = DecreeList.objects.create(
                                         decreeType="Присвоение звания",
                                         decreeDate=datetime.strptime(rankUpDate, "%Y-%m-%d").date(),
+                                        minioDocName=document_name,
                                         personId=personInstance
                                     )
 
@@ -961,9 +1061,24 @@ def generate_rankup_decree(request):
                         rankUpDate_dateformat = datetime.strptime(rankUpDate, "%Y-%m-%d").date()
                         if personsRankInfo.nextPromotionDate <= rankUpDate_dateformat:
 
+                            doc_stream.seek(0)
+                            document_id = str(uuid4())
+                            document_name = f"document_{document_id}.docx"
+
+                            minio_client = Minio(MINIO_ENDPOINT,
+                                                 access_key=MINIO_ACCESS_KEY,
+                                                 secret_key=MINIO_SECRET_KEY,
+                                                 secure=False)
+
+                            minio_client.put_object(MINIO_BUCKET_NAME, document_name, data=doc_stream,
+                                                    length=len(doc_stream.getvalue()))
+                            document_url = f"{MINIO_ENDPOINT}/{MINIO_BUCKET_NAME}/{document_name}"
+                            print(document_url)
+
                             decreeInstance = DecreeList.objects.create(
                                 decreeType="Присвоение звания",
                                 decreeDate=datetime.strptime(rankUpDate, "%Y-%m-%d").date(),
+                                minioDocName=document_name,
                                 personId=personInstance
                             )
 
@@ -1007,7 +1122,6 @@ def generate_firing_decree(request):
             currentPosition = PositionInfo.objects.get(person=personInstance).position
             currentDepartment = PositionInfo.objects.get(person=personInstance).department
 
-            personsRankInfo = RankInfo.objects.get(person=personInstance)
             personsPositionInfo = PositionInfo.objects.get(person=personInstance)
 
             positionTitle = personsPositionInfo.position.positionTitle
@@ -1163,9 +1277,25 @@ def generate_firing_decree(request):
             if not DecreeList.objects.filter(personId=personInstance, decreeType="Увольнение",
                                              isConfirmed=False).first():
                 if not personInstance.isFired:
+
+                    doc_stream.seek(0)
+                    document_id = str(uuid4())
+                    document_name = f"document_{document_id}.docx"
+
+                    minio_client = Minio(MINIO_ENDPOINT,
+                                         access_key=MINIO_ACCESS_KEY,
+                                         secret_key=MINIO_SECRET_KEY,
+                                         secure=False)
+
+                    minio_client.put_object(MINIO_BUCKET_NAME, document_name, data=doc_stream,
+                                            length=len(doc_stream.getvalue()))
+                    document_url = f"{MINIO_ENDPOINT}/{MINIO_BUCKET_NAME}/{document_name}"
+                    print(document_url)
+
                     decree_list_instance = DecreeList.objects.create(
                         decreeType="Увольнение",
                         decreeDate=datetime.strptime(decreeDate, '%Y-%m-%d').date(),
+                        minioDocName=document_name,
                         personId=personInstance
                     )
 
@@ -1181,6 +1311,7 @@ def generate_firing_decree(request):
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Invalid JSON data'}, status=400)
 
+
 @csrf_exempt
 def generate_komandirovka_decree(request):
     if request.method == 'POST':
@@ -1194,11 +1325,113 @@ def generate_komandirovka_decree(request):
             person_ids = [person.get('personId') for person in persons]
 
             decreeDate = data.get('decreeDate')
+            departure = data.get('departure')
+            startDate = data.get('startDate')
+            endDate = data.get('endDate')
+            choice = data.get('choice')
+            transport = data.get('transport')
 
             personInstance = Person.objects.get(pk=person_ids[0])
-            print(personInstance)
+            personsPositionInfo = PositionInfo.objects.get(person=personInstance)
 
+            changedDepartmentNameKaz = personsPositionInfo.department.DepartmentNameKaz
+            wordsKaz = changedDepartmentNameKaz.split()
+            if wordsKaz[-1] == 'басқармасы':
+                wordsKaz[-1] = wordsKaz[-1] + 'ның'
+                changedDepartmentNameKaz = ' '.join(wordsKaz)
 
+            personsFIOKaz = personInstance.firstName + ' ' + personInstance.patronymic + ' ' + personInstance.surname
+
+            departureDeparment = Department.objects.get(DepartmentNameKaz=departure)
+            changedDeparture = departureDeparment.DepartmentNameKaz
+
+            splittedChangedDeparture = changedDeparture.split()
+            if splittedChangedDeparture[-1] == 'басқармасы':
+                changedDeparture = changedDeparture + 'на'
+
+            decreeDate = datetime.strptime(decreeDate, "%Y-%m-%d")
+            startDate = datetime.strptime(startDate, "%Y-%m-%d")
+            endDate = datetime.strptime(endDate, "%Y-%m-%d")
+
+            dayCount = (endDate - startDate).days
+
+            if startDate > endDate:
+                return JsonResponse({'error': 'Неправильно введенные даты'}, status=400)
+
+            monthString = None
+            if startDate.month == 1:
+                monthString = 'қантар'
+            if startDate.month == 2:
+                monthString = 'ақпан'
+            if startDate.month == 3:
+                monthString = 'наурыз'
+            if startDate.month == 4:
+                monthString = 'сәуір'
+            if startDate.month == 5:
+                monthString = 'мамыр'
+            if startDate.month == 6:
+                monthString = 'маусым'
+            if startDate.month == 7:
+                monthString = 'шілде'
+            if startDate.month == 8:
+                monthString = 'тамыз'
+            if startDate.month == 9:
+                monthString = 'қыркүйек'
+            if startDate.month == 10:
+                monthString = 'қазан'
+            if startDate.month == 11:
+                monthString = 'қараша'
+            if startDate.month == 12:
+                monthString = 'желтоқсан'
+
+            dateString = str(startDate.day) + '-' + str(endDate.day) + ' ' + monthString
+
+            template_path = None
+            if len(person_ids) == 1:
+                template_path = 'docx_generator/static/templates/komandirovka_solo_template.docx'
+            if len(person_ids) > 1:
+                template_path = 'docx_generator/static/templates/komandirovka_group_template.docx'
+            document = Document(template_path)
+
+            def replace_placeholder(placeholder, replacement):
+                for paragraph1 in document.paragraphs:
+                    if placeholder in paragraph1.text:
+
+                        for run1 in paragraph1.runs:
+                            if placeholder in run1.text:
+                                run1.text = run1.text.replace(placeholder, replacement)
+                                run1.font.size = Pt(14)  # Adjust the font size if needed
+                                run1.font.name = 'Times New Roman'
+
+                # Replace placeholders with actual data
+
+            # replace_placeholder('departmentName', f"{departmentName}")
+            if len(person_ids) == 1:
+                replace_placeholder('CHANGEDDEPARTMENTNAME', f"{changedDepartmentNameKaz}")
+                replace_placeholder('CHANGEDPOSITIONTITLE', f"{personsPositionInfo.position.positionTitleKaz.lower()}")
+                replace_placeholder('PERSONSFIO', f"{personsFIOKaz}")
+                replace_placeholder('changeddeparture', f"{changedDeparture}")
+                replace_placeholder('DAYCOUNT', f"{dayCount}")
+                replace_placeholder('YEAR', f"{startDate.year}")
+                replace_placeholder('DATERANGE', f"{dateString}")
+                replace_placeholder('CHOICE', choice)
+                replace_placeholder('TRANSPORT', transport)
+                replace_placeholder('DEPARTURE', departure)
+
+            # if len(person_ids) > 1:
+
+            doc_stream = BytesIO()
+            document.save(doc_stream)
+            doc_stream.seek(0)
+
+            # Prepare the HTTP response with the modified document
+            response = HttpResponse(doc_stream.read(),
+                                    content_type='application/vnd.openxmlformats-officedocument.wordprocessingml'
+                                                 '.document')
+            response['Content-Disposition'] = f'attachment; filename=Приказ о командировке.docx'
+
+            # Need to create decreeList object and also decreeInfo
+            return response
 
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Invalid JSON data'}, status=400)

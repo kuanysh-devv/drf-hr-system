@@ -12,6 +12,7 @@ class DecreeList(models.Model):
     decreeDate = models.DateField(verbose_name=_("Decree Date"))
     isConfirmed = models.BooleanField(default=False, verbose_name=_("isConfirmed"))
     personId = models.ForeignKey(Person, on_delete=models.CASCADE, default=1, verbose_name=_("Person"))
+    minioDocName = models.CharField(max_length=4048, default="None", verbose_name=_("minioDocName"))
 
     class Meta:
         verbose_name = _("Decree List")

@@ -1,4 +1,6 @@
 venv
+.env
+
 birth_info/migrations/0001_*.py
 birth_info/migrations/0002_*.py
 birth_info/migrations/0003_*.py

@@ -172,3 +172,6 @@ msgstr "Взыскание"
 #: .\decree\models.py:54
 msgid "Investigations"
 msgstr "Взыскания"
+
+msgid "minioDocName"
+msgstr "Документ"

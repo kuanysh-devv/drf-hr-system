@@ -1,5 +1,6 @@
 import json
-
+from dotenv import load_dotenv
+import os
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
@@ -11,154 +12,187 @@ from military_rank.models import MilitaryRank, RankInfo
 from person.models import RankArchive, Vacation
 from photo.models import Photo
 from position.models import PositionInfo, Position
+from position.serializers import PositionSerializer, PositionInfoSerializer
 from working_history.models import WorkingHistory
 from .models import DecreeList, SpecCheck, SickLeave, Investigation, TransferInfo, RankUpInfo, AppointmentInfo
 from .serializers import DecreeListSerializer, SpecCheckSerializer, SickLeaveSerializer, InvestigationSerializer
+from minio import Minio
+from rest_framework.decorators import action
+
+load_dotenv()
+
+MINIO_ENDPOINT = os.getenv('MINIO_ENDPOINT')
+MINIO_ACCESS_KEY = os.getenv('MINIO_ACCESS_KEY')
+MINIO_SECRET_KEY = os.getenv('MINIO_SECRET_KEY')
+MINIO_SECURE = os.getenv('MINIO_SECURE') == 'True'
+MINIO_BUCKET_NAME = os.getenv('MINIO_BUCKET_NAME')
 
 
-def getDecreeList(request):
-    # Get all decrees from DecreeList model
-    decrees = DecreeList.objects.all()
+class DecreeListViewSet(viewsets.ModelViewSet):
+    queryset = DecreeList.objects.all()
+    serializer_class = DecreeListSerializer
+    permission_classes = (IsAuthenticated,)
 
-    # Serialize the decree data
-    decree_data = []
-    for decree in decrees:
+    @action(detail=False, methods=['get'])
+    def getDecreeList(self, request, *args, **kwargs):
+        decrees = DecreeList.objects.all()
+
+        # Serialize the decree data
+        decree_data = []
+        for decree in decrees:
+            try:
+                personsRankInfo = decree.personId.rankInfo
+            except RankInfo.DoesNotExist:
+                personsRankInfo = None
+
+            # Check if personsRankInfo is not None before accessing its attributes
+            rank_title = personsRankInfo.militaryRank.rankTitle if personsRankInfo else ''
+
+            person_data = {
+                'iin': decree.personId.iin,
+                'pin': decree.personId.pin,
+                'surname': decree.personId.surname,
+                'firstName': decree.personId.firstName,
+                'patronymic': decree.personId.patronymic,
+                'positionInfo': decree.personId.positionInfo.position.positionTitle,
+                'rankInfo': rank_title,  # Use the rank_title variable
+            }
+
+            # Get the photo for the person
+            photo = Photo.objects.filter(personId=decree.personId).first()
+            if photo:
+                person_data['photo'] = photo.photoBinary
+            else:
+                person_data['photo'] = None
+
+            decree_data.append({
+                'decreeId': decree.id,
+                'decreeType': decree.decreeType,
+                'decreeNumber': decree.decreeNumber,
+                'decreeDate': decree.decreeDate,
+                'decreeIsConfirmed': decree.isConfirmed,
+                'person': person_data,
+            })
+
+        return JsonResponse({'decrees': decree_data})
+
+    @action(detail=False, methods=['get'])
+    def getDecreeInfo(self, request, *args, **kwargs):
+        decreeId = request.GET.get('decreeId')
+
+        try:
+            decreeInstance = DecreeList.objects.get(pk=decreeId)
+        except DecreeList.DoesNotExist:
+            return JsonResponse({'error': 'Decree not found'})
+
+        try:
+            personsRankInfo = decreeInstance.personId.rankInfo
+        except RankInfo.DoesNotExist:
+            personsRankInfo = None
+
+        # Check if personsRankInfo is not None before accessing its attributes
+        rank_title = personsRankInfo.militaryRank.rankTitle if personsRankInfo else ''
+
         person_data = {
-            'iin': decree.personId.iin,
-            'pin': decree.personId.pin,
-            'surname': decree.personId.surname,
-            'firstName': decree.personId.firstName,
-            'patronymic': decree.personId.patronymic,
-            'positionInfo': decree.personId.positionInfo.position.positionTitle,
-            'rankInfo': decree.personId.rankInfo.militaryRank.rankTitle,
+            'iin': decreeInstance.personId.iin,
+            'pin': decreeInstance.personId.pin,
+            'surname': decreeInstance.personId.surname,
+            'firstName': decreeInstance.personId.firstName,
+            'patronymic': decreeInstance.personId.patronymic,
+            'positionInfo': PositionInfoSerializer(decreeInstance.personId.positionInfo).data,
+            'rankInfo': rank_title,  # Use the rank_title variable
         }
 
         # Get the photo for the person
-        photo = Photo.objects.filter(personId=decree.personId).first()
+        photo = Photo.objects.filter(personId=decreeInstance.personId).first()
         if photo:
             person_data['photo'] = photo.photoBinary
         else:
             person_data['photo'] = None
 
-        decree_data.append({
-            'decreeId': decree.id,
-            'decreeType': decree.decreeType,
-            'decreeNumber': decree.decreeNumber,
-            'decreeDate': decree.decreeDate,
-            'decreeIsConfirmed': decree.isConfirmed,
-            'person': person_data,
-        })
+        if decreeInstance.decreeType == 'Назначение':
+            decreeInfo = AppointmentInfo.objects.get(decreeId=decreeInstance)
 
-    return JsonResponse({'decrees': decree_data})
-
-
-@csrf_exempt
-def getDecreeInfo(request):
-    decreeId = request.GET.get('decreeId')
-
-    try:
-        decreeInstance = DecreeList.objects.get(pk=decreeId)
-    except DecreeList.DoesNotExist:
-        return JsonResponse({'error': 'Decree not found'})
-
-    person_data = {
-        'iin': decreeInstance.personId.iin,
-        'pin': decreeInstance.personId.pin,
-        'surname': decreeInstance.personId.surname,
-        'firstName': decreeInstance.personId.firstName,
-        'patronymic': decreeInstance.personId.patronymic,
-        'positionInfo': decreeInstance.personId.positionInfo.position.positionTitle,
-        'rankInfo': decreeInstance.personId.rankInfo.militaryRank.rankTitle,
-    }
-
-    # Get the photo for the person
-    photo = Photo.objects.filter(personId=decreeInstance.personId).first()
-    if photo:
-        person_data['photo'] = photo.photoBinary
-    else:
-        person_data['photo'] = None
-
-    if decreeInstance.decreeType == 'Назначение':
-        decreeInfo = AppointmentInfo.objects.get(decreeId=decreeInstance)
-
-        appointmentInfo = [{
-            'decreeInfo': {
-                'decreeId': decreeInstance.id,
-                'decreeType': decreeInstance.decreeType,
-                'decreeNumber': decreeInstance.decreeNumber,
-                'decreeDate': decreeInstance.decreeDate,
-                'person': person_data,
-            },
-            'newPosition': {
-                'newDepartment': decreeInfo.appointmentDepartment.DepartmentName,
-                'newPosition': decreeInfo.appointmentPosition.positionTitle,
-                'probationMonthCount': decreeInfo.appointmentProbation,
-                'base': decreeInfo.appointmentBase,
-                'appointmentType': decreeInfo.appointmentType
-            }
-
-        }]
-
-        return JsonResponse({'appointmentInfo': appointmentInfo})
-
-    if decreeInstance.decreeType == 'Перемещение':
-
-        decreeInfo = TransferInfo.objects.get(decreeId=decreeInstance)
-
-        transfer_info = [{
-            'decreeInfo': {
-                'decreeId': decreeInstance.id,
-                'decreeType': decreeInstance.decreeType,
-                'decreeNumber': decreeInstance.decreeNumber,
-                'decreeDate': decreeInstance.decreeDate,
-                'person': person_data,
-            },
-            'newPosition': {
-                'newDepartment': decreeInfo.newDepartment.DepartmentName,
-                'newPosition': decreeInfo.newPosition.positionTitle
-            },
-            'previousPosition': {
-                'previousDepartment': decreeInfo.previousDepartment.DepartmentName,
-                'previousPosition': decreeInfo.previousPosition.positionTitle
-            }
-
-        }]
-
-        return JsonResponse({'transferInfo': transfer_info})
-
-    if decreeInstance.decreeType == 'Присвоение звания':
-
-        decreeInfo = RankUpInfo.objects.get(decreeId=decreeInstance)
-
-        rank_up_info = [{
-            'decreeInfo': {
-                'decreeId': decreeInstance.id,
-                'decreeType': decreeInstance.decreeType,
-                'decreeNumber': decreeInstance.decreeNumber,
-                'decreeDate': decreeInstance.decreeDate,
-                'person': person_data,
-            },
-            'newRank': decreeInfo.newRank.rankTitle,
-            'previousRank': decreeInfo.previousRank.rankTitle
-
-        }]
-
-        return JsonResponse({'rankUpInfo': rank_up_info})
-    if decreeInstance.decreeType == 'Увольнение':
-        firing_info = [
-            {
+            appointmentInfo = [{
                 'decreeInfo': {
-                    'person': person_data
+                    'decreeId': decreeInstance.id,
+                    'decreeType': decreeInstance.decreeType,
+                    'decreeNumber': decreeInstance.decreeNumber,
+                    'decreeDate': decreeInstance.decreeDate,
+                    'document': decreeInstance.minioDocName,
+                    'person': person_data,
+                },
+                'newPosition': {
+                    'newDepartment': decreeInfo.appointmentDepartment.DepartmentName,
+                    'newPosition': decreeInfo.appointmentPosition.positionTitle,
+                    'probationMonthCount': decreeInfo.appointmentProbation,
+                    'base': decreeInfo.appointmentBase,
+                    'appointmentType': decreeInfo.appointmentType
                 }
+
+            }]
+
+            return JsonResponse({'appointmentInfo': appointmentInfo})
+
+        if decreeInstance.decreeType == 'Перемещение':
+            decreeInfo = TransferInfo.objects.get(decreeId=decreeInstance)
+
+            transfer_info = [{
+                'decreeInfo': {
+                    'decreeId': decreeInstance.id,
+                    'decreeType': decreeInstance.decreeType,
+                    'decreeNumber': decreeInstance.decreeNumber,
+                    'decreeDate': decreeInstance.decreeDate,
+                    'document': decreeInstance.minioDocName,
+                    'person': person_data,
+                },
+                'newPosition': {
+                    'newDepartment': decreeInfo.newDepartment.DepartmentName,
+                    'newPosition': decreeInfo.newPosition.positionTitle
+                },
+                'previousPosition': {
+                    'previousDepartment': decreeInfo.previousDepartment.DepartmentName,
+                    'previousPosition': decreeInfo.previousPosition.positionTitle
+                }
+
+            }]
+
+            return JsonResponse({'transferInfo': transfer_info})
+
+        if decreeInstance.decreeType == 'Присвоение звания':
+            decreeInfo = RankUpInfo.objects.get(decreeId=decreeInstance)
+
+            rank_up_info = [{
+                'decreeInfo': {
+                    'decreeId': decreeInstance.id,
+                    'decreeType': decreeInstance.decreeType,
+                    'decreeNumber': decreeInstance.decreeNumber,
+                    'decreeDate': decreeInstance.decreeDate,
+                    'document': decreeInstance.minioDocName,
+                    'person': person_data,
+                },
+                'newRank': decreeInfo.newRank.rankTitle,
+                'previousRank': decreeInfo.previousRank.rankTitle
+
+            }]
+
+            return JsonResponse({'rankUpInfo': rank_up_info})
+        if decreeInstance.decreeType == 'Увольнение':
+            firing_info = {
+                    'decreeInfo': {
+                        'decreeId': decreeInstance.id,
+                        'decreeType': decreeInstance.decreeType,
+                        'decreeNumber': decreeInstance.decreeNumber,
+                        'decreeDate': decreeInstance.decreeDate,
+                        'document': decreeInstance.minioDocName,
+                        'person': person_data,
+                    },
             }
-        ]
-        return JsonResponse({'firingInfo': firing_info})
 
+            return JsonResponse({'firingInfo': firing_info})
 
-@csrf_exempt
-def decreeConfirmation(request):
-    if request.method == 'POST':
-        # 1 L 2 K 3 O 4 P/D
+    @action(detail=False, methods=['post'])
+    def decreeConfirmation(self, request, *args, **kwargs):
         data = json.loads(request.body.decode('utf-8'))
         decreeId = data.get('decreeId')
 
@@ -170,7 +204,9 @@ def decreeConfirmation(request):
             decree_instance.isConfirmed = True
             decree_instance.save()
 
-            staffingTableInstance = StaffingTable.objects.get(staffing_table_department=decreeInfo.appointmentDepartment, staffing_table_position=decreeInfo.appointmentPosition)
+            staffingTableInstance = StaffingTable.objects.get(
+                staffing_table_department=decreeInfo.appointmentDepartment,
+                staffing_table_position=decreeInfo.appointmentPosition)
             Vacancy.delete(staffingTableInstance.vacancy_list.first())
             staffingTableInstance.save()
 
@@ -185,11 +221,13 @@ def decreeConfirmation(request):
             return HttpResponse(response_json, content_type='application/json')
 
         if decree_instance.decreeType == 'Перемещение':
-
             decreeInfo = TransferInfo.objects.get(decreeId=decree_instance)
             personsPositionInfo = PositionInfo.objects.get(person=personInstance)
-            OldStaffingTableInstance = StaffingTable.objects.get(staffing_table_department=personsPositionInfo.department, staffing_table_position=personsPositionInfo.position)
-            NewStaffingTableInstance = StaffingTable.objects.get(staffing_table_department=decreeInfo.newDepartment, staffing_table_position=decreeInfo.newPosition)
+            OldStaffingTableInstance = StaffingTable.objects.get(
+                staffing_table_department=personsPositionInfo.department,
+                staffing_table_position=personsPositionInfo.position)
+            NewStaffingTableInstance = StaffingTable.objects.get(staffing_table_department=decreeInfo.newDepartment,
+                                                                 staffing_table_position=decreeInfo.newPosition)
 
             Vacancy.delete(NewStaffingTableInstance.vacancy_list.first())
             NewStaffingTableInstance.save()
@@ -213,7 +251,6 @@ def decreeConfirmation(request):
             return HttpResponse(response_json, content_type='application/json')
 
         if decree_instance.decreeType == 'Присвоение звания':
-
             decreeInfo = RankUpInfo.objects.get(decreeId=decree_instance)
             personsRankInfo = RankInfo.objects.get(person=personInstance)
 
@@ -249,14 +286,24 @@ def decreeConfirmation(request):
             response_json = json.dumps(response_data)
             return HttpResponse(response_json, content_type='application/json')
 
+    @action(detail=False, methods=['get'])
+    def decreeDownload(self, request, *args, **kwargs):
+        decreeId = request.GET.get('decreeId')
 
+        decree_instance = DecreeList.objects.get(pk=decreeId)
 
+        minio_client = Minio(MINIO_ENDPOINT,
+                             access_key=MINIO_ACCESS_KEY,
+                             secret_key=MINIO_SECRET_KEY,
+                             secure=False)
+        document_data = minio_client.get_object(MINIO_BUCKET_NAME, decree_instance.minioDocName)
+        document = document_data.read()
 
-
-class DecreeListViewSet(viewsets.ModelViewSet):
-    queryset = DecreeList.objects.all()
-    serializer_class = DecreeListSerializer
-    permission_classes = (IsAuthenticated,)
+        # Serve document for download
+        response = HttpResponse(document,
+                                content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+        response['Content-Disposition'] = 'attachment; filename={decree_instance.minioDocName}'
+        return response
 
 
 class SpecCheckViewSet(viewsets.ModelViewSet):
