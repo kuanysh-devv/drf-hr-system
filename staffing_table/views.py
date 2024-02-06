@@ -380,7 +380,7 @@ class StaffingTableViewSet(viewsets.ModelViewSet):
                 position_data = PositionSerializer(staffTable.staffing_table_position).data
                 currentPositionInfos = PositionInfo.objects.filter(position=staffTable.staffing_table_position,
                                                                    department=staffTable.staffing_table_department)
-                personsOnPosition = Person.objects.filter(positionInfo__in=currentPositionInfos)
+                personsOnPosition = Person.objects.filter(positionInfo__in=currentPositionInfos, isFired=False)
                 position_data['persons'] = PersonSerializer(personsOnPosition, many=True).data
 
                 staffing_table_entry = StaffingTable.objects.filter(
