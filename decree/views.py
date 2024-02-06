@@ -207,6 +207,7 @@ class DecreeListViewSet(viewsets.ModelViewSet):
             staffingTableInstance = StaffingTable.objects.get(
                 staffing_table_department=decreeInfo.appointmentDepartment,
                 staffing_table_position=decreeInfo.appointmentPosition)
+
             Vacancy.delete(staffingTableInstance.vacancy_list.first())
             staffingTableInstance.save()
 

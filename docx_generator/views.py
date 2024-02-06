@@ -678,6 +678,15 @@ def generate_transfer_decree(request):
             if not DecreeList.objects.filter(personId=personInstance, decreeType="Перемещение",
                                              isConfirmed=False).first():
 
+                staffingTableInstance = StaffingTable.objects.get(
+                    staffing_table_department=newDepartmentInstance,
+                    staffing_table_position=newPositionInstance)
+
+                if staffingTableInstance.vacancy_list.first() is None:
+                    return JsonResponse(
+                        {'error': 'На новой должности не существует актуальной вакансии'},
+                        status=400)
+
                 doc_stream.seek(0)
                 document_id = str(uuid4())
                 document_name = f"document_{document_id}.docx"
