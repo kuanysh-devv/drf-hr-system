@@ -12,8 +12,7 @@ def attestation_pre_save(sender, instance, **kwargs):
         # Set nextAttDateMax to lastAttDate + 3 years 3 months
         instance.nextAttDateMax = instance.lastAttDate + timezone.timedelta(days=(3 * 365) + (6 * 30))
     elif instance.attResult == 'Не соответствует':
-         # If attResult is 'Ne proshel', set nextAttDateMin to lastAttDate + 3 months
+        # If attResult is 'Ne proshel', set nextAttDateMin to lastAttDate + 3 months
         instance.nextAttDateMin = instance.lastAttDate + timezone.timedelta(days=3 * 30)
         # Set nextAttDateMax to lastAttDate + 6 months
         instance.nextAttDateMax = instance.lastAttDate + timezone.timedelta(days=6 * 30)
-

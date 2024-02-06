@@ -1028,17 +1028,21 @@ def filter_data(request):
 @csrf_exempt
 def attestation_list_view(request):
     try:
-        # Extract date from query parameters
-        date_param = request.GET.get('date')
-        if not date_param:
-            raise ValueError('Date parameter is required')
+        # Extract start and end dates from query parameters
+        start_date_param = request.GET.get('startDate')
+        end_date_param = request.GET.get('endDate')
 
-        # Convert date string to datetime object
-        date = datetime.strptime(date_param, '%Y-%m-%d').date()
+        # Validate that both start and end dates are provided
+        if not (start_date_param and end_date_param):
+            return JsonResponse({'error': 'Даты с и до обязательны'}, status=400)
+
+        # Convert date strings to datetime objects
+        start_date = datetime.strptime(start_date_param, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date_param, '%Y-%m-%d').date()
 
         # Filter Attestation objects based on date range
         attestations = Attestation.objects.filter(
-            Q(nextAttDateMin__lte=date) & Q(nextAttDateMax__gte=date)
+            Q(nextAttDateMin__gte=start_date) & Q(nextAttDateMin__lte=end_date)
         )
 
         # Serialize the queryset to JSON
@@ -1065,16 +1069,20 @@ def attestation_list_view(request):
 def attestation_list_view_download(request):
     try:
         # Extract date from query parameters
-        date_param = request.GET.get('date')
-        if not date_param:
-            raise ValueError('Date parameter is required')
+        start_date_param = request.GET.get('startDate')
+        end_date_param = request.GET.get('endDate')
 
-        # Convert date string to datetime object
-        date = datetime.strptime(date_param, '%Y-%m-%d').date()
+        # Validate that both start and end dates are provided
+        if not (start_date_param and end_date_param):
+            return JsonResponse({'error': 'Даты с и до обязательны'}, status=400)
+
+        # Convert date strings to datetime objects
+        start_date = datetime.strptime(start_date_param, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date_param, '%Y-%m-%d').date()
 
         # Filter Attestation objects based on date range
         attestations = Attestation.objects.filter(
-            Q(nextAttDateMin__lte=date) & Q(nextAttDateMax__gte=date)
+            Q(nextAttDateMin__gte=start_date) & Q(nextAttDateMin__lte=end_date)
         )
 
         # Create an in-memory Excel file
@@ -1083,7 +1091,8 @@ def attestation_list_view_download(request):
         worksheet = workbook.add_worksheet()
 
         # Write header row
-        header = ['Имя', 'Фамилия', 'Отчество', 'Должность', 'Управление', 'Дата последней аттестации']
+        header = ['Имя', 'Фамилия', 'Отчество', 'Должность', 'Управление', 'Дата последней аттестации', 'Дата следующей аттестации (начало)',
+                  'Дата следующей аттестации (конец)']
         for col_num, header_value in enumerate(header):
             worksheet.write(0, col_num, header_value)
 
@@ -1095,6 +1104,10 @@ def attestation_list_view_download(request):
             worksheet.write(row_num, 3, att.personId.positionInfo.position.positionTitle)
             worksheet.write(row_num, 4, att.personId.positionInfo.department.DepartmentName)
             worksheet.write(row_num, 5, att.lastAttDate.strftime(
+                '%d.%m.%Y') if att.lastAttDate else None)
+            worksheet.write(row_num, 6, att.nextAttDateMin.strftime(
+                '%d.%m.%Y') if att.lastAttDate else None)
+            worksheet.write(row_num, 7, att.nextAttDateMax.strftime(
                 '%d.%m.%Y') if att.lastAttDate else None)
 
         # Close the workbook
@@ -1116,15 +1129,18 @@ def attestation_list_view_download(request):
 def rankUps_list_view(request):
     try:
         # Extract date from query parameters
-        date_param = request.GET.get('date')
-        if not date_param:
-            raise ValueError('Date parameter is required')
+        start_date_param = request.GET.get('startDate')
+        end_date_param = request.GET.get('endDate')
 
-        # Convert date string to datetime object
-        date = datetime.strptime(date_param, '%Y-%m-%d').date()
+        # Validate that both start and end dates are provided
+        if not (start_date_param and end_date_param):
+            return JsonResponse({'error': 'Даты с и до обязательны'}, status=400)
 
-        # Filter Person objects based on RankInfo's nextPromotionDate
-        persons = Person.objects.filter(rankInfo__nextPromotionDate__range=[datetime.now().date(), date])
+        # Convert date strings to datetime objects
+        start_date = datetime.strptime(start_date_param, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date_param, '%Y-%m-%d').date()
+
+        persons = Person.objects.filter(rankInfo__nextPromotionDate__range=[start_date, end_date])
         # NextPromotiondate range = date - todays.daty
         # Serialize the queryset to JSON
         data = [
@@ -1152,15 +1168,18 @@ def rankUps_list_view(request):
 def rankUps_list_view_download(request):
     try:
         # Extract date from query parameters
-        date_param = request.GET.get('date')
-        if not date_param:
-            raise ValueError('Date parameter is required')
+        start_date_param = request.GET.get('startDate')
+        end_date_param = request.GET.get('endDate')
 
-        # Convert date string to datetime object
-        date = datetime.strptime(date_param, '%Y-%m-%d').date()
+        # Validate that both start and end dates are provided
+        if not (start_date_param and end_date_param):
+            return JsonResponse({'error': 'Даты с и до обязательны'}, status=400)
 
-        # Filter Person objects based on RankInfo's nextPromotionDate
-        persons = Person.objects.filter(rankInfo__nextPromotionDate__range=[datetime.now().date(), date])
+        # Convert date strings to datetime objects
+        start_date = datetime.strptime(start_date_param, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date_param, '%Y-%m-%d').date()
+
+        persons = Person.objects.filter(rankInfo__nextPromotionDate__range=[start_date, end_date])
 
         # Create an in-memory Excel file
         output = io.BytesIO()
@@ -1203,38 +1222,41 @@ def rankUps_list_view_download(request):
 @csrf_exempt
 def pension_list_view(request):
     try:
-        # Extract date from query parameters
-        date_param = request.GET.get('date')
-        if not date_param:
-            raise ValueError('Date parameter is required')
+        # Extract start and end dates from query parameters
+        start_date_param = request.GET.get('startDate')
+        end_date_param = request.GET.get('endDate')
 
-        # Convert date string to datetime object
-        date = datetime.strptime(date_param, '%Y-%m-%d').date()
+        # Validate that both start and end dates are provided
+        if not (start_date_param and end_date_param):
+            raise ValueError('Both startDate and endDate parameters are required')
+
+        # Convert date strings to datetime objects
+        start_date = datetime.strptime(start_date_param, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date_param, '%Y-%m-%d').date()
 
         # Retrieve persons with birth info
-        persons = Person.objects.filter(birthinfo__isnull=False)
+        persons = Person.objects.filter(birthinfo__isnull=False, rankInfo__isnull=False)
 
-        # Create a list of persons close to pension age within 1 month based on the given request date
+        # Create a list of persons close to pension age within 1 month based on the given date range
         data = [
             {
                 'firstName': person.firstName,
                 'lastName': person.surname,
                 'patronymic': person.patronymic,
                 'position': person.positionInfo.position.positionTitle,
-                'department': person.positionInfo.department.DepartmentName,
+                'department': person.positionInfo.department.DepartmentName if person.positionInfo.department else '',
                 'currentRank': person.rankInfo.militaryRank.rankTitle,
                 'photo': person.photo_set.first().photoBinary if person.photo_set.exists() else None,
-                'age': (date - person.birthinfo_set.first().birth_date).days // 365,
+                'age': (start_date - person.birthinfo_set.first().birth_date).days // 365,
                 'pensionDate': (person.birthinfo_set.first().birth_date.replace(
                     year=person.birthinfo_set.first().birth_date.year + person.rankInfo.militaryRank.pensionAge)).strftime(
                     '%Y-%m-%d'),
             }
             for person in persons
             if (
-                       person.birthinfo_set.first().birth_date <= date - relativedelta(
-                   years=person.rankInfo.militaryRank.pensionAge) <= date
-               ) and ((date - (relativedelta(
-                years=person.rankInfo.militaryRank.pensionAge) + person.birthinfo_set.first().birth_date)).days <= 30)
+                       start_date <= person.birthinfo_set.first().birth_date + relativedelta(
+                   years=person.rankInfo.militaryRank.pensionAge) <= end_date
+               )
         ]
 
         return JsonResponse({'data': data}, status=200)
@@ -1247,18 +1269,19 @@ def pension_list_view(request):
 def pension_list_view_download(request):
     try:
         # Extract date from query parameters
-        date_param = request.GET.get('date')
-        if not date_param:
-            raise ValueError('Date parameter is required')
+        start_date_param = request.GET.get('startDate')
+        end_date_param = request.GET.get('endDate')
 
-        # Convert date string to datetime object
-        date = datetime.strptime(date_param, '%Y-%m-%d').date()
+        # Validate that both start and end dates are provided
+        if not (start_date_param and end_date_param):
+            raise ValueError('Both startDate and endDate parameters are required')
 
-        # Retrieve persons with birth info, filtered based on pension conditions
-        persons = Person.objects.filter(
-            birthinfo__isnull=False,
-            rankInfo__militaryRank__pensionAge__isnull=False,
-        )
+        # Convert date strings to datetime objects
+        start_date = datetime.strptime(start_date_param, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date_param, '%Y-%m-%d').date()
+
+        # Retrieve persons with birth info
+        persons = Person.objects.filter(birthinfo__isnull=False, rankInfo__isnull=False, rankInfo__militaryRank__pensionAge__isnull=False)
 
         # Create an in-memory Excel file
         output = io.BytesIO()
@@ -1272,13 +1295,12 @@ def pension_list_view_download(request):
 
         # Write data rows
         for row_num, person in enumerate(persons, start=1):
-            age = (date - person.birthinfo_set.first().birth_date).days // 365
+            age = (datetime.now().date() - person.birthinfo_set.first().birth_date).days // 365
             pension_age = person.rankInfo.militaryRank.pensionAge
             pension_date = person.birthinfo_set.first().birth_date.replace(
                 year=person.birthinfo_set.first().birth_date.year + pension_age)
 
-            if person.birthinfo_set.first().birth_date <= date - relativedelta(years=pension_age) <= date and (
-                    date - pension_date).days <= 30:
+            if start_date <= person.birthinfo_set.first().birth_date + relativedelta(years=pension_age) <= end_date:
                 worksheet.write(row_num, 0, person.firstName)
                 worksheet.write(row_num, 1, person.surname)
                 worksheet.write(row_num, 2, person.patronymic)
