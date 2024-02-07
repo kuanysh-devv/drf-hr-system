@@ -383,7 +383,7 @@ def filter_data(request):
 
     print(filter_conditions)
     filtered_persons = filtered_persons.filter(filter_conditions).distinct()
-
+    filtered_persons = filtered_persons.filter(isFired=False)
     # Serialize the required fields along with the filtered field
     result = []
     for p in filtered_persons:
@@ -973,13 +973,26 @@ def filter_data(request):
                         return HttpResponseServerError("Investigation {} does not exist.".format(value))
                 if filtered_field == 'investigation_date':
                     try:
-                        MultipleInvInstance = Investigation.objects.filter(personId=p,
-                                                                           investigation_decree_type__icontains=investigationDecreeTypeGlobal
+                        if value != '':
+                            MultipleInvInstance = Investigation.objects.filter(personId=p,
+                                                                           investigation_decree_type__icontains=investigationDecreeTypeGlobal,
+                                                                           investigation_date=datetime.strptime(value,
+                                                                                                            '%Y-%m-%d').date()
                                                                            ).order_by(
                             '-id')
-                        last_inv_instance = MultipleInvInstance.first()
+                            last_inv_instance = MultipleInvInstance.first()
+                        else:
+                            MultipleInvInstance = Investigation.objects.filter(personId=p,
+                                                                               investigation_decree_type__icontains=investigationDecreeTypeGlobal,
+                                                                               ).order_by(
+                                '-id')
+                            last_inv_instance = MultipleInvInstance.first()
 
-                        person_data[filtered_field] = last_inv_instance.investigation_date
+                        if last_inv_instance:
+                            person_data[filtered_field] = last_inv_instance.investigation_decree_type
+                        else:
+                            person_data = None
+
                     except Investigation.DoesNotExist:
                         return HttpResponseServerError("Investigation {} does not exist.".format(value))
 
