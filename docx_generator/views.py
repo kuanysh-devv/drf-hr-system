@@ -47,7 +47,10 @@ def generate_work_reference(request, person_id):
     birth_date_format = datetime.strptime(birth_date, '%Y-%m-%d')
     formatted_date = birth_date_format.strftime('%d.%m.%Y')
 
-    rankInfo = RankInfo.objects.get(person=person)
+    try:
+        rankInfo = RankInfo.objects.get(person=person)
+    except RankInfo.DoesNotExist:
+        rankInfo = None
 
     education_objects = Education.objects.filter(personId=person.id)
     education_data = EducationSerializer(education_objects, many=True).data
@@ -131,7 +134,7 @@ def generate_work_reference(request, person_id):
     replace_placeholder('birth_date', str(formatted_date))
     replace_placeholder('region', birth_info.region)
     replace_placeholder('city', birth_info.city)
-    replace_placeholder('rank', rankInfo.militaryRank.rankTitle)
+    replace_placeholder('rank', rankInfo.militaryRank.rankTitle if rankInfo else '')
 
     if len(education_data) == 0:
         replace_placeholder('education', "Не имеет")
@@ -1441,6 +1444,59 @@ def generate_komandirovka_decree(request):
 
             # Need to create decreeList object and also decreeInfo
             return response
+
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON data'}, status=400)
+
+
+@csrf_exempt
+def generate_otpusk_decree(request):
+    if request.method == 'POST':
+        try:
+            body = request.body.decode('utf-8')
+            data = json.loads(body)
+
+            person_id = data.get('personId')
+            startDate = data.get('startDate')
+            endDate = data.get('endDate')
+            otpuskType = data.get('otpuskType')
+            benefitChoice = data.get('benefitChoice')
+
+            personInstance = Person.objects.get(pk=person_id)
+            personsPositionInfo = PositionInfo.objects.get(person=personInstance)
+
+            changedDepartmentNameKaz = personsPositionInfo.department.DepartmentNameKaz
+            wordsKaz = changedDepartmentNameKaz.split()
+            if wordsKaz[-1] == 'басқармасы':
+                wordsKaz[-1] = wordsKaz[-1] + 'ның'
+                changedDepartmentNameKaz = ' '.join(wordsKaz)
+
+            changedPositionTitle = personsPositionInfo.position.positionTitleKaz
+            wordsKaz = changedPositionTitle.split()
+            if wordsKaz[-1] == 'уәкіл':
+                wordsKaz[-1] = wordsKaz[-1] + 'і'
+                changedPositionTitle = ' '.join(wordsKaz)
+
+            changedSurnameKaz = personInstance.surname
+
+            if personInstance.gender.genderName == 'Мужской':
+                if personInstance.surname[-2:] == 'ев' or personInstance.surname[-2:] == 'ов':
+                    changedSurnameKaz = personInstance.surname + 'қа'
+
+            if personInstance.gender.genderName == 'Женский':
+                if personInstance.surname[-3:] == 'ева' or personInstance.surname[-3:] == 'ова':
+                    changedSurnameKaz = personInstance.surname + 'ға'
+
+            personsFIOKaz = personInstance.firstName + ' ' + personInstance.patronymic + ' ' + changedSurnameKaz
+
+            startDate = datetime.strptime(startDate, "%Y-%m-%d")
+            endDate = datetime.strptime(endDate, "%Y-%m-%d")
+
+            otpuskYear = startDate.year
+            dayCount = (endDate - startDate).days
+
+
+
 
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Invalid JSON data'}, status=400)

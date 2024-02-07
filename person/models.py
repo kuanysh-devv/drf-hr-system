@@ -197,11 +197,12 @@ class RankArchive(models.Model):
 
 class Vacation(models.Model):
     year = models.IntegerField(default=datetime.now().year, verbose_name=_("Vacation year"))
+    daysType = models.CharField(default="Обычные", verbose_name=_("Vacation days type"))
     daysCount = models.IntegerField(default=0, verbose_name=_("Vacation days count"))
     personId = models.ForeignKey('Person', on_delete=models.CASCADE, default=1, verbose_name=_("Person"))
 
     def __str__(self):
-        return str(self.personId.iin) + " - " + str(self.daysCount) + "(" + str(self.year) + ")"
+        return str(self.personId.iin) + " - " + str(self.daysType) + " " + str(self.daysCount) + "(" + str(self.year) + ")"
 
     class Meta:
         verbose_name = _("Vacation")

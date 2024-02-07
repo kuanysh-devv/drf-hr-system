@@ -866,7 +866,6 @@ def search_persons(request):
         query &= Q(isFired=False)
 
         persons = Person.objects.filter(query)
-
         # You can serialize the persons to JSON and return it
         persons_data = [
             {
@@ -875,7 +874,7 @@ def search_persons(request):
                 'surname': person.surname,
                 'patronymic': person.patronymic,
                 'photo': person.photo_set.first().photoBinary if person.photo_set.exists() else None,
-                'currentRank': person.rankInfo.militaryRank.rankTitle
+                'currentRank': person.rankInfo.militaryRank.rankTitle if person.rankInfo else ''
             }
             for person in persons
         ]

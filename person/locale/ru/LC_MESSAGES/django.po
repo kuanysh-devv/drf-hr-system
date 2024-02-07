@@ -264,3 +264,6 @@ msgstr "Отпуск"
 
 msgid "Vacations"
 msgstr "Отпускные дни"
+
+msgid "Vacation days type"
+msgstr "Тип отпускных дней"

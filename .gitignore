@@ -1,5 +1,8 @@
 venv
 .env
+celerybeat-schedule.bak
+celerybeat-schedule.dat
+celerybeat-schedule.dir
 
 birth_info/migrations/0001_*.py
 birth_info/migrations/0002_*.py

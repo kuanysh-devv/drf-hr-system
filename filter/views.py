@@ -31,7 +31,6 @@ def filter_data(request):
     sportTypeGlobal = None
     rewardTypeGlobal = None
     decreeTypeGlobal = None
-    decreeSubTypeGlobal = None
     investigationDecreeTypeGlobal = None
 
     for key, value in request.GET.items():
@@ -997,22 +996,12 @@ def filter_data(request):
                         person_data[filtered_field] = last_dec_instance.decreeType
                     except DecreeList.DoesNotExist:
                         return HttpResponseServerError("DecreeList {} does not exist.".format(value))
-                if filtered_field == 'decreeSubType':  # required
-                    decreeSubTypeGlobal = value
-                    try:
-                        MultipleDecreeInstance = DecreeList.objects.filter(personId=p,
-                                                                           decreeSubType__icontains=value).order_by(
-                            '-id')
-                        last_dec_instance = MultipleDecreeInstance.first()
 
-                        person_data[filtered_field] = last_dec_instance.decreeSubType
-                    except DecreeList.DoesNotExist:
-                        return HttpResponseServerError("DecreeList {} does not exist.".format(value))
                 if filtered_field == 'decreeDate':
                     try:
                         MultipleDecreeInstance = DecreeList.objects.filter(personId=p,
                                                                            decreeType__icontains=decreeTypeGlobal,
-                                                                           decreeSubType__icontains=decreeSubTypeGlobal).order_by(
+                                                                           ).order_by(
                             '-id')
                         last_dec_instance = MultipleDecreeInstance.first()
 
