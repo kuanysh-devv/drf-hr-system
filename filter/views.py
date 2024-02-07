@@ -999,13 +999,25 @@ def filter_data(request):
 
                 if filtered_field == 'decreeDate':
                     try:
-                        MultipleDecreeInstance = DecreeList.objects.filter(personId=p,
-                                                                           decreeType__icontains=decreeTypeGlobal,
-                                                                           ).order_by(
-                            '-id')
-                        last_dec_instance = MultipleDecreeInstance.first()
+                        if value != '':
+                            MultipleDecreeInstance = DecreeList.objects.filter(personId=p,
+                                                                               decreeType__icontains=decreeTypeGlobal,
+                                                                               decreeDate=datetime.strptime(value,
+                                                                                                            '%Y-%m-%d').date()
+                                                                               ).order_by('-id')
+                            last_dec_instance = MultipleDecreeInstance.first()
+                        else:
+                            MultipleDecreeInstance = DecreeList.objects.filter(personId=p,
+                                                                               decreeType__icontains=decreeTypeGlobal
+                                                                               ).order_by('-id')
+                            last_dec_instance = MultipleDecreeInstance.first()
 
-                        person_data[filtered_field] = last_dec_instance.decreeDate
+                        if last_dec_instance:
+                            person_data[filtered_field] = last_dec_instance.decreeDate
+                        else:
+                            person_data = None
+
+
                     except DecreeList.DoesNotExist:
                         return HttpResponseServerError("DecreeList {} does not exist.".format(value))
 
@@ -1080,7 +1092,8 @@ def attestation_list_view_download(request):
         worksheet = workbook.add_worksheet()
 
         # Write header row
-        header = ['Имя', 'Фамилия', 'Отчество', 'Должность', 'Управление', 'Дата последней аттестации', 'Дата следующей аттестации (начало)',
+        header = ['Имя', 'Фамилия', 'Отчество', 'Должность', 'Управление', 'Дата последней аттестации',
+                  'Дата следующей аттестации (начало)',
                   'Дата следующей аттестации (конец)']
         for col_num, header_value in enumerate(header):
             worksheet.write(0, col_num, header_value)
@@ -1243,9 +1256,9 @@ def pension_list_view(request):
             }
             for person in persons
             if (
-                       start_date <= person.birthinfo_set.first().birth_date + relativedelta(
-                   years=person.rankInfo.militaryRank.pensionAge) <= end_date
-               )
+                    start_date <= person.birthinfo_set.first().birth_date + relativedelta(
+                years=person.rankInfo.militaryRank.pensionAge) <= end_date
+            )
         ]
 
         return JsonResponse({'data': data}, status=200)
@@ -1270,7 +1283,8 @@ def pension_list_view_download(request):
         end_date = datetime.strptime(end_date_param, '%Y-%m-%d').date()
 
         # Retrieve persons with birth info
-        persons = Person.objects.filter(birthinfo__isnull=False, rankInfo__isnull=False, rankInfo__militaryRank__pensionAge__isnull=False)
+        persons = Person.objects.filter(birthinfo__isnull=False, rankInfo__isnull=False,
+                                        rankInfo__militaryRank__pensionAge__isnull=False)
 
         # Create an in-memory Excel file
         output = io.BytesIO()
