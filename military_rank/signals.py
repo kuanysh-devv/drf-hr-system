@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.signals import post_save, pre_save
@@ -18,7 +18,10 @@ def rankInfo_pre_save(sender, instance, **kwargs):
         else:
             received_date_string = instance.receivedDate
             next_promotion_days = instance.militaryRank.nextPromotionDateInDays
-            received_date = datetime.strptime(received_date_string, '%Y-%m-%d')
+            if isinstance(received_date_string, date):
+                received_date = received_date_string
+            else:
+                received_date = datetime.strptime(received_date_string, '%Y-%m-%d')
             next_promotion_days = int(next_promotion_days)
             new_next_promotion_date = received_date + timedelta(days=next_promotion_days)
             instance.nextPromotionDate = new_next_promotion_date

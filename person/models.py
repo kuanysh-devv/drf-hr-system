@@ -202,8 +202,25 @@ class Vacation(models.Model):
     personId = models.ForeignKey('Person', on_delete=models.CASCADE, default=1, verbose_name=_("Person"))
 
     def __str__(self):
-        return str(self.personId.iin) + " - " + str(self.daysType) + " " + str(self.daysCount) + "(" + str(self.year) + ")"
+        return str(self.personId.iin) + " - " + str(self.daysType) + " " + str(self.daysCount) + "(" + str(
+            self.year) + ")"
 
     class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['year', 'daysType', 'personId'], name='unique_vacation')
+        ]
+
         verbose_name = _("Vacation")
         verbose_name_plural = _("Vacations")
+
+
+class Holidays(models.Model):
+    holidayDate = models.DateField(default=None, verbose_name=_("Holiday date"))
+    holidayTitle = models.CharField(verbose_name=_("Holiday title"), max_length=255)
+
+    def __str__(self):
+        return str(self.holidayTitle) + " - " + str(self.holidayDate)
+
+    class Meta:
+        verbose_name = _("Holiday")
+        verbose_name_plural = _("Holidays")

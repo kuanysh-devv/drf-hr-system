@@ -267,3 +267,15 @@ msgstr "Отпускные дни"
 
 msgid "Vacation days type"
 msgstr "Тип отпускных дней"
+
+msgid "Holiday"
+msgstr "Праздничный день"
+
+msgid "Holidays"
+msgstr "Праздничные дни"
+
+msgid "Holiday date"
+msgstr "Дата праздничного дня"
+
+msgid "Holiday title"
+msgstr "Описание праздничного дня"
