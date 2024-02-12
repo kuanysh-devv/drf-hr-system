@@ -65,11 +65,12 @@ def rankInfo_pre_save(sender, instance, **kwargs):
             )
 
         try:
-            rankUpDecree = DecreeList.objects.filter(personId=person_instance, decreeType="Присвоение звания",
-                                                    isConfirmed=False).first()
+            rankUpDecree = DecreeList.objects.filter(personIds=person_instance, decreeType="Присвоение звания",
+                                                     isConfirmed=False).first()
             rankUpInfo = RankUpInfo.objects.get(decreeId=rankUpDecree)
             print(rankUpInfo.receivedType)
-            if (rankUpInfo.receivedType == 'Досрочное' or rankUpInfo.receivedType == 'Внеочередное') and instance.militaryRank in non_valid_ranks:
+            if (
+                    rankUpInfo.receivedType == 'Досрочное' or rankUpInfo.receivedType == 'Внеочередное') and instance.militaryRank in non_valid_ranks:
 
                 next_promotion_days = instance.militaryRank.nextPromotionDateInDays
                 new_next_promotion_date = instance.receivedDate + timedelta(days=next_promotion_days)
@@ -95,4 +96,3 @@ def rankInfo_pre_save(sender, instance, **kwargs):
 
         except Person.DoesNotExist:
             pass  # Handle Person.DoesNotExist exception as per your requirement
-

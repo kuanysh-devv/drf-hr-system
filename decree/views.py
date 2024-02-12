@@ -14,7 +14,7 @@ from photo.models import Photo
 from position.models import PositionInfo, Position
 from position.serializers import PositionSerializer, PositionInfoSerializer
 from working_history.models import WorkingHistory
-from .models import DecreeList, SpecCheck, SickLeave, Investigation, TransferInfo, RankUpInfo, AppointmentInfo
+from .models import DecreeList, SpecCheck, SickLeave, Investigation, TransferInfo, RankUpInfo, AppointmentInfo, OtpuskInfo
 from .serializers import DecreeListSerializer, SpecCheckSerializer, SickLeaveSerializer, InvestigationSerializer
 from minio import Minio
 from rest_framework.decorators import action
@@ -191,6 +191,30 @@ class DecreeListViewSet(viewsets.ModelViewSet):
 
             return JsonResponse({'firingInfo': firing_info})
 
+        if decreeInstance.decreeType == 'Отпуск':
+            decreeInfo = OtpuskInfo.objects.get(decreeId=decreeInstance)
+
+            otpusk_info = [{
+                'decreeInfo': {
+                    'decreeId': decreeInstance.id,
+                    'decreeType': decreeInstance.decreeType,
+                    'decreeNumber': decreeInstance.decreeNumber,
+                    'decreeDate': decreeInstance.decreeDate,
+                    'document': decreeInstance.minioDocName,
+                    'person': person_data,
+                },
+                'startDate': decreeInfo.startDate,
+                'endDate': decreeInfo.endDate,
+                'otpuskType': decreeInfo.otpuskType,
+                'benefitChoice': decreeInfo.benefitChoice,
+                'oldBasicDaysCount': decreeInfo.oldBasicDaysCount,
+                'oldExperienceDaysCount': decreeInfo.oldExperiencedDaysCount,
+                'newBasicDaysCount': decreeInfo.newBasicDaysCount,
+                'newExperienceDaysCount': decreeInfo.newExperiencedDaysCount,
+            }]
+
+            return JsonResponse({'otpuskInfo': otpusk_info})
+
     @action(detail=False, methods=['post'])
     def decreeConfirmation(self, request, *args, **kwargs):
         data = json.loads(request.body.decode('utf-8'))
@@ -284,6 +308,26 @@ class DecreeListViewSet(viewsets.ModelViewSet):
             decree_instance.save()
 
             response_data = {'status': 'success', 'message': 'Приказ об увольнении согласован'}
+            response_json = json.dumps(response_data)
+            return HttpResponse(response_json, content_type='application/json')
+
+        if decree_instance.decreeType == 'Отпуск':
+
+            decreeInfo = OtpuskInfo.objects.get(decreeId=decree_instance)
+
+            personsBasicVacation = Vacation.objects.get(personId=personInstance, year=decreeInfo.startDate.year, daysType="Обычные")
+            if decreeInfo.oldExperiencedDaysCount:
+                personsExperiencedVacation = Vacation.objects.get(personId=personInstance, year=decreeInfo.startDate.year, daysType="Стажные")
+                personsExperiencedVacation.daysCount = decreeInfo.newExperiencedDaysCount
+                personsExperiencedVacation.save()
+
+            personsBasicVacation.daysCount = decreeInfo.newBasicDaysCount
+            personsBasicVacation.save()
+
+            decree_instance.isConfirmed = True
+            decree_instance.save()
+
+            response_data = {'status': 'success', 'message': 'Приказ об отпуске согласован'}
             response_json = json.dumps(response_data)
             return HttpResponse(response_json, content_type='application/json')
 

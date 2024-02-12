@@ -175,3 +175,54 @@ msgstr "Взыскания"
 
 msgid "minioDocName"
 msgstr "Документ"
+
+msgid "Otpusk start date"
+msgstr "Дата начала отпуска"
+
+msgid "Otpusk end date"
+msgstr "Дата окончания отпуска"
+
+msgid "Otpusk type"
+msgstr "Тип отпуска"
+
+msgid "Benefit choice"
+msgstr "С пособием или без"
+
+msgid "Old basic days"
+msgstr "Старое значение календарных дней"
+
+msgid "Old experienced days"
+msgstr "Старое значение стажных дней"
+
+msgid "New basic days"
+msgstr "Новое значение календарных дней"
+
+msgid "New experienced days"
+msgstr "Новое значение стажных дней"
+
+msgid "OtpuskInfo"
+msgstr "Архив отпуска"
+
+msgid "OtpuskInfos"
+msgstr "Архивы отпусков"
+
+msgid "Komandirovka start date"
+msgstr "Дата начала командировки"
+
+msgid "Komandirovka end date"
+msgstr "Дата окончания командировки"
+
+msgid "Departure"
+msgstr "Направление"
+
+msgid "Travel choice"
+msgstr "Тип поездки"
+
+msgid "Transport"
+msgstr "Транспорт"
+
+msgid "KomandirovkaInfo"
+msgstr "Архив командировки"
+
+msgid "KomandirovkaInfos"
+msgstr "Архивы командировок"
