@@ -31,7 +31,7 @@ from resident_info.serializers import ResidentInfoSerializer
 from working_history.models import WorkingHistory
 from working_history.serializers import WorkingHistorySerializer
 from .models import Person, Gender, FamilyStatus, Relative, FamilyComposition, ClassCategory, Autobiography, Reward, \
-    LanguageSkill, SportSkill, CustomUser, RankArchive
+    LanguageSkill, SportSkill, CustomUser, RankArchive, Vacation
 from .serializers import PersonSerializer, GenderSerializer, FamilyStatusSerializer, RelativeSerializer, \
     FamilyCompositionSerializer, ClassCategorySerializer, AutobiographySerializer, RewardSerializer, \
     LanguageSkillSerializer, SportSkillSerializer, RankArchiveSerializer
@@ -170,7 +170,7 @@ class PersonViewSet(viewsets.ModelViewSet):
         investigation_objects = Investigation.objects.filter(personId=person.id)
         investigation_data = InvestigationSerializer(investigation_objects, many=True).data
 
-        decree_list_objects = DecreeList.objects.filter(personId=person.id)
+        decree_list_objects = DecreeList.objects.filter(personIds=person.id)
         decree_list_data = DecreeListSerializer(decree_list_objects, many=True).data
 
         # Create a dictionary with the serialized data
@@ -880,6 +880,30 @@ def search_persons(request):
         ]
 
         return JsonResponse({'persons': persons_data})
+
+    return JsonResponse({'error': 'Invalid request method'})
+
+
+def get_vacation_days(request):
+    if request.method == 'GET':
+        person_id = request.GET.get('personId')
+        start_date = request.GET.get('startDate')
+
+        # Validate query parameters
+        if not person_id or not start_date:
+            return JsonResponse({'error': 'personId and startDate are required query parameters'})
+
+        startDate = datetime.strptime(start_date, "%Y-%m-%d")
+
+        vacation_basic_days = Vacation.objects.filter(personId=person_id, year=startDate.year, daysType="Обычные").first()
+        vacation_exp_days = Vacation.objects.filter(personId=person_id, year=startDate.year, daysType="Стажные").first()
+
+        response_data = {
+            'vacation_basic_days': vacation_basic_days.daysCount,
+            'vacation_exp_days': vacation_exp_days.daysCount,
+        }
+
+        return JsonResponse(response_data)
 
     return JsonResponse({'error': 'Invalid request method'})
 

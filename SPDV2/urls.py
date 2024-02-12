@@ -82,6 +82,7 @@ urlpatterns = [
     path('api/v1/confirm-decree/', DecreeListViewSet.as_view({'post': 'decreeConfirmation'}), name='decreeConfirmation'),
     path('api/v1/download-decree/', DecreeListViewSet.as_view({'get': 'decreeDownload'}), name='decreeDownload'),
     path('api/v1/search_persons/', search_persons, name='search_persons'),
+    path('api/v1/get-vacation-days/', get_vacation_days, name='get_vacation_days'),
     path('api/v1/generate-rankup-decree/', generate_rankup_decree, name='generate_rankup_decree'),
     path('api/v1/generate-firing-decree/', generate_firing_decree, name='generate_firing_decree'),
     path('api/v1/generate-komandirovka-decree/', generate_komandirovka_decree, name='generate_komandirovka_decree'),
