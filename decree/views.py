@@ -40,39 +40,43 @@ class DecreeListViewSet(viewsets.ModelViewSet):
         # Serialize the decree data
         decree_data = []
         for decree in decrees:
-            try:
-                personsRankInfo = decree.personId.rankInfo
-            except RankInfo.DoesNotExist:
-                personsRankInfo = None
-
-            # Check if personsRankInfo is not None before accessing its attributes
-            rank_title = personsRankInfo.militaryRank.rankTitle if personsRankInfo else ''
-
-            person_data = {
-                'iin': decree.personId.iin,
-                'pin': decree.personId.pin,
-                'surname': decree.personId.surname,
-                'firstName': decree.personId.firstName,
-                'patronymic': decree.personId.patronymic,
-                'positionInfo': decree.personId.positionInfo.position.positionTitle,
-                'rankInfo': rank_title,  # Use the rank_title variable
-            }
-
-            # Get the photo for the person
-            photo = Photo.objects.filter(personId=decree.personId).first()
-            if photo:
-                person_data['photo'] = photo.photoBinary
-            else:
-                person_data['photo'] = None
-
-            decree_data.append({
+            decree_info = {
                 'decreeId': decree.id,
                 'decreeType': decree.decreeType,
                 'decreeNumber': decree.decreeNumber,
                 'decreeDate': decree.decreeDate,
                 'decreeIsConfirmed': decree.isConfirmed,
-                'person': person_data,
-            })
+                'persons': [],  # Placeholder for person data
+            }
+
+            # Retrieve person data for each person in personIds
+            for person in decree.personIds.all():
+                try:
+                    persons_rank_info = person.rankInfo
+                    rank_title = persons_rank_info.militaryRank.rankTitle if persons_rank_info else ''
+                except RankInfo.DoesNotExist:
+                    rank_title = ''
+
+                person_data = {
+                    'iin': person.iin,
+                    'pin': person.pin,
+                    'surname': person.surname,
+                    'firstName': person.firstName,
+                    'patronymic': person.patronymic,
+                    'positionInfo': person.positionInfo.position.positionTitle,
+                    'rankInfo': rank_title,
+                }
+
+                # Get the photo for the person
+                photo = Photo.objects.filter(personId=person).first()
+                if photo:
+                    person_data['photo'] = photo.photoBinary
+                else:
+                    person_data['photo'] = None
+
+                decree_info['persons'].append(person_data)
+
+            decree_data.append(decree_info)
 
         return JsonResponse({'decrees': decree_data})
 
