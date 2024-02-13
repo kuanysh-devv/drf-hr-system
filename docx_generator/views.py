@@ -1569,7 +1569,6 @@ def generate_otpusk_decree(request):
             otpuskType = data.get('otpuskType')
             benefitChoice = data.get('benefitChoice')
             priority = data.get('priority')
-            otzivDate = data.get('otzivDate')
 
             person_instances = Person.objects.filter(pk__in=person_ids)
             for personInstance in person_instances:
@@ -1753,7 +1752,7 @@ def generate_otpusk_decree(request):
                                               str(holidays_between_dates) + " мерекелік күн) " +
                                               str(otpuskYear) + " жылғы " + str(startDate.day) + " "
                                               + startDateMonth + " " + str(endDate.year) + " жылғы " + str(
-                                                endDate.day) +
+                                            endDate.day) +
                                               " " + endDateMonth)
                                 newExperiencedDaysCount = oldExperiencedDaysCount - (dayCount - holidays_between_dates)
                             if priority == "Календарные дни":
@@ -1763,7 +1762,7 @@ def generate_otpusk_decree(request):
                                                   str(holidays_between_dates) + " мерекелік күн) " +
                                                   str(otpuskYear) + " жылғы " + str(startDate.day) + " "
                                                   + startDateMonth + " " + str(endDate.year) + " жылғы " + str(
-                                                    endDate.day) +
+                                                endDate.day) +
                                                   " " + endDateMonth)
                                     newBasicDaysCount = oldBasicDaysCount - (dayCount - holidays_between_dates)
 
@@ -1783,8 +1782,9 @@ def generate_otpusk_decree(request):
                         newExperiencedDaysCount = oldExperiencedDaysCount
 
                     else:
-                        return JsonResponse({'error': f'У сотрудника {personInstance.iin} недостаточно отпускных дней на {otpuskYear} '
-                                                      f'год, осталось обычных {vacationDays.daysCount}'}, status=400)
+                        return JsonResponse(
+                            {'error': f'У сотрудника {personInstance.iin} недостаточно отпускных дней на {otpuskYear} '
+                                      f'год, осталось обычных {vacationDays.daysCount}'}, status=400)
                     if holidays_between_dates > 0:
                         dateString = ("(" + str(
                             dayCount - holidays_between_dates) + " күнтізбелік күн, " +
@@ -1814,16 +1814,12 @@ def generate_otpusk_decree(request):
                         newExperiencedDaysCount = oldExperiencedDaysCount
 
                         if startDate.month == endDate.month:
-                            dateString = str(otpuskYear) + " жылғы " + str(startDate.day) + "-" + str(endDate.day) + " " + startDateMonth
+                            dateString = str(otpuskYear) + " жылғы " + str(startDate.day) + "-" + str(
+                                endDate.day) + " " + startDateMonth
                         else:
-                            dateString = str(otpuskYear) + " жылғы " + str(startDate.day) + " " + startDateMonth + " " + str(endDate.year) + " жылғы " + str(endDate.day) + " " + endDateMonth
-
-                    if otpuskType == 'Отпуск Отзыв':
-                        template_path = 'docx_generator/static/templates/otpusk_otziv_template.docx'
-
-                        dateString = str(otpuskYear) + " жылғы " + str(startDate.day) + " " + startDateMonth
-
-                        otzivDate = datetime.strptime(otzivDate, "%Y-%m-%d")
+                            dateString = str(otpuskYear) + " жылғы " + str(
+                                startDate.day) + " " + startDateMonth + " " + str(endDate.year) + " жылғы " + str(
+                                endDate.day) + " " + endDateMonth
 
                 if len(person_instances) > 1:
                     return JsonResponse(
@@ -1855,6 +1851,7 @@ def generate_otpusk_decree(request):
                         replace_placeholder('PERSONSFIO', f"{personsFIOKaz}")
                         replace_placeholder('DAYCOUNT', f"{dayCount}")
                         replace_placeholder('DATESTRING', f"{dateString}")
+
                 # if len(person_ids) > 1:
 
                 doc_stream = BytesIO()
@@ -1896,6 +1893,209 @@ def generate_otpusk_decree(request):
                         endDate=endDate,
                         otpuskType=otpuskType,
                         benefitChoice=benefitChoice,
+                        oldBasicDaysCount=oldBasicDaysCount,
+                        newBasicDaysCount=newBasicDaysCount,
+                        oldExperiencedDaysCount=oldExperiencedDaysCount,
+                        newExperiencedDaysCount=newExperiencedDaysCount,
+                        decreeId=decree_list_instance
+                    )
+
+                    return response
+                else:
+                    return JsonResponse({'error': f'У сотрудника {personInstance.iin} уже имеется приказ об отпуске '
+                                                  f'который не согласован'},
+                                        status=400)
+
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON data'}, status=400)
+
+
+@csrf_exempt
+def generate_otpusk_otziv_decree(request):
+    if request.method == 'POST':
+        try:
+            body = request.body.decode('utf-8')
+            data = json.loads(body)
+
+            persons = data.get('persons', [])
+
+            # Extract personIds from the list of persons
+            person_ids = [person.get('personId') for person in persons]
+
+            decreeDate = data.get('decreeDate')
+            otpuskType = data.get('otpuskType')
+            otzivDate = data.get('otzivDate')
+
+            person_instances = Person.objects.filter(pk__in=person_ids)
+            for personInstance in person_instances:
+                personsPositionInfo = PositionInfo.objects.get(person=personInstance)
+
+                changedDepartmentNameKaz = personsPositionInfo.department.DepartmentNameKaz
+                wordsKaz = changedDepartmentNameKaz.split()
+                if wordsKaz[-1] == 'басқармасы':
+                    wordsKaz[-1] = wordsKaz[-1] + 'ның'
+                    changedDepartmentNameKaz = ' '.join(wordsKaz)
+
+                changedPositionTitle = personsPositionInfo.position.positionTitleKaz
+                wordsKaz = changedPositionTitle.split()
+                if wordsKaz[-1] == 'уәкіл':
+                    wordsKaz[-1] = wordsKaz[-1] + 'і'
+                    changedPositionTitle = ' '.join(wordsKaz)
+
+                changedSurnameKaz = personInstance.surname
+
+                if personInstance.gender.genderName == 'Мужской':
+                    if personInstance.surname[-2:] == 'ев' or personInstance.surname[-2:] == 'ов':
+                        changedSurnameKaz = personInstance.surname
+
+                if personInstance.gender.genderName == 'Женский':
+                    if personInstance.surname[-3:] == 'ева' or personInstance.surname[-3:] == 'ова':
+                        changedSurnameKaz = personInstance.surname
+
+                personsFIOKaz = personInstance.firstName + ' ' + personInstance.patronymic + ' ' + changedSurnameKaz
+
+                if len(person_instances) > 1:
+                    return JsonResponse({'error': f'Отзыв отпуска с несколькими сотрудниками не поддерживается'},
+                                        status=400)
+
+                if not personInstance.inVacation:
+                    return JsonResponse({'error': f'Сотрудник {personInstance.iin} не находится в отпуске'}, status=400)
+
+                decree_instance = DecreeList.objects.filter(personIds=personInstance, decreeType="Отпуск",
+                                                            isConfirmed=True).last()
+
+                if decree_instance:
+                    otpuskInfo = OtpuskInfo.objects.get(decreeId=decree_instance)
+                else:
+                    return JsonResponse({'error': f'У сотрудника {personInstance.iin} нету приказа об отпуске'},
+                                        status=400)
+
+                otzivDate = datetime.strptime(otzivDate, "%Y-%m-%d").date()
+                # startDate = 2023-03-22
+                # endDate = 2023-03-30
+                # OtzivDate = 2023-03-27
+                if otpuskInfo.startDate > otzivDate > otpuskInfo.endDate:
+                    return JsonResponse({'error': f'Неправильно введенная дата отзыва'},
+                                        status=400)
+
+                vacationDays = None
+                experienced = None
+
+                try:
+                    vacationDays = Vacation.objects.get(personId=personInstance, year=otpuskInfo.startDate.year,
+                                                        daysType="Обычные")
+                except Vacation.DoesNotExist:
+                    return JsonResponse({'error': f'Нету сущности отпускные дни для сотрудника {personInstance.iin}'},
+                                        status=400)
+
+                try:
+                    experienced = Vacation.objects.get(personId=personInstance, year=otpuskInfo.startDate.year,
+                                                       daysType="Стажные")
+                except Vacation.DoesNotExist:
+                    print("Person doesn't have experienced vacation days")
+
+                monthStringKaz = None
+
+                if otzivDate.month == 1:
+                    monthStringKaz = 'қантардан'
+                if otzivDate.month == 2:
+                    monthStringKaz = 'ақпаннан'
+                if otzivDate.month == 3:
+                    monthStringKaz = 'наурыздан'
+                if otzivDate.month == 4:
+                    monthStringKaz = 'сәуірден'
+                if otzivDate.month == 5:
+                    monthStringKaz = 'мамырдан'
+                if otzivDate.month == 6:
+                    monthStringKaz = 'маусымнан'
+                if otzivDate.month == 7:
+                    monthStringKaz = 'шілдеден'
+                if otzivDate.month == 8:
+                    monthStringKaz = 'тамыздан'
+                if otzivDate.month == 9:
+                    monthStringKaz = 'қыркүйектен'
+                if otzivDate.month == 10:
+                    monthStringKaz = 'қазаннан'
+                if otzivDate.month == 11:
+                    monthStringKaz = 'қарашадан'
+                if otzivDate.month == 12:
+                    monthStringKaz = 'желтоқсаннан'
+
+                dateString = str(otzivDate.year) + " жылғы " + str(otzivDate.day) + " " + monthStringKaz
+                template_path = 'docx_generator/static/templates/otpusk_otziv_template.docx'
+                document = Document(template_path)
+
+                def replace_placeholder(placeholder, replacement):
+                    for paragraph1 in document.paragraphs:
+                        if placeholder in paragraph1.text:
+
+                            for run1 in paragraph1.runs:
+                                if placeholder in run1.text:
+                                    run1.text = run1.text.replace(placeholder, replacement)
+                                    run1.font.size = Pt(14)  # Adjust the font size if needed
+                                    run1.font.name = 'Times New Roman'
+
+                if otpuskType == 'Отпуск Отзыв':
+
+                    replace_placeholder('CHANGEDDEPARTMENTNAME', f"{changedDepartmentNameKaz}")
+                    replace_placeholder('CHANGEDPOSITIONTITLE', f"{changedPositionTitle.lower()}")
+                    replace_placeholder('PERSONSFIO', f"{personsFIOKaz}")
+                    replace_placeholder('DATESTRING', f"{dateString}")
+                else:
+                    return JsonResponse({'error': f'Неправильно введенный тип приказа об отпуске'},
+                                        status=400)
+
+                doc_stream = BytesIO()
+                document.save(doc_stream)
+                doc_stream.seek(0)
+
+                # Prepare the HTTP response with the modified document
+                response = HttpResponse(doc_stream.read(),
+                                        content_type='application/vnd.openxmlformats-officedocument.wordprocessingml'
+                                                     '.document')
+                response['Content-Disposition'] = f'attachment; filename=Приказ об отпуске отзыве.docx'
+
+                # Need to create decreeList object and also decreeInfo
+                if not DecreeList.objects.filter(personIds=personInstance, decreeType="Отпуск",
+                                                 isConfirmed=False).first():
+                    doc_stream.seek(0)
+                    document_id = str(uuid4())
+                    document_name = f"document_{document_id}.docx"
+
+                    minio_client = Minio(MINIO_ENDPOINT,
+                                         access_key=MINIO_ACCESS_KEY,
+                                         secret_key=MINIO_SECRET_KEY,
+                                         secure=False)
+
+                    minio_client.put_object(MINIO_BUCKET_NAME, document_name, data=doc_stream,
+                                            length=len(doc_stream.getvalue()))
+                    document_url = f"{MINIO_ENDPOINT}/{MINIO_BUCKET_NAME}/{document_name}"
+                    print(document_url)
+
+                    decree_list_instance = DecreeList.objects.create(
+                        decreeType="Отпуск",
+                        decreeDate=datetime.strptime(decreeDate, '%Y-%m-%d').date(),
+                        minioDocName=document_name
+                    )
+                    decree_list_instance.personIds.add(personInstance)
+
+                    oldBasicDaysCount = None
+                    if vacationDays is not None:
+                        oldBasicDaysCount = vacationDays.daysCount
+
+                    oldExperiencedDaysCount = None
+                    if experienced is not None:
+                        oldExperiencedDaysCount = experienced.daysCount
+
+                    newBasicDaysCount = oldBasicDaysCount + (otpuskInfo.endDate-otzivDate).days
+                    newExperiencedDaysCount = oldExperiencedDaysCount
+
+                    OtpuskInfo.objects.create(
+                        startDate=otpuskInfo.startDate,
+                        endDate=otpuskInfo.endDate,
+                        otpuskType=otpuskType,
+                        benefitChoice=None,
+                        otzivDate=otzivDate,
                         oldBasicDaysCount=oldBasicDaysCount,
                         newBasicDaysCount=newBasicDaysCount,
                         oldExperiencedDaysCount=oldExperiencedDaysCount,

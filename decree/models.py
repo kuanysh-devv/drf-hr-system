@@ -118,13 +118,14 @@ class RankUpInfo(models.Model):
 
 
 class OtpuskInfo(models.Model):
-    startDate = models.DateField(verbose_name=_("Otpusk start date"))
-    endDate = models.DateField(verbose_name=_("Otpusk end date"))
+    startDate = models.DateField(verbose_name=_("Otpusk start date"), null=True, blank=True)
+    endDate = models.DateField(verbose_name=_("Otpusk end date"), null=True, blank=True)
     otpuskType = models.CharField(max_length=255, verbose_name=_("Otpusk type"))
     benefitChoice = models.CharField(max_length=255, null=True, blank=True, verbose_name=_("Benefit choice"))
-    oldBasicDaysCount = models.IntegerField(verbose_name=_("Old basic days"))
+    otzivDate = models.DateField(verbose_name=_("Otpusk otziv date"), null=True, blank=True)
+    oldBasicDaysCount = models.IntegerField(verbose_name=_("Old basic days"), null=True, blank=True)
     oldExperiencedDaysCount = models.IntegerField(verbose_name=_("Old experienced days"), null=True, blank=True)
-    newBasicDaysCount = models.IntegerField(verbose_name=_("New basic days"))
+    newBasicDaysCount = models.IntegerField(verbose_name=_("New basic days"), null=True, blank=True)
     newExperiencedDaysCount = models.IntegerField(verbose_name=_("New experienced days"), null=True, blank=True)
     decreeId = models.ForeignKey(
         'DecreeList',

@@ -215,6 +215,7 @@ class DecreeListViewSet(viewsets.ModelViewSet):
                 'endDate': decreeInfo.endDate,
                 'otpuskType': decreeInfo.otpuskType,
                 'benefitChoice': decreeInfo.benefitChoice,
+                'otzivDate': decreeInfo.otzivDate,
                 'oldBasicDaysCount': decreeInfo.oldBasicDaysCount,
                 'oldExperienceDaysCount': decreeInfo.oldExperiencedDaysCount,
                 'newBasicDaysCount': decreeInfo.newBasicDaysCount,
@@ -372,6 +373,21 @@ class DecreeListViewSet(viewsets.ModelViewSet):
                     decree_instance.save()
 
                     response_data = {'status': 'success', 'message': 'Приказ об отпуске согласован'}
+                    response_json = json.dumps(response_data)
+                    return HttpResponse(response_json, content_type='application/json')
+                if decreeInfo.otpuskType == 'Отпуск Отзыв':
+
+                    personsBasicVacation = Vacation.objects.get(personId=personInstance, year=decreeInfo.startDate.year,
+                                                                daysType="Обычные")
+                    personsBasicVacation.daysCount = decreeInfo.newBasicDaysCount
+                    personsBasicVacation.save()
+
+                    personInstance.inVacation = False
+                    personInstance.save()
+                    decree_instance.isConfirmed = True
+                    decree_instance.save()
+
+                    response_data = {'status': 'success', 'message': 'Приказ об отзыве отпуска согласован'}
                     response_json = json.dumps(response_data)
                     return HttpResponse(response_json, content_type='application/json')
 

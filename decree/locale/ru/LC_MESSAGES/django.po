@@ -226,3 +226,6 @@ msgstr "Архив командировки"
 
 msgid "KomandirovkaInfos"
 msgstr "Архивы командировок"
+
+msgid "Otpusk otziv date"
+msgstr "Дата отзыва отпуска"
