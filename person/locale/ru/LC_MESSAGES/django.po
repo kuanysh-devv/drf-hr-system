@@ -279,3 +279,9 @@ msgstr "Дата праздничного дня"
 
 msgid "Holiday title"
 msgstr "Описание праздничного дня"
+
+msgid "inVacation"
+msgstr "В отпуске"
+
+msgid "inKomandirovka"
+msgstr "В командировке"

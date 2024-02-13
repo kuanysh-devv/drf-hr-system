@@ -2,9 +2,10 @@ import datetime
 from celery import shared_task
 from django.core.management.base import BaseCommand
 from person.models import Vacation, Person
+from decree.models import DecreeList, OtpuskInfo, KomandirovkaInfo
 from military_rank.models import RankInfo
 from working_history.models import WorkingHistory
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 
 @shared_task(bind=True)
@@ -110,3 +111,31 @@ def find_unnecessary_rank_infos():
             unnecessary_rank_infos.append(rank_info)
 
     return unnecessary_rank_infos
+
+
+@shared_task(bind=True)
+def check_vacation_komandirovka_status(self, *args, **kwargs):
+    today = date.today()
+    persons_on_vacation = Person.objects.filter(inVacation=True)
+    persons_in_komandirovka = Person.objects.filter(inKomandirovka=True)
+    for person in persons_on_vacation:
+        decree_instance = DecreeList.objects.filter(personIds=person, decreeType="Отпуск", isConfirmed=True).last()
+        if decree_instance:
+            otpuskInfo = OtpuskInfo.objects.get(decreeId=decree_instance)
+            end_date = otpuskInfo.endDate
+            if today == end_date + timedelta(days=1):
+                person.inVacation = False
+                person.save()
+                print(f"Сотрудник {person.iin} вышел с отпуска")
+
+    for person in persons_in_komandirovka:
+        decree_instance = DecreeList.objects.filter(personIds=person, decreeType="Командировка", isConfirmed=True).last()
+        if decree_instance:
+            komandirovkaInfo = KomandirovkaInfo.objects.get(decreeId=decree_instance)
+            end_date = komandirovkaInfo.endDate
+            if today == end_date + timedelta(days=1):
+                person.inKomandirovka = False
+                person.save()
+                print(f"Сотрудник {person.iin} прибыл из командировки")
+
+

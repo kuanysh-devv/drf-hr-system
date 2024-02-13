@@ -1543,7 +1543,8 @@ def generate_komandirovka_decree(request):
                     return response
                 else:
                     return JsonResponse({
-                        'error': f'У сотрудника {personInstance.iin} уже имеется приказ об отпуске который не согласован'},
+                        'error': f'У сотрудника {personInstance.iin} уже имеется приказ о командировке который не '
+                                 f'согласован'},
                         status=400)
 
         except json.JSONDecodeError:
@@ -1568,6 +1569,7 @@ def generate_otpusk_decree(request):
             otpuskType = data.get('otpuskType')
             benefitChoice = data.get('benefitChoice')
             priority = data.get('priority')
+            otzivDate = data.get('otzivDate')
 
             person_instances = Person.objects.filter(pk__in=person_ids)
             for personInstance in person_instances:
@@ -1721,7 +1723,8 @@ def generate_otpusk_decree(request):
                                 else:
                                     return JsonResponse(
                                         {
-                                            'error': f'У сотрудника {personInstance.iin} недостаточно календарных отпускных дней на {otpuskYear} '},
+                                            'error': f'У сотрудника {personInstance.iin} недостаточно календарных '
+                                                     f'отпускных дней на {otpuskYear} '},
                                         status=400)
 
                     else:
@@ -1804,6 +1807,24 @@ def generate_otpusk_decree(request):
                 if len(person_instances) == 1:
                     if otpuskType == 'Отпуск':
                         template_path = 'docx_generator/static/templates/otpusk_basic_template.docx'
+                    if otpuskType == 'Отпуск Кратко':
+                        template_path = 'docx_generator/static/templates/otpusk_kratko_template.docx'
+
+                        newBasicDaysCount = oldBasicDaysCount
+                        newExperiencedDaysCount = oldExperiencedDaysCount
+
+                        if startDate.month == endDate.month:
+                            dateString = str(otpuskYear) + " жылғы " + str(startDate.day) + "-" + str(endDate.day) + " " + startDateMonth
+                        else:
+                            dateString = str(otpuskYear) + " жылғы " + str(startDate.day) + " " + startDateMonth + " " + str(endDate.year) + " жылғы " + str(endDate.day) + " " + endDateMonth
+
+                    if otpuskType == 'Отпуск Отзыв':
+                        template_path = 'docx_generator/static/templates/otpusk_otziv_template.docx'
+
+                        dateString = str(otpuskYear) + " жылғы " + str(startDate.day) + " " + startDateMonth
+
+                        otzivDate = datetime.strptime(otzivDate, "%Y-%m-%d")
+
                 if len(person_instances) > 1:
                     return JsonResponse(
                         {'error': 'Приказы с несколькими сотрудниками в разработке'},
@@ -1828,7 +1849,12 @@ def generate_otpusk_decree(request):
                         replace_placeholder('YEAR', f"{startDate.year}")
                         replace_placeholder('DAYCOUNT', f"{dayCount}")
                         replace_placeholder('DATESTRING', f"{dateString}")
-
+                    if otpuskType == 'Отпуск Кратко':
+                        replace_placeholder('CHANGEDDEPARTMENTNAME', f"{changedDepartmentNameKaz}")
+                        replace_placeholder('CHANGEDPOSITIONTITLE', f"{changedPositionTitle.lower()}")
+                        replace_placeholder('PERSONSFIO', f"{personsFIOKaz}")
+                        replace_placeholder('DAYCOUNT', f"{dayCount}")
+                        replace_placeholder('DATESTRING', f"{dateString}")
                 # if len(person_ids) > 1:
 
                 doc_stream = BytesIO()

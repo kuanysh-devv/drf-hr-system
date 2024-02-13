@@ -20,6 +20,10 @@ app.conf.beat_schedule = {
         'task': 'person.tasks.remove_unnecessary_rank_infos',
         'schedule': crontab(hour='10', minute='0', day_of_month='1'),  # Run at midnight on the 1st day of every month
     },
+    'check_vacation_komandirovka_status': {
+        'task': 'person.tasks.check_vacation_komandirovka_status',
+        'schedule': crontab(hour='10', minute='0'),
+    },
 }
 
 app.autodiscover_tasks()

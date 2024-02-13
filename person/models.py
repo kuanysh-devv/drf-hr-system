@@ -18,6 +18,8 @@ class Person(models.Model):
     positionInfo = models.ForeignKey(PositionInfo, on_delete=models.CASCADE, verbose_name=_("Position Info"))
     rankInfo = models.ForeignKey(RankInfo, on_delete=models.CASCADE, null=True, blank=True, verbose_name=_("Rank Info"))
     isFired = models.BooleanField(default=False, verbose_name=_("isFired"))
+    inVacation = models.BooleanField(default=False, verbose_name=_("inVacation"))
+    inKomandirovka = models.BooleanField(default=False, verbose_name=_("inKomandirovka"))
     role = models.CharField(max_length=255, default='User', verbose_name=_("Role"))
 
     def next_rank(self):

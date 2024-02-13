@@ -121,7 +121,7 @@ class OtpuskInfo(models.Model):
     startDate = models.DateField(verbose_name=_("Otpusk start date"))
     endDate = models.DateField(verbose_name=_("Otpusk end date"))
     otpuskType = models.CharField(max_length=255, verbose_name=_("Otpusk type"))
-    benefitChoice = models.CharField(max_length=255, verbose_name=_("Benefit choice"))
+    benefitChoice = models.CharField(max_length=255, null=True, blank=True, verbose_name=_("Benefit choice"))
     oldBasicDaysCount = models.IntegerField(verbose_name=_("Old basic days"))
     oldExperiencedDaysCount = models.IntegerField(verbose_name=_("Old experienced days"), null=True, blank=True)
     newBasicDaysCount = models.IntegerField(verbose_name=_("New basic days"))
