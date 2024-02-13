@@ -237,15 +237,12 @@ class DecreeListViewSet(viewsets.ModelViewSet):
                 },
                 'startDate': decreeInfo.startDate,
                 'endDate': decreeInfo.endDate,
-                'otpuskType': decreeInfo.otpuskType,
-                'benefitChoice': decreeInfo.benefitChoice,
-                'oldBasicDaysCount': decreeInfo.oldBasicDaysCount,
-                'oldExperienceDaysCount': decreeInfo.oldExperiencedDaysCount,
-                'newBasicDaysCount': decreeInfo.newBasicDaysCount,
-                'newExperienceDaysCount': decreeInfo.newExperiencedDaysCount,
+                'departure': decreeInfo.departure,
+                'travelChoice': decreeInfo.travelChoice,
+                'transport': decreeInfo.transport
             }]
 
-            return JsonResponse({'otpuskInfo': otpusk_info})
+            return JsonResponse({'komandirovka_info': komandirovka_info})
 
     @action(detail=False, methods=['post'])
     def decreeConfirmation(self, request, *args, **kwargs):
