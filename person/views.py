@@ -888,20 +888,32 @@ def get_vacation_days(request):
     if request.method == 'GET':
         person_id = request.GET.get('personId')
         start_date = request.GET.get('startDate')
-
+        end_date = request.GET.get('endDate')
         # Validate query parameters
-        if not person_id or not start_date:
-            return JsonResponse({'error': 'personId and startDate are required query parameters'})
+        if not person_id or not start_date or not end_date:
+            return JsonResponse({'error': 'personId and startDate and endDate are required query parameters'})
 
         startDate = datetime.strptime(start_date, "%Y-%m-%d")
+        endDate = datetime.strptime(end_date, "%Y-%m-%d")
+
+        if startDate >= endDate:
+            return JsonResponse({'error': 'Неправильно введенные даты'})
+
+        daysCount = (endDate - startDate).days + 1
 
         vacation_basic_days = Vacation.objects.filter(personId=person_id, year=startDate.year, daysType="Обычные").first()
         vacation_exp_days = Vacation.objects.filter(personId=person_id, year=startDate.year, daysType="Стажные").first()
 
-        response_data = {
-            'vacation_basic_days': vacation_basic_days.daysCount,
-            'vacation_exp_days': vacation_exp_days.daysCount,
-        }
+        if daysCount > vacation_exp_days.daysCount:
+            response_data = {
+                'priorityField': "No need"
+            }
+        else:
+            response_data = {
+                'priorityField': "Need",
+                'vacation_basic_days': vacation_basic_days.daysCount,
+                'vacation_exp_days': vacation_exp_days.daysCount,
+            }
 
         return JsonResponse(response_data)
 
