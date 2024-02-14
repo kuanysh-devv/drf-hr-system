@@ -900,21 +900,26 @@ def get_vacation_days(request):
             return JsonResponse({'error': 'Неправильно введенные даты'})
 
         daysCount = (endDate - startDate).days + 1
-
         vacation_basic_days = Vacation.objects.filter(personId=person_id, year=startDate.year, daysType="Обычные").first()
         vacation_exp_days = Vacation.objects.filter(personId=person_id, year=startDate.year, daysType="Стажные").first()
 
-        if daysCount > vacation_exp_days.daysCount:
+        if vacation_exp_days:
+            expDaysCount = vacation_exp_days.daysCount
+
+            if daysCount > expDaysCount:
+                response_data = {
+                    'priorityField': "No need"
+                }
+            else:
+                response_data = {
+                    'priorityField': "Need",
+                    'vacation_basic_days': vacation_basic_days.daysCount,
+                    'vacation_exp_days': vacation_exp_days.daysCount,
+                }
+        else:
             response_data = {
                 'priorityField': "No need"
             }
-        else:
-            response_data = {
-                'priorityField': "Need",
-                'vacation_basic_days': vacation_basic_days.daysCount,
-                'vacation_exp_days': vacation_exp_days.daysCount,
-            }
-
         return JsonResponse(response_data)
 
     return JsonResponse({'error': 'Invalid request method'})
