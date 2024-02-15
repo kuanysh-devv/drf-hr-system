@@ -76,37 +76,42 @@ class DecreeListViewSet(viewsets.ModelViewSet):
             decreeInstance = DecreeList.objects.get(pk=decreeId)
         except DecreeList.DoesNotExist:
             return JsonResponse({'error': 'Decree not found'})
-        persons = []
-        for person in decreeInstance.personIds.all():
-            try:
-                personsRankInfo = person.rankInfo
-            except RankInfo.DoesNotExist:
-                personsRankInfo = None
-
-        # Check if personsRankInfo is not None before accessing its attributes
-            rank_title = personsRankInfo.militaryRank.rankTitle if personsRankInfo else ''
-
-            person_data = {
-                'iin': person.iin,
-                'pin': person.pin,
-                'surname': person.surname,
-                'firstName': person.firstName,
-                'patronymic': person.patronymic,
-                'positionInfo': PositionInfoSerializer(person.positionInfo).data,
-                'rankInfo': rank_title,  # Use the rank_title variable
-            }
-
-        # Get the photo for the person
-            photo = Photo.objects.filter(personId=person).first()
-            if photo:
-                person_data['photo'] = photo.photoBinary
-            else:
-                person_data['photo'] = None
-
-            persons.append(person_data)
-
         if decreeInstance.decreeType == 'Назначение':
-            decreeInfo = AppointmentInfo.objects.get(decreeId=decreeInstance)
+            persons = []
+            appointment_infos = AppointmentInfo.objects.filter(decreeId=decreeInstance)
+            for appointmentInfo in appointment_infos:
+                try:
+                    personsRankInfo = appointmentInfo.personId.rankInfo
+                except RankInfo.DoesNotExist:
+                    personsRankInfo = None
+
+                # Check if personsRankInfo is not None before accessing its attributes
+                rank_title = personsRankInfo.militaryRank.rankTitle if personsRankInfo else ''
+
+                person_data = {
+                    'iin': appointmentInfo.personId.iin,
+                    'pin': appointmentInfo.personId.pin,
+                    'surname': appointmentInfo.personId.surname,
+                    'firstName': appointmentInfo.personId.firstName,
+                    'patronymic': appointmentInfo.personId.patronymic,
+                    'positionInfo': PositionInfoSerializer(appointmentInfo.personId.positionInfo).data,
+                    'rankInfo': rank_title,  # Use the rank_title variable
+                    'newPosition': {
+                        'newDepartment': appointmentInfo.appointmentDepartment.DepartmentName,
+                        'newPosition': appointmentInfo.appointmentPosition.positionTitle,
+                        'probationMonthCount': appointmentInfo.appointmentProbation,
+                        'appointmentType': appointmentInfo.appointmentType
+                    }
+                }
+
+                # Get the photo for the person
+                photo = Photo.objects.filter(personId=appointmentInfo.personId).first()
+                if photo:
+                    person_data['photo'] = photo.photoBinary
+                else:
+                    person_data['photo'] = None
+
+                persons.append(person_data)
 
             appointmentInfo = [{
                 'decreeInfo': {
@@ -115,16 +120,9 @@ class DecreeListViewSet(viewsets.ModelViewSet):
                     'decreeNumber': decreeInstance.decreeNumber,
                     'decreeDate': decreeInstance.decreeDate,
                     'document': decreeInstance.minioDocName,
+                    'bases': [base.baseName for base in decreeInstance.decreeBases.all()],
                     'person': persons,
-                },
-                'newPosition': {
-                    'newDepartment': decreeInfo.appointmentDepartment.DepartmentName,
-                    'newPosition': decreeInfo.appointmentPosition.positionTitle,
-                    'probationMonthCount': decreeInfo.appointmentProbation,
-                    'base': decreeInfo.appointmentBase,
-                    'appointmentType': decreeInfo.appointmentType
                 }
-
             }]
 
             return JsonResponse({'appointmentInfo': appointmentInfo})
