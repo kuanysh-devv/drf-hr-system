@@ -25,6 +25,20 @@ decree/migrations/0007_*.py
 decree/migrations/0008_*.py
 decree/migrations/0009_*.py
 decree/migrations/0010_*.py
+decree/migrations/0011_*.py
+decree/migrations/0012_*.py
+decree/migrations/0013_*.py
+decree/migrations/0014_*.py
+decree/migrations/0015_*.py
+decree/migrations/0016_*.py
+decree/migrations/0017_*.py
+decree/migrations/0018_*.py
+decree/migrations/0019_*.py
+decree/migrations/0020_*.py
+decree/migrations/0021_*.py
+decree/migrations/0022_*.py
+
+
 
 education/migrations/0001_*.py
 education/migrations/0002_*.py

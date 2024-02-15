@@ -13,7 +13,7 @@ from rest_framework.response import Response
 
 from birth_info.models import BirthInfo
 from birth_info.serializers import BirthInfoSerializer
-from decree.models import SpecCheck, SickLeave, Investigation, DecreeList, AppointmentInfo
+from decree.models import SpecCheck, SickLeave, Investigation, DecreeList, AppointmentInfo, TransferInfo
 from decree.serializers import SpecCheckSerializer, SickLeaveSerializer, InvestigationSerializer, DecreeListSerializer
 from education.models import Education, AcademicDegree, Course, Attestation
 from education.serializers import CourseSerializer, AcademicDegreeSerializer, EducationSerializer, AttestationSerializer
@@ -170,10 +170,10 @@ class PersonViewSet(viewsets.ModelViewSet):
         investigation_objects = Investigation.objects.filter(personId=person.id)
         investigation_data = InvestigationSerializer(investigation_objects, many=True).data
 
-        appointment_infos = AppointmentInfo.objects.filter(personId=person_id)
+        appointment_infos = AppointmentInfo.objects.filter(personId=person.id)
 
         # Filter TransferInfo objects by person_id
-        transfer_infos = TransferInfo.objects.filter(personId=person_id)
+        transfer_infos = TransferInfo.objects.filter(personId=person.id)
 
         # Extract decree ids from AppointmentInfo objects
         appointment_decree_ids = appointment_infos.values_list('decreeId', flat=True)
