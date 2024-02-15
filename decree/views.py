@@ -10,6 +10,7 @@ from staffing_table.models import StaffingTable, Vacancy
 from location.models import Department
 from military_rank.models import MilitaryRank, RankInfo
 from person.models import RankArchive, Vacation
+from person.serializers import PersonSerializer
 from photo.models import Photo
 from position.models import PositionInfo, Position
 from position.serializers import PositionSerializer, PositionInfoSerializer
@@ -53,12 +54,13 @@ class DecreeListViewSet(viewsets.ModelViewSet):
             if decree.decreeType == "Назначение":
                 appointment_infos = AppointmentInfo.objects.filter(decreeId=decree)
                 for appointment_info in appointment_infos:
+                    person_data = PersonSerializer(appointment_info.personId).data
                     appointment_data = {
                         'appointmentDepartment': appointment_info.appointmentDepartment.DepartmentName,
                         'appointmentPosition': appointment_info.appointmentPosition.positionTitle,
                         'appointmentProbation': appointment_info.appointmentProbation,
                         'appointmentType': appointment_info.appointmentType,
-                        'personId': appointment_info.personId.id,
+                        'person': person_data,
                     }
                     decree_info['persons'].append(appointment_data)
 
