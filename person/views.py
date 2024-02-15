@@ -170,7 +170,23 @@ class PersonViewSet(viewsets.ModelViewSet):
         investigation_objects = Investigation.objects.filter(personId=person.id)
         investigation_data = InvestigationSerializer(investigation_objects, many=True).data
 
-        decree_list_objects = DecreeList.objects.filter(personIds=person.id)
+        appointment_infos = AppointmentInfo.objects.filter(personId=person_id)
+
+        # Filter TransferInfo objects by person_id
+        transfer_infos = TransferInfo.objects.filter(personId=person_id)
+
+        # Extract decree ids from AppointmentInfo objects
+        appointment_decree_ids = appointment_infos.values_list('decreeId', flat=True)
+
+        # Extract decree ids from TransferInfo objects
+        transfer_decree_ids = transfer_infos.values_list('decreeId', flat=True)
+
+        # Combine both lists of decree ids
+        all_decree_ids = list(appointment_decree_ids) + list(transfer_decree_ids)
+
+        # Fetch DecreeList objects based on combined decree ids
+        decree_list_objects = DecreeList.objects.filter(id__in=all_decree_ids)
+
         decree_list_data = DecreeListSerializer(decree_list_objects, many=True).data
 
         # Create a dictionary with the serialized data
