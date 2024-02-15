@@ -14,5 +14,8 @@ def check_max_count(sender, instance, created, **kwargs):
         if staffing_table.current_count + staffing_table.vacancy_list.count() >= staffing_table.max_count:
             raise ValueError("Добавление еще одной вакансии будет превышать максимальное количество")
 
+        initial_count = staffing_table.vacancy_list.count()
+        staffing_table.vacancy_counter = initial_count + 1
+
         staffing_table.vacancy_list.add(instance)
         staffing_table.save()

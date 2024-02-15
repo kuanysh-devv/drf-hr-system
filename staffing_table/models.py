@@ -23,6 +23,7 @@ class StaffingTable(models.Model):
     staffing_table_department = models.ForeignKey(Department, blank=True, null=True, on_delete=models.CASCADE,
                                                   verbose_name=_("Department"))
     vacancy_list = models.ManyToManyField('Vacancy', verbose_name=_("Vacancy List"), blank=True)
+    vacancy_counter = models.IntegerField(default=0)
     current_count = models.IntegerField(default=0, verbose_name=_("Current Count"))
     max_count = models.IntegerField(verbose_name=_("Max Count"))
 

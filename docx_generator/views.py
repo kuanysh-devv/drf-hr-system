@@ -4,6 +4,7 @@ import json
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from datetime import datetime, timedelta
 import pytz
+from django.db import transaction, IntegrityError
 from minio import Minio
 from io import BytesIO
 from dotenv import load_dotenv
@@ -270,206 +271,307 @@ def generate_work_reference(request, person_id):
 def generate_appointment_decree(request):
     if request.method == 'POST':
         try:
-            body = request.body.decode('utf-8')
-            data = json.loads(body)
+            with transaction.atomic():
+                body = request.body.decode('utf-8')
+                data = json.loads(body)
 
-            decreeDate = data.get('decreeDate')
-            forms = data.get('forms', [])
-            bases = [base['base'] for base in data.get('bases', [])]
-            # Create a Document object
-            template_path = 'docx_generator/static/templates/appointment_template.docx'
-            document = Document(template_path)
+                decreeDate = data.get('decreeDate')
+                forms = data.get('forms', [])
+                bases = [base['base'] for base in data.get('bases', [])]
+                # Create a Document object
+                template_path = 'docx_generator/static/templates/appointment_template.docx'
+                document = Document(template_path)
 
-            # Find the index of the paragraph containing "Председатель"
-            keyword_index = -1
-            keyword_index_kz = -1
-            for i, paragraph in enumerate(document.paragraphs):
-                if "Председатель" in paragraph.text:
-                    print("Russ")
-                    keyword_index = i
-                    print(keyword_index)
-                    break
-
-            for i, paragraph in enumerate(document.paragraphs):
-                for run in paragraph.runs:
-                    if "Төраға" in run.text and run.bold:
-                        print("helloooo")
-                        keyword_index_kz = i
-                        print(keyword_index_kz)
+                # Find the index of the paragraph containing "Председатель"
+                keyword_index = -1
+                keyword_index_kz = -1
+                for i, paragraph in enumerate(document.paragraphs):
+                    if "Председатель" in paragraph.text:
+                        keyword_index = i
                         break
 
-            decree_list_instance = DecreeList.objects.create(
-                decreeType="Назначение",
-                decreeDate=datetime.strptime(decreeDate, '%Y-%m-%d').date(),
-                minioDocName=None
-            )
+                for i, paragraph in enumerate(document.paragraphs):
+                    for run in paragraph.runs:
+                        if "Төраға" in run.text and run.bold:
+                            keyword_index_kz = i
+                            break
 
-            # If the keyword is found, insert form text after it
-            if keyword_index != -1 and keyword_index_kz != -1:
-                last_index = None
-                last_index_kz = None
-                for index, form in enumerate(forms, start=1):
-                    person_id = form.get('personId')
-                    month_count = form.get('monthCount')
-                    appointmentType = form.get('appointmentType')
-                    try:
-                        personInstance = Person.objects.get(pk=person_id)
-                    except Person.DoesNotExist:
-                        decree_list_instance.delete()
-                        return JsonResponse({'error': 'Выбранного сотрудника не существует'}, status=400)
+                decree_list_instance = DecreeList.objects.create(
+                    decreeType="Назначение",
+                    decreeDate=datetime.strptime(decreeDate, '%Y-%m-%d').date(),
+                    minioDocName=None
+                )
 
-                    departmentInstance = personInstance.positionInfo.department
-                    positionInstance = personInstance.positionInfo.position
-                    positionTitle = positionInstance.positionTitle
-                    departmentName = departmentInstance.DepartmentName
+                # If the keyword is found, insert form text after it
+                if keyword_index != -1 and keyword_index_kz != -1:
+                    last_index = None
+                    last_index_kz = None
+                    for index, form in enumerate(forms, start=1):
+                        person_id = form.get('personId')
+                        month_count = form.get('monthCount')
+                        appointmentType = form.get('appointmentType')
+                        try:
+                            personInstance = Person.objects.get(pk=person_id)
+                        except Person.DoesNotExist:
+                            transaction.set_rollback(True)
+                            return JsonResponse({'error': 'Выбранного сотрудника не существует'}, status=400)
 
-                    if AppointmentInfo.objects.filter(personId=personInstance, decreeId__isConfirmed=False,
-                                                      decreeId__decreeType="Назначение"):
-                        decree_list_instance.delete()
-                        return JsonResponse({
-                            'error': f'У сотрудника {personInstance.iin} уже существует приказ о назначении который '
-                                     f'не согласован'},
-                            status=400)
+                        departmentInstance = personInstance.positionInfo.department
+                        positionInstance = personInstance.positionInfo.position
+                        positionTitle = positionInstance.positionTitle
+                        departmentName = departmentInstance.DepartmentName
 
-                    try:
-                        staffing_table_instance = StaffingTable.objects.get(staffing_table_position=positionInstance,
-                                                                            staffing_table_department=departmentInstance)
-                    except StaffingTable.DoesNotExist:
-                        # If StaffingTable instance doesn't exist, there are no vacancies
-                        decree_list_instance.delete()
-                        return JsonResponse(
-                            {
-                                'error': f'В базе данных нету штатного расписания с департаментом {departmentInstance.DepartmentName} и должностью {positionInstance.positionTitle}'},
-                            status=400)
+                        if AppointmentInfo.objects.filter(personId=personInstance, decreeId__isConfirmed=False,
+                                                          decreeId__decreeType="Назначение"):
+                            transaction.set_rollback(True)
+                            return JsonResponse({
+                                'error': f'У сотрудника {personInstance.iin} уже существует приказ о назначении который '
+                                         f'не согласован'},
+                                status=400)
 
-                    if not staffing_table_instance.vacancy_list.filter(position=positionInstance,
-                                                                       department=departmentInstance).first():
-                        decree_list_instance.delete()
-                        return JsonResponse({
-                                                'error': f'Нет свободных вакансий для назначения {departmentInstance.DepartmentName} - {positionInstance.positionTitle}'},
-                                            status=400)
+                        try:
+                            staffing_table_instance = StaffingTable.objects.get(
+                                staffing_table_position=positionInstance,
+                                staffing_table_department=departmentInstance)
+                        except StaffingTable.DoesNotExist:
+                            # If StaffingTable instance doesn't exist, there are no vacancies
+                            transaction.set_rollback(True)
+                            return JsonResponse(
+                                {
+                                    'error': f'В базе данных нету штатного расписания с департаментом {departmentInstance.DepartmentName} и должностью {positionInstance.positionTitle}'},
+                                status=400)
 
-                    if appointmentType == "Впервые принятый":
-                        tz = pytz.timezone('Etc/GMT-6')
+                        if not staffing_table_instance.vacancy_list.filter(position=positionInstance,
+                                                                           department=departmentInstance).first():
+                            decree_list_instance.delete()
+                            return JsonResponse({
+                                'error': f'Нет свободных вакансий для назначения {departmentInstance.DepartmentName} - {positionInstance.positionTitle}'},
+                                status=400)
 
-                        three_months_later = datetime.strptime(decreeDate, '%Y-%m-%d').date() + timedelta(
-                            days=int(month_count) * 30 + 1)
-                        print(three_months_later)
-                        if personInstance.rankInfo is None:
+                        if appointmentType == "Впервые принятый":
+                            tz = pytz.timezone('Etc/GMT-6')
 
-                            appointmentInstance = AppointmentInfo.objects.create(
+                            three_months_later = datetime.strptime(decreeDate, '%Y-%m-%d').date() + timedelta(
+                                days=int(month_count) * 30 + 1)
+                            print(three_months_later)
+                            if personInstance.rankInfo is None:
+
+                                appointmentInstance = AppointmentInfo.objects.create(
+                                    appointmentDepartment=departmentInstance,
+                                    appointmentPosition=positionInstance,
+                                    appointmentProbation=int(month_count),
+                                    appointmentType=appointmentType,
+                                    personId=personInstance,
+                                    decreeId=decree_list_instance
+                                )
+
+                                task = create_rank_info_after_months.apply_async(
+                                    args=(int(month_count), appointmentInstance.id), eta=three_months_later)
+
+                            else:
+                                return JsonResponse(
+                                    {'error': f'Сотрудник {personInstance.iin} уже имеет звание'}, status=400)
+
+                        if appointmentType == "Вновь принятый":
+                            AppointmentInfo.objects.create(
                                 appointmentDepartment=departmentInstance,
                                 appointmentPosition=positionInstance,
-                                appointmentProbation=int(month_count),
+                                appointmentProbation=None,
                                 appointmentType=appointmentType,
                                 personId=personInstance,
                                 decreeId=decree_list_instance
                             )
+                        soglasnie = ['б', 'в', 'г', 'д', 'ж', 'з', 'й', 'к', 'л', 'м', 'н', 'п', 'р', 'с', 'т', 'ф',
+                                     'х',
+                                     'ц',
+                                     'ч',
+                                     'ш', 'щ']
+                        glasnie = ['а', 'е', 'ё', 'и', 'о', 'у', 'ы', 'э', 'ю', 'я']
 
-                            task = create_rank_info_after_months.apply_async(
-                                args=(int(month_count), appointmentInstance.id), eta=three_months_later)
+                        changedSurname = personInstance.surname
+                        changedFirstName = personInstance.firstName
 
+                        if personInstance.gender.genderName == 'Мужской':
+                            if personInstance.firstName[-1] in soglasnie:
+                                changedFirstName = personInstance.firstName + 'а'
+                            else:
+                                changedFirstName = personInstance.firstName
+
+                            if personInstance.surname[-2:] == 'ев' or personInstance.surname[-2:] == 'ов':
+                                changedSurname = personInstance.surname + 'а'
+                            else:
+                                changedSurname = personInstance.surname
+
+                        if personInstance.gender.genderName == 'Женский':
+                            if personInstance.firstName[-1] == 'а' and personInstance.firstName[-2] in soglasnie:
+                                changedFirstName = personInstance.firstName[:-1]
+                                changedFirstName = changedFirstName + 'у'
+                            else:
+                                changedFirstName = personInstance.firstName
+
+                            if personInstance.surname[-3:] == 'ева' or personInstance.surname[-3:] == 'ова':
+                                changedSurname = personInstance.surname[:-1]
+                                changedSurname = changedSurname + 'у'
+                            else:
+                                changedSurname = personInstance.surname
+
+                        personsFIO = changedSurname + ' ' + changedFirstName + ' ' + personInstance.patronymic
+                        personsFIOKaz = personInstance.firstName + ' ' + personInstance.patronymic + ' ' + personInstance.surname
+                        changedPositionTitle = positionTitle
+
+                        if positionTitle == 'Руководитель департамента':
+                            changedPositionTitle = 'Руководителя департамента'
+                        if positionTitle == 'Заместитель руководителя департамента':
+                            changedPositionTitle = 'Заместителя руководителя департамента'
+                        if positionTitle == 'Руководитель управления':
+                            changedPositionTitle = 'Руководителя управления'
+                        if positionTitle == 'Заместитель руководителя управления':
+                            changedPositionTitle = 'Заместителя руководителя управления'
+                        if positionTitle == 'Оперуполномоченный по особо важным делам':
+                            changedPositionTitle = 'Оперуполномоченного по особо важным делам'
+                        if positionTitle == 'Старший оперуполномоченный':
+                            changedPositionTitle = 'Старшего оперуполномоченного'
+                        if positionTitle == 'Оперуполномоченный':
+                            changedPositionTitle = 'Оперуполномоченного'
+
+                        changedDepartmentName = departmentName
+                        changedDepartmentNameKz = departmentInstance.DepartmentNameKaz
+                        words = departmentName.split()
+                        if words[0] == 'Управление':
+                            words[0] = 'Управления'
+                            changedDepartmentName = ' '.join(words)
+                        if departmentName == 'ЦА':
+                            changedDepartmentName = 'Управления'
+                        if departmentName == 'ЦА':
+                            departmentName = 'Управление'
+
+                        if departmentInstance.DepartmentNameKaz == 'Басқарма':
+                            changedDepartmentNameKz = 'Басқармасының'
                         else:
-                            return JsonResponse(
-                                {'error': f'Сотрудник {personInstance.iin} уже имеет звание'}, status=400)
+                            changedDepartmentNameKz = departmentInstance.DepartmentNameKaz + 'ның'
 
-                    if appointmentType == "Вновь принятый":
-                        AppointmentInfo.objects.create(
-                            appointmentDepartment=departmentInstance,
-                            appointmentPosition=positionInstance,
-                            appointmentProbation=None,
-                            appointmentType=appointmentType,
-                            personId=personInstance,
-                            decreeId=decree_list_instance
-                        )
-                    soglasnie = ['б', 'в', 'г', 'д', 'ж', 'з', 'й', 'к', 'л', 'м', 'н', 'п', 'р', 'с', 'т', 'ф', 'х',
-                                 'ц',
-                                 'ч',
-                                 'ш', 'щ']
-                    glasnie = ['а', 'е', 'ё', 'и', 'о', 'у', 'ы', 'э', 'ю', 'я']
+                        # Bases
+                        form_text = None
+                        form_text_kz = None
 
-                    changedSurname = personInstance.surname
-                    changedFirstName = personInstance.firstName
+                        if appointmentType == "Впервые принятый":
+                            form_text = f"\t{index}. Принять {personsFIO} на правоохранительную службу, назначить на должность {changedPositionTitle.lower()} {changedDepartmentName} _____________________ Агентства Республики Казахстан по финансовому мониторингу, установить испытательный срок {month_count} месяца."
+                            form_text_kz = (f"\t{index}. {personsFIOKaz} Қазақстан Республикасы Қаржылық мониторинг "
+                                            f"агенттігінің құқық қорғау қызметіне қабылдансын, Агенттіктің "
+                                            f"____________________ департаменті "
+                                            f"{changedDepartmentNameKz} {positionInstance.positionTitleKaz.lower()} лауазымына "
+                                            f"тағайындалсын, {month_count} ай сынақ мерзімі белгіленсін.")
+                        if appointmentType == "Вновь принятый":
+                            form_text = f"\t{index}. Принять {personsFIO} на правоохранительную службу, назначить на должность {changedPositionTitle.lower()} {changedDepartmentName} _____________________ Агентства Республики Казахстан по финансовому мониторингу."
+                            form_text_kz = (f"\t{index}. {personsFIOKaz} Қазақстан Республикасы Қаржылық мониторинг "
+                                            f"агенттігінің құқық қорғау қызметіне қабылдансын, Агенттіктің "
+                                            f"____________________ департаменті "
+                                            f"{changedDepartmentNameKz} {positionInstance.positionTitleKaz.lower()} лауазымына "
+                                            f"тағайындалсын.")
 
-                    if personInstance.gender.genderName == 'Мужской':
-                        if personInstance.firstName[-1] in soglasnie:
-                            changedFirstName = personInstance.firstName + 'а'
-                        else:
-                            changedFirstName = personInstance.firstName
+                        new_paragraph = document.paragraphs[keyword_index].insert_paragraph_before(form_text)
+                        keyword_index += 1
 
-                        if personInstance.surname[-2:] == 'ев' or personInstance.surname[-2:] == 'ов':
-                            changedSurname = personInstance.surname + 'а'
-                        else:
-                            changedSurname = personInstance.surname
+                        run = new_paragraph.runs[0]
+                        run.font.name = 'Times New Roman'
+                        run.font.size = Pt(14)
 
-                    if personInstance.gender.genderName == 'Женский':
-                        if personInstance.firstName[-1] == 'а' and personInstance.firstName[-2] in soglasnie:
-                            changedFirstName = personInstance.firstName[:-1]
-                            changedFirstName = changedFirstName + 'у'
-                        else:
-                            changedFirstName = personInstance.firstName
+                        new_paragraph.paragraph_format.line_spacing = Pt(16)
+                        new_paragraph.paragraph_format.space_after = Pt(0)
 
-                        if personInstance.surname[-3:] == 'ева' or personInstance.surname[-3:] == 'ова':
-                            changedSurname = personInstance.surname[:-1]
-                            changedSurname = changedSurname + 'у'
-                        else:
-                            changedSurname = personInstance.surname
+                        new_paragraph.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
 
-                    personsFIO = changedSurname + ' ' + changedFirstName + ' ' + personInstance.patronymic
-                    personsFIOKaz = personInstance.firstName + ' ' + personInstance.patronymic + ' ' + personInstance.surname
-                    changedPositionTitle = positionTitle
+                        last_index = index
 
-                    if positionTitle == 'Руководитель департамента':
-                        changedPositionTitle = 'Руководителя департамента'
-                    if positionTitle == 'Заместитель руководителя департамента':
-                        changedPositionTitle = 'Заместителя руководителя департамента'
-                    if positionTitle == 'Руководитель управления':
-                        changedPositionTitle = 'Руководителя управления'
-                    if positionTitle == 'Заместитель руководителя управления':
-                        changedPositionTitle = 'Заместителя руководителя управления'
-                    if positionTitle == 'Оперуполномоченный по особо важным делам':
-                        changedPositionTitle = 'Оперуполномоченного по особо важным делам'
-                    if positionTitle == 'Старший оперуполномоченный':
-                        changedPositionTitle = 'Старшего оперуполномоченного'
-                    if positionTitle == 'Оперуполномоченный':
-                        changedPositionTitle = 'Оперуполномоченного'
+                        for i, paragraph in enumerate(document.paragraphs):
+                            for run in paragraph.runs:
+                                if "Төраға" in run.text and run.bold:
+                                    print("helloooo")
+                                    keyword_index_kz = i
+                                    print(keyword_index_kz)
+                                    break
 
-                    changedDepartmentName = departmentName
-                    changedDepartmentNameKz = departmentInstance.DepartmentNameKaz
-                    words = departmentName.split()
-                    if words[0] == 'Управление':
-                        words[0] = 'Управления'
-                        changedDepartmentName = ' '.join(words)
-                    if departmentName == 'ЦА':
-                        changedDepartmentName = 'Управления'
-                    if departmentName == 'ЦА':
-                        departmentName = 'Управление'
+                        new_paragraph_kz = document.paragraphs[keyword_index_kz].insert_paragraph_before(form_text_kz)
+                        keyword_index_kz += 1
 
-                    if departmentInstance.DepartmentNameKaz == 'Басқарма':
-                        changedDepartmentNameKz = 'Басқармасының'
-                    else:
-                        changedDepartmentNameKz = departmentInstance.DepartmentNameKaz + 'ның'
+                        run = new_paragraph_kz.runs[0]
+                        run.font.name = 'Times New Roman'
+                        run.font.size = Pt(14)
 
-                    # Bases
-                    form_text = None
-                    form_text_kz = None
+                        new_paragraph_kz.paragraph_format.line_spacing = Pt(16)
+                        new_paragraph_kz.paragraph_format.space_after = Pt(0)
 
-                    if appointmentType == "Впервые принятый":
-                        form_text = f"\t{index}. Принять {personsFIO} на правоохранительную службу, назначить на должность {changedPositionTitle.lower()} {changedDepartmentName} _____________________ Агентства Республики Казахстан по финансовому мониторингу, установить испытательный срок {month_count} месяца."
-                        form_text_kz = (f"\t{index}. {personsFIOKaz} Қазақстан Республикасы Қаржылық мониторинг "
-                                        f"агенттігінің құқық қорғау қызметіне қабылдансын, Агенттіктің "
-                                        f"____________________ департаменті "
-                                        f"{changedDepartmentNameKz} {positionInstance.positionTitleKaz.lower()} лауазымына "
-                                        f"тағайындалсын, {month_count} ай сынақ мерзімі белгіленсін.")
-                    if appointmentType == "Вновь принятый":
-                        form_text = f"\t{index}. Принять {personsFIO} на правоохранительную службу, назначить на должность {changedPositionTitle.lower()} {changedDepartmentName} _____________________ Агентства Республики Казахстан по финансовому мониторингу."
-                        form_text_kz = (f"\t{index}. {personsFIOKaz} Қазақстан Республикасы Қаржылық мониторинг "
-                                        f"агенттігінің құқық қорғау қызметіне қабылдансын, Агенттіктің "
-                                        f"____________________ департаменті "
-                                        f"{changedDepartmentNameKz} {positionInstance.positionTitleKaz.lower()} лауазымына "
-                                        f"тағайындалсын.")
+                        new_paragraph_kz.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
 
-                    new_paragraph = document.paragraphs[keyword_index].insert_paragraph_before(form_text)
+                        new_paragraph.paragraph_format.keep_together = True
+
+                        last_index_kz = index
+
+                    bases_kz = []
+                    for base in bases:
+                        if base == 'представление':
+                            try:
+                                predstavlenie = Base.objects.get(baseName="Представление")
+                                decree_list_instance.decreeBases.add(predstavlenie)
+                            except Base.DoesNotExist:
+                                decree_list_instance.delete()
+                                return JsonResponse({'error': 'Представление не было найдено в базе данных'},
+                                                    status=400)
+
+                            bases_kz.append('ұсыныс')
+                        elif base == 'рапорт':
+                            try:
+                                raport = Base.objects.get(baseName="Рапорт")
+                                decree_list_instance.decreeBases.add(raport)
+                            except Base.DoesNotExist:
+                                decree_list_instance.delete()
+                                return JsonResponse({'error': 'Рапорт не было найден в базе данных'}, status=400)
+
+                            bases_kz.append('баянат')
+                        elif base == 'заявление':
+                            try:
+                                zayavlenie = Base.objects.get(baseName="Заявление")
+                                decree_list_instance.decreeBases.add(zayavlenie)
+                            except Base.DoesNotExist:
+                                decree_list_instance.delete()
+                                return JsonResponse({'error': 'Заявление не было найдено в базе данных'}, status=400)
+
+                            bases_kz.append('өтініш')
+                        elif base == 'протокол':
+                            try:
+                                protocol = Base.objects.get(baseName="Протокол")
+                                decree_list_instance.decreeBases.add(protocol)
+                            except Base.DoesNotExist:
+                                decree_list_instance.delete()
+                                return JsonResponse({'error': 'Протокол не было найден в базе данных'}, status=400)
+                            bases_kz.append('хаттама')
+                    if len(forms) > 1:
+                        # Modify bases if needed
+                        modified_bases = []
+                        modified_bases_kz = []
+                        for base in bases:
+                            if base == 'представление':
+                                modified_bases.append('представления')
+                                modified_bases_kz.append('ұсыныстар')
+                            elif base == 'рапорт':
+                                modified_bases.append('рапорта')
+                                modified_bases_kz.append('баянаттар')
+                            elif base == 'заявление':
+                                modified_bases.append('заявления')
+                                modified_bases_kz.append('өтініштер')
+                            elif base == 'протокол':
+                                modified_bases.append('протокола')
+                                modified_bases_kz.append('хаттамалар')
+                        bases = modified_bases
+                        bases_kz = modified_bases_kz
+
+                    base_text = f"\t{last_index + 1}. Настоящий приказ вступает в силу со дня подписания.\n\tОснование: {', '.join(bases)}."
+                    base_text_kz = (f"\t{last_index_kz + 1}. Осы бұйрық қол қойылған күнінен бастап күшіне "
+                                    f"енеді.\n\tНегіздеме: {', '.join(bases_kz)}.")
+
+                    # Основание
+
+                    new_paragraph = document.paragraphs[keyword_index].insert_paragraph_before(base_text)
                     keyword_index += 1
 
                     run = new_paragraph.runs[0]
@@ -479,9 +581,9 @@ def generate_appointment_decree(request):
                     new_paragraph.paragraph_format.line_spacing = Pt(16)
                     new_paragraph.paragraph_format.space_after = Pt(0)
 
-                    new_paragraph.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
+                    document.paragraphs[keyword_index].insert_paragraph_before('\n')
 
-                    last_index = index
+                    # Негіздеме
 
                     for i, paragraph in enumerate(document.paragraphs):
                         for run in paragraph.runs:
@@ -491,7 +593,7 @@ def generate_appointment_decree(request):
                                 print(keyword_index_kz)
                                 break
 
-                    new_paragraph_kz = document.paragraphs[keyword_index_kz].insert_paragraph_before(form_text_kz)
+                    new_paragraph_kz = document.paragraphs[keyword_index_kz].insert_paragraph_before(base_text_kz)
                     keyword_index_kz += 1
 
                     run = new_paragraph_kz.runs[0]
@@ -501,333 +603,17 @@ def generate_appointment_decree(request):
                     new_paragraph_kz.paragraph_format.line_spacing = Pt(16)
                     new_paragraph_kz.paragraph_format.space_after = Pt(0)
 
-                    new_paragraph_kz.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
+                    document.paragraphs[keyword_index_kz].insert_paragraph_before('\n')
 
-                    new_paragraph.paragraph_format.keep_together = True
+                    doc_stream = BytesIO()
+                    document.save(doc_stream)
+                    doc_stream.seek(0)
 
-                    last_index_kz = index
-
-                bases_kz = []
-                for base in bases:
-                    if base == 'представление':
-                        try:
-                            predstavlenie = Base.objects.get(baseName="Представление")
-                            decree_list_instance.decreeBases.add(predstavlenie)
-                        except Base.DoesNotExist:
-                            decree_list_instance.delete()
-                            return JsonResponse({'error': 'Представление не было найдено в базе данных'}, status=400)
-
-                        bases_kz.append('ұсыныс')
-                    elif base == 'рапорт':
-                        try:
-                            raport = Base.objects.get(baseName="Рапорт")
-                            decree_list_instance.decreeBases.add(raport)
-                        except Base.DoesNotExist:
-                            decree_list_instance.delete()
-                            return JsonResponse({'error': 'Рапорт не было найден в базе данных'}, status=400)
-
-                        bases_kz.append('баянат')
-                    elif base == 'заявление':
-                        try:
-                            zayavlenie = Base.objects.get(baseName="Заявление")
-                            decree_list_instance.decreeBases.add(zayavlenie)
-                        except Base.DoesNotExist:
-                            decree_list_instance.delete()
-                            return JsonResponse({'error': 'Заявление не было найдено в базе данных'}, status=400)
-
-                        bases_kz.append('өтініш')
-                    elif base == 'протокол':
-                        try:
-                            protocol = Base.objects.get(baseName="Протокол")
-                            decree_list_instance.decreeBases.add(protocol)
-                        except Base.DoesNotExist:
-                            decree_list_instance.delete()
-                            return JsonResponse({'error': 'Протокол не было найден в базе данных'}, status=400)
-                        bases_kz.append('хаттама')
-                if len(forms) > 1:
-                    # Modify bases if needed
-                    modified_bases = []
-                    modified_bases_kz = []
-                    for base in bases:
-                        if base == 'представление':
-                            modified_bases.append('представления')
-                            modified_bases_kz.append('ұсыныстар')
-                        elif base == 'рапорт':
-                            modified_bases.append('рапорта')
-                            modified_bases_kz.append('баянаттар')
-                        elif base == 'заявление':
-                            modified_bases.append('заявления')
-                            modified_bases_kz.append('өтініштер')
-                        elif base == 'протокол':
-                            modified_bases.append('протокола')
-                            modified_bases_kz.append('хаттамалар')
-                    bases = modified_bases
-                    bases_kz = modified_bases_kz
-
-                base_text = f"\t{last_index + 1}. Настоящий приказ вступает в силу со дня подписания.\n\tОснование: {', '.join(bases)}."
-                base_text_kz = (f"\t{last_index_kz + 1}. Осы бұйрық қол қойылған күнінен бастап күшіне "
-                                f"енеді.\n\tНегіздеме: {', '.join(bases_kz)}.")
-
-                # Основание
-
-                new_paragraph = document.paragraphs[keyword_index].insert_paragraph_before(base_text)
-                keyword_index += 1
-
-                run = new_paragraph.runs[0]
-                run.font.name = 'Times New Roman'
-                run.font.size = Pt(14)
-
-                new_paragraph.paragraph_format.line_spacing = Pt(16)
-                new_paragraph.paragraph_format.space_after = Pt(0)
-
-                document.paragraphs[keyword_index].insert_paragraph_before('\n')
-
-                # Негіздеме
-
-                for i, paragraph in enumerate(document.paragraphs):
-                    for run in paragraph.runs:
-                        if "Төраға" in run.text and run.bold:
-                            print("helloooo")
-                            keyword_index_kz = i
-                            print(keyword_index_kz)
-                            break
-
-                new_paragraph_kz = document.paragraphs[keyword_index_kz].insert_paragraph_before(base_text_kz)
-                keyword_index_kz += 1
-
-                run = new_paragraph_kz.runs[0]
-                run.font.name = 'Times New Roman'
-                run.font.size = Pt(14)
-
-                new_paragraph_kz.paragraph_format.line_spacing = Pt(16)
-                new_paragraph_kz.paragraph_format.space_after = Pt(0)
-
-                document.paragraphs[keyword_index_kz].insert_paragraph_before('\n')
-
-                doc_stream = BytesIO()
-                document.save(doc_stream)
-                doc_stream.seek(0)
-
-                # Prepare the HTTP response with the modified document
-                response = HttpResponse(doc_stream.read(),
-                                        content_type='application/vnd.openxmlformats-officedocument.wordprocessingml'
-                                                     '.document')
-                response['Content-Disposition'] = f'attachment; filename=Приказ о назначении.docx'
-
-                doc_stream.seek(0)
-                document_id = str(uuid4())
-                document_name = f"document_{document_id}.docx"
-
-                minio_client = Minio(MINIO_ENDPOINT,
-                                     access_key=MINIO_ACCESS_KEY,
-                                     secret_key=MINIO_SECRET_KEY,
-                                     secure=False)
-
-                minio_client.put_object(MINIO_BUCKET_NAME, document_name, data=doc_stream,
-                                        length=len(doc_stream.getvalue()))
-                document_url = f"{MINIO_ENDPOINT}/{MINIO_BUCKET_NAME}/{document_name}"
-                print(document_url)
-
-                return response
-
-        except json.JSONDecodeError:
-            return JsonResponse({'error': 'Неправильные JSON данные'}, status=400)
-
-    return JsonResponse({'error': 'Неправильный метод запроса'}, status=405)
-
-
-
-@csrf_exempt
-def generate_transfer_decree(request):
-    if request.method == 'POST':
-        try:
-            # Get the raw request body
-            body = request.body.decode('utf-8')
-
-            # Parse the JSON data from the request body
-            data = json.loads(body)
-
-            # Extract variables from the parsed data
-            persons = data.get('persons', [])
-
-            # Extract personIds from the list of persons
-            person_ids = [person.get('personId') for person in persons]
-            newPositionTitle = data.get('newPosition')
-            newDepartmentName = data.get('newDepartment')
-            decreeDate = data.get('decreeDate')
-            base = data.get('base')
-            person_instances = Person.objects.filter(pk__in=person_ids)
-            for personInstance in person_instances:
-                newDepartmentInstance = Department.objects.get(DepartmentName=newDepartmentName)
-                newPositionInstance = Position.objects.get(positionTitle=newPositionTitle)
-
-                currentPosition = PositionInfo.objects.get(person=personInstance).position
-                currentDepartment = PositionInfo.objects.get(person=personInstance).department
-
-                soglasnie = ['б', 'в', 'г', 'д', 'ж', 'з', 'й', 'к', 'л', 'м', 'н', 'п', 'р', 'с', 'т', 'ф', 'х', 'ц',
-                             'ч',
-                             'ш', 'щ']
-                glasnie = ['а', 'е', 'ё', 'и', 'о', 'у', 'ы', 'э', 'ю', 'я']
-
-                changedSurname = None
-                changedFirstName = None
-
-                if personInstance.gender.genderName == 'Мужской':
-                    if personInstance.firstName[-1] in soglasnie:
-                        changedFirstName = personInstance.firstName + 'а'  # Қасымбаева Қуаныша Ахатұлы
-                    else:
-                        changedFirstName = personInstance.firstName
-
-                    if personInstance.surname[-2:] == 'ев' or personInstance.surname[-2:] == 'ов':
-                        changedSurname = personInstance.surname + 'а'  # Қасымбаева Қуаныша Ахатұлы
-                    else:
-                        changedSurname = personInstance.surname
-
-                if personInstance.gender.genderName == 'Женский':
-                    if personInstance.firstName[-1] == 'а' and personInstance.firstName[-2] in soglasnie:
-                        changedFirstName = personInstance.firstName[:-1]
-                        changedFirstName = changedFirstName + 'у'
-                    else:
-                        changedFirstName = personInstance.firstName
-
-                    if personInstance.surname[-3:] == 'ева' or personInstance.surname[-3:] == 'ова':
-                        changedSurname = personInstance.surname[:-1]
-                        changedSurname = changedSurname + 'у'
-                    else:
-                        changedSurname = personInstance.surname
-
-                personsFIO = changedSurname + ' ' + changedFirstName + ' ' + personInstance.patronymic
-                personsFIOKaz = personInstance.firstName + ' ' + personInstance.patronymic + ' ' + personInstance.surname
-
-                changedPositionTitle = newPositionInstance.positionTitle
-                changedCurrentPositionTitle = currentPosition.positionTitle
-
-                if newPositionTitle == 'Руководитель департамента':
-                    changedPositionTitle = 'Руководителя департамента'
-                if newPositionTitle == 'Заместитель руководителя департамента':
-                    changedPositionTitle = 'Заместителя руководителя департамента'
-                if newPositionTitle == 'Руководитель управления':
-                    changedPositionTitle = 'Руководителя управления'
-                if newPositionTitle == 'Заместитель руководителя управления':
-                    changedPositionTitle = 'Заместителя руководителя управления'
-                if newPositionTitle == 'Оперуполномоченный по особо важным делам':
-                    changedPositionTitle = 'Оперуполномоченного по особо важным делам'
-                if newPositionTitle == 'Старший оперуполномоченный':
-                    changedPositionTitle = 'Старшего оперуполномоченного'
-                if newPositionTitle == 'Оперуполномоченный':
-                    changedPositionTitle = 'Оперуполномоченного'
-
-                if currentPosition.positionTitle == 'Руководитель департамента':
-                    changedCurrentPositionTitle = 'Руководителя департамента'
-                if currentPosition.positionTitle == 'Заместитель руководителя департамента':
-                    changedCurrentPositionTitle = 'Заместителя руководителя департамента'
-                if currentPosition.positionTitle == 'Руководитель управления':
-                    changedCurrentPositionTitle = 'Руководителя управления'
-                if currentPosition.positionTitle == 'Заместитель руководителя управления':
-                    changedCurrentPositionTitle = 'Заместителя руководителя управления'
-                if currentPosition.positionTitle == 'Оперуполномоченный по особо важным делам':
-                    changedCurrentPositionTitle = 'Оперуполномоченного по особо важным делам'
-                if currentPosition.positionTitle == 'Старший оперуполномоченный':
-                    changedCurrentPositionTitle = 'Старшего оперуполномоченного'
-                if currentPosition.positionTitle == 'Оперуполномоченный':
-                    changedCurrentPositionTitle = 'Оперуполномоченного'
-
-                changedDepartmentName = newDepartmentInstance.DepartmentName
-                changedCurrentDepartmentName = currentDepartment.DepartmentName
-                changedCurrentDepartmentNameKaz = currentDepartment.DepartmentNameKaz
-                changedNewDepartmentNameKaz = newDepartmentInstance.DepartmentNameKaz
-
-                words = newDepartmentName.split()
-                if words[0] == 'Управление':
-                    words[0] = 'Управления'
-                    changedDepartmentName = ' '.join(words)
-                if newDepartmentName == 'ЦА':
-                    changedDepartmentName = 'Управления'
-                if newDepartmentName == 'ЦА':
-                    departmentName = 'Управление'
-
-                words = currentDepartment.DepartmentName.split()
-                if words[0] == 'Управление':
-                    words[0] = 'Управления'
-                    changedCurrentDepartmentName = ' '.join(words)
-                if currentDepartment.DepartmentName == 'ЦА':
-                    changedCurrentDepartmentName = 'Управления'
-                if currentDepartment.DepartmentName == 'ЦА':
-                    currentDepartment.DepartmentName = 'Управление'
-
-                if currentDepartment.DepartmentNameKaz == 'Басқарма':
-                    changedCurrentDepartmentNameKaz = 'Басқармасының'
-                else:
-                    changedCurrentDepartmentNameKaz = currentDepartment.DepartmentNameKaz + 'ның'
-
-                if newDepartmentInstance.DepartmentNameKaz == 'Басқарма':
-                    changedNewDepartmentNameKaz = 'Басқармасының'
-                else:
-                    changedNewDepartmentNameKaz = newDepartmentInstance.DepartmentNameKaz + 'ның'
-
-                baseKaz = None
-                if base == 'представление':
-                    baseKaz = 'ұсыныс'
-                if base == 'рапорт':
-                    baseKaz = 'баянат'
-
-                document = None
-
-                if len(person_instances) == 1:
-                    template_path = 'docx_generator/static/templates/transfer_template.docx'  # Update with the path to your template
-                    document = Document(template_path)
-                if len(person_instances) > 1:
-                    return JsonResponse(
-                        {'error': 'Приказы с несколькими сотрудниками в разработке'},
-                        status=400)
-
-                # Define a function to replace placeholders in the document
-                def replace_placeholder(placeholder, replacement):
-                    for paragraph1 in document.paragraphs:
-                        if placeholder in paragraph1.text:
-
-                            for run1 in paragraph1.runs:
-                                if placeholder in run1.text:
-                                    run1.text = run1.text.replace(placeholder, replacement)
-                                    run1.font.size = Pt(14)  # Adjust the font size if needed
-                                    run1.font.name = 'Times New Roman'
-
-                if len(person_instances) == 1:
-                    replace_placeholder('FIO', f"{personsFIO}")
-                    replace_placeholder('POSITIONTITLE', f"{changedPositionTitle}")
-                    replace_placeholder('DEPARTMENTNAME', f"{changedDepartmentName}")
-                    replace_placeholder('CURRENTP', f"{changedCurrentPositionTitle}")
-                    replace_placeholder('CURRENTD', f"{changedCurrentDepartmentName}")
-                    replace_placeholder('BASE', base)
-
-                    replace_placeholder('fio', f"{personsFIOKaz}")
-                    replace_placeholder('currentd', f"{changedCurrentDepartmentNameKaz}")
-                    replace_placeholder('currentp', f"{currentPosition.positionTitleKaz}")
-                    replace_placeholder('departmentname', f"{changedNewDepartmentNameKaz}")
-                    replace_placeholder('positiontitle', f"{newPositionInstance.positionTitleKaz}")
-                    replace_placeholder('base', baseKaz)
-
-                doc_stream = BytesIO()
-                document.save(doc_stream)
-                doc_stream.seek(0)
-
-                # Prepare the HTTP response with the modified document
-                response = HttpResponse(doc_stream.read(),
-                                        content_type='application/vnd.openxmlformats-officedocument.wordprocessingml'
-                                                     '.document')
-                response['Content-Disposition'] = f'attachment; filename=Приказ о перемещении.docx'
-
-                if not DecreeList.objects.filter(personIds=personInstance, decreeType="Перемещение",
-                                                 isConfirmed=False).first():
-
-                    staffingTableInstance = StaffingTable.objects.get(
-                        staffing_table_department=newDepartmentInstance,
-                        staffing_table_position=newPositionInstance)
-
-                    if staffingTableInstance.vacancy_list.first() is None:
-                        return JsonResponse(
-                            {'error': 'На новой должности не существует актуальной вакансии'},
-                            status=400)
+                    # Prepare the HTTP response with the modified document
+                    response = HttpResponse(doc_stream.read(),
+                                            content_type='application/vnd.openxmlformats-officedocument.wordprocessingml'
+                                                         '.document')
+                    response['Content-Disposition'] = f'attachment; filename=Приказ о назначении.docx'
 
                     doc_stream.seek(0)
                     document_id = str(uuid4())
@@ -842,34 +628,391 @@ def generate_transfer_decree(request):
                                             length=len(doc_stream.getvalue()))
                     document_url = f"{MINIO_ENDPOINT}/{MINIO_BUCKET_NAME}/{document_name}"
                     print(document_url)
-
-                    decree_list_instance = DecreeList.objects.create(
-                        decreeType="Перемещение",
-                        decreeDate=datetime.strptime(decreeDate, '%Y-%m-%d').date(),
-                        minioDocName=document_name
-                    )
-
-                    decree_list_instance.personIds.add(personInstance)
-
-                    TransferInfo.objects.create(
-                        previousDepartment=currentDepartment,
-                        previousPosition=currentPosition,
-                        newDepartment=newDepartmentInstance,
-                        newPosition=newPositionInstance,
-                        transferBase=base,
-                        decreeId=decree_list_instance
-                    )
-
+                    decree_list_instance.minioDocName = document_name
+                    decree_list_instance.save()
                     return response
-                else:
-                    return JsonResponse(
-                        {'error': f'У сотрудника {personInstance.iin} уже имеется приказ о перемещении который не '
-                                  f'согласован'},
-                        status=400)
-        except json.JSONDecodeError:
-            return JsonResponse({'error': 'Invalid JSON data'}, status=400)
+
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
 
     return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+
+@csrf_exempt
+def generate_transfer_decree(request):
+    if request.method == 'POST':
+        try:
+            with transaction.atomic():
+                body = request.body.decode('utf-8')
+                data = json.loads(body)
+
+                decreeDate = data.get('decreeDate')
+                forms = data.get('forms', [])
+                bases = [base['base'] for base in data.get('bases', [])]
+
+                template_path = 'docx_generator/static/templates/transfer_template.docx'
+                document = Document(template_path)
+
+                # Find the index of the paragraph containing "Председатель"
+                keyword_index = -1
+                keyword_index_kz = -1
+                for i, paragraph in enumerate(document.paragraphs):
+                    if "Председатель" in paragraph.text:
+                        keyword_index = i
+                        break
+
+                for i, paragraph in enumerate(document.paragraphs):
+                    for run in paragraph.runs:
+                        if "Төраға" in run.text and run.bold:
+                            keyword_index_kz = i
+                            break
+
+                decree_list_instance = DecreeList.objects.create(
+                    decreeType="Перемещение",
+                    decreeDate=datetime.strptime(decreeDate, '%Y-%m-%d').date(),
+                    minioDocName=None
+                )
+
+                if keyword_index != -1 and keyword_index_kz != -1:
+                    last_index = None
+                    last_index_kz = None
+                    vacancy_count = None
+                    for index, form in enumerate(forms, start=1):
+                        person_id = form.get('personId')
+                        newPositionTitle = form.get('newPosition')
+                        newDepartmentName = form.get('newDepartment')
+
+                        try:
+                            personInstance = Person.objects.get(pk=person_id)
+                        except Person.DoesNotExist:
+                            decree_list_instance.delete()
+                            return JsonResponse({'error': 'Выбранного сотрудника не существует'}, status=400)
+
+                        newDepartmentInstance = Department.objects.get(DepartmentName=newDepartmentName)
+                        newPositionInstance = Position.objects.get(positionTitle=newPositionTitle)
+                        currentPosition = PositionInfo.objects.get(person=personInstance).position
+                        currentDepartment = PositionInfo.objects.get(person=personInstance).department
+
+                        if TransferInfo.objects.filter(personId=personInstance, decreeId__isConfirmed=False,
+                                                       decreeId__decreeType="Перемещение"):
+                            transaction.set_rollback(True)
+                            return JsonResponse({
+                                'error': f'У сотрудника {personInstance.iin} уже существует приказ о перемещении '
+                                         f'который '
+                                         f'не согласован'},
+                                status=400)
+
+                        if newDepartmentInstance == currentDepartment and newPositionInstance == currentPosition:
+                            transaction.set_rollback(True)
+                            return JsonResponse({
+                                'error': f'Сотрудник {personInstance.iin} уже находится на этой позиции'},
+                                status=400)
+
+                        try:
+                            staffingTableInstance = StaffingTable.objects.get(
+                                staffing_table_department=newDepartmentInstance,
+                                staffing_table_position=newPositionInstance)
+                        except StaffingTable.DoesNotExist:
+                            transaction.set_rollback(True)
+                            return JsonResponse(
+                                {
+                                    'error': f'В базе данных нету штатного расписания с департаментом {newDepartmentInstance.DepartmentName} и должностью {newPositionInstance.positionTitle}'},
+                                status=400)
+
+                        vacancy_count = staffingTableInstance.vacancy_counter
+                        print(vacancy_count)
+                        if vacancy_count == 0:
+                            transaction.set_rollback(True)
+                            return JsonResponse(
+                                {'error': 'На новой должности не существует либо недостаточно актуальной вакансии'},
+                                status=400)
+                        staffingTableInstance.vacancy_counter = staffingTableInstance.vacancy_counter - 1
+                        staffingTableInstance.save()
+
+                        TransferInfo.objects.create(
+                            previousDepartment=currentDepartment,
+                            previousPosition=currentPosition,
+                            newDepartment=newDepartmentInstance,
+                            newPosition=newPositionInstance,
+                            personId=personInstance,
+                            decreeId=decree_list_instance
+                        )
+
+                        soglasnie = ['б', 'в', 'г', 'д', 'ж', 'з', 'й', 'к', 'л', 'м', 'н', 'п', 'р', 'с', 'т', 'ф',
+                                     'х',
+                                     'ц',
+                                     'ч',
+                                     'ш', 'щ']
+                        glasnie = ['а', 'е', 'ё', 'и', 'о', 'у', 'ы', 'э', 'ю', 'я']
+
+                        changedSurname = None
+                        changedFirstName = None
+
+                        if personInstance.gender.genderName == 'Мужской':
+                            if personInstance.firstName[-1] in soglasnie:
+                                changedFirstName = personInstance.firstName + 'а'  # Қасымбаева Қуаныша Ахатұлы
+                            else:
+                                changedFirstName = personInstance.firstName
+
+                            if personInstance.surname[-2:] == 'ев' or personInstance.surname[-2:] == 'ов':
+                                changedSurname = personInstance.surname + 'а'  # Қасымбаева Қуаныша Ахатұлы
+                            else:
+                                changedSurname = personInstance.surname
+
+                        if personInstance.gender.genderName == 'Женский':
+                            if personInstance.firstName[-1] == 'а' and personInstance.firstName[-2] in soglasnie:
+                                changedFirstName = personInstance.firstName[:-1]
+                                changedFirstName = changedFirstName + 'у'
+                            else:
+                                changedFirstName = personInstance.firstName
+
+                            if personInstance.surname[-3:] == 'ева' or personInstance.surname[-3:] == 'ова':
+                                changedSurname = personInstance.surname[:-1]
+                                changedSurname = changedSurname + 'у'
+                            else:
+                                changedSurname = personInstance.surname
+
+                        personsFIO = changedSurname + ' ' + changedFirstName + ' ' + personInstance.patronymic
+                        personsFIOKaz = personInstance.firstName + ' ' + personInstance.patronymic + ' ' + personInstance.surname
+
+                        changedPositionTitle = newPositionInstance.positionTitle
+                        changedCurrentPositionTitle = currentPosition.positionTitle
+
+                        if newPositionTitle == 'Руководитель департамента':
+                            changedPositionTitle = 'Руководителя департамента'
+                        if newPositionTitle == 'Заместитель руководителя департамента':
+                            changedPositionTitle = 'Заместителя руководителя департамента'
+                        if newPositionTitle == 'Руководитель управления':
+                            changedPositionTitle = 'Руководителя управления'
+                        if newPositionTitle == 'Заместитель руководителя управления':
+                            changedPositionTitle = 'Заместителя руководителя управления'
+                        if newPositionTitle == 'Оперуполномоченный по особо важным делам':
+                            changedPositionTitle = 'Оперуполномоченного по особо важным делам'
+                        if newPositionTitle == 'Старший оперуполномоченный':
+                            changedPositionTitle = 'Старшего оперуполномоченного'
+                        if newPositionTitle == 'Оперуполномоченный':
+                            changedPositionTitle = 'Оперуполномоченного'
+
+                        if currentPosition.positionTitle == 'Руководитель департамента':
+                            changedCurrentPositionTitle = 'Руководителя департамента'
+                        if currentPosition.positionTitle == 'Заместитель руководителя департамента':
+                            changedCurrentPositionTitle = 'Заместителя руководителя департамента'
+                        if currentPosition.positionTitle == 'Руководитель управления':
+                            changedCurrentPositionTitle = 'Руководителя управления'
+                        if currentPosition.positionTitle == 'Заместитель руководителя управления':
+                            changedCurrentPositionTitle = 'Заместителя руководителя управления'
+                        if currentPosition.positionTitle == 'Оперуполномоченный по особо важным делам':
+                            changedCurrentPositionTitle = 'Оперуполномоченного по особо важным делам'
+                        if currentPosition.positionTitle == 'Старший оперуполномоченный':
+                            changedCurrentPositionTitle = 'Старшего оперуполномоченного'
+                        if currentPosition.positionTitle == 'Оперуполномоченный':
+                            changedCurrentPositionTitle = 'Оперуполномоченного'
+
+                        changedDepartmentName = newDepartmentInstance.DepartmentName
+                        changedCurrentDepartmentName = currentDepartment.DepartmentName
+                        changedCurrentDepartmentNameKaz = currentDepartment.DepartmentNameKaz
+                        changedNewDepartmentNameKaz = newDepartmentInstance.DepartmentNameKaz
+
+                        words = newDepartmentName.split()
+                        if words[0] == 'Управление':
+                            words[0] = 'Управления'
+                            changedDepartmentName = ' '.join(words)
+                        if newDepartmentName == 'ЦА':
+                            changedDepartmentName = 'Управления'
+                        if newDepartmentName == 'ЦА':
+                            departmentName = 'Управление'
+
+                        words = currentDepartment.DepartmentName.split()
+                        if words[0] == 'Управление':
+                            words[0] = 'Управления'
+                            changedCurrentDepartmentName = ' '.join(words)
+                        if currentDepartment.DepartmentName == 'ЦА':
+                            changedCurrentDepartmentName = 'Управления'
+                        if currentDepartment.DepartmentName == 'ЦА':
+                            currentDepartment.DepartmentName = 'Управление'
+
+                        if currentDepartment.DepartmentNameKaz == 'Басқарма':
+                            changedCurrentDepartmentNameKaz = 'Басқармасының'
+                        else:
+                            changedCurrentDepartmentNameKaz = currentDepartment.DepartmentNameKaz + 'ның'
+
+                        if newDepartmentInstance.DepartmentNameKaz == 'Басқарма':
+                            changedNewDepartmentNameKaz = 'Басқармасының'
+                        else:
+                            changedNewDepartmentNameKaz = newDepartmentInstance.DepartmentNameKaz + 'ның'
+
+                        form_text = None
+                        form_text_kz = None
+
+                        form_text = f"\t{index}. Назначить {personsFIO} на должность {changedPositionTitle.lower()} {changedDepartmentName} _______________________ департамента Агентства Республики Казахстан по финансовому мониторингу (далее - Агентство), освободив от занимаемой должности {changedCurrentPositionTitle.lower()} {changedCurrentDepartmentName} ______________________ департамента Агентства."
+                        form_text_kz = f"\t{index}. {personsFIOKaz} атқарып отырған Қазақстан Республикасы Қаржылық мониторинг агенттігінің (бұдан әрі - Агенттік) _______________________ департаменті {changedCurrentDepartmentNameKaz} {currentPosition.positionTitleKaz.lower()} лауазымынан босатылып, Агенттіктің _____________________ департаменті {changedNewDepartmentNameKaz} {newPositionInstance.positionTitleKaz.lower()} лауазымына тағайындалсын."
+
+                        new_paragraph = document.paragraphs[keyword_index].insert_paragraph_before(form_text)
+                        keyword_index += 1
+
+                        run = new_paragraph.runs[0]
+                        run.font.name = 'Times New Roman'
+                        run.font.size = Pt(14)
+
+                        new_paragraph.paragraph_format.line_spacing = Pt(16)
+                        new_paragraph.paragraph_format.space_after = Pt(0)
+
+                        new_paragraph.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
+
+                        last_index = index
+
+                        for i, paragraph in enumerate(document.paragraphs):
+                            for run in paragraph.runs:
+                                if "Төраға" in run.text and run.bold:
+                                    keyword_index_kz = i
+                                    break
+
+                        new_paragraph_kz = document.paragraphs[keyword_index_kz].insert_paragraph_before(form_text_kz)
+                        keyword_index_kz += 1
+
+                        run = new_paragraph_kz.runs[0]
+                        run.font.name = 'Times New Roman'
+                        run.font.size = Pt(14)
+
+                        new_paragraph_kz.paragraph_format.line_spacing = Pt(16)
+                        new_paragraph_kz.paragraph_format.space_after = Pt(0)
+
+                        new_paragraph_kz.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
+
+                        new_paragraph.paragraph_format.keep_together = True
+
+                        last_index_kz = index
+
+                        vacancy_count -= 1
+
+                    bases_kz = []
+                    for base in bases:
+                        if base == 'представление':
+                            try:
+                                predstavlenie = Base.objects.get(baseName="Представление")
+                                decree_list_instance.decreeBases.add(predstavlenie)
+                            except Base.DoesNotExist:
+                                decree_list_instance.delete()
+                                return JsonResponse({'error': 'Представление не было найдено в базе данных'},
+                                                    status=400)
+
+                            bases_kz.append('ұсыныс')
+                        elif base == 'рапорт':
+                            try:
+                                raport = Base.objects.get(baseName="Рапорт")
+                                decree_list_instance.decreeBases.add(raport)
+                            except Base.DoesNotExist:
+                                decree_list_instance.delete()
+                                return JsonResponse({'error': 'Рапорт не было найден в базе данных'}, status=400)
+
+                            bases_kz.append('баянат')
+                        elif base == 'заявление':
+                            try:
+                                zayavlenie = Base.objects.get(baseName="Заявление")
+                                decree_list_instance.decreeBases.add(zayavlenie)
+                            except Base.DoesNotExist:
+                                decree_list_instance.delete()
+                                return JsonResponse({'error': 'Заявление не было найдено в базе данных'}, status=400)
+
+                            bases_kz.append('өтініш')
+                        elif base == 'протокол':
+                            try:
+                                protocol = Base.objects.get(baseName="Протокол")
+                                decree_list_instance.decreeBases.add(protocol)
+                            except Base.DoesNotExist:
+                                decree_list_instance.delete()
+                                return JsonResponse({'error': 'Протокол не было найден в базе данных'}, status=400)
+                            bases_kz.append('хаттама')
+                    if len(forms) > 1:
+                        # Modify bases if needed
+                        modified_bases = []
+                        modified_bases_kz = []
+                        for base in bases:
+                            if base == 'представление':
+                                modified_bases.append('представления')
+                                modified_bases_kz.append('ұсыныстар')
+                            elif base == 'рапорт':
+                                modified_bases.append('рапорта')
+                                modified_bases_kz.append('баянаттар')
+                            elif base == 'заявление':
+                                modified_bases.append('заявления')
+                                modified_bases_kz.append('өтініштер')
+                            elif base == 'протокол':
+                                modified_bases.append('протокола')
+                                modified_bases_kz.append('хаттамалар')
+                        bases = modified_bases
+                        bases_kz = modified_bases_kz
+
+                    base_text = f"\t{last_index + 1}. Настоящий приказ вступает в силу со дня подписания.\n\tОснование: {', '.join(bases)}."
+                    base_text_kz = (f"\t{last_index_kz + 1}. Осы бұйрық қол қойылған күнінен бастап күшіне "
+                                    f"енеді.\n\tНегіздеме: {', '.join(bases_kz)}.")
+
+                    # Основание
+
+                    new_paragraph = document.paragraphs[keyword_index].insert_paragraph_before(base_text)
+                    keyword_index += 1
+
+                    run = new_paragraph.runs[0]
+                    run.font.name = 'Times New Roman'
+                    run.font.size = Pt(14)
+
+                    new_paragraph.paragraph_format.line_spacing = Pt(16)
+                    new_paragraph.paragraph_format.space_after = Pt(0)
+
+                    document.paragraphs[keyword_index].insert_paragraph_before('\n')
+
+                    # Негіздеме
+
+                    for i, paragraph in enumerate(document.paragraphs):
+                        for run in paragraph.runs:
+                            if "Төраға" in run.text and run.bold:
+                                keyword_index_kz = i
+                                break
+
+                    new_paragraph_kz = document.paragraphs[keyword_index_kz].insert_paragraph_before(base_text_kz)
+                    keyword_index_kz += 1
+
+                    run = new_paragraph_kz.runs[0]
+                    run.font.name = 'Times New Roman'
+                    run.font.size = Pt(14)
+
+                    new_paragraph_kz.paragraph_format.line_spacing = Pt(16)
+                    new_paragraph_kz.paragraph_format.space_after = Pt(0)
+
+                    document.paragraphs[keyword_index_kz].insert_paragraph_before('\n')
+
+                    doc_stream = BytesIO()
+                    document.save(doc_stream)
+                    doc_stream.seek(0)
+
+                    # Prepare the HTTP response with the modified document
+                    response = HttpResponse(doc_stream.read(),
+                                            content_type='application/vnd.openxmlformats-officedocument.wordprocessingml'
+                                                         '.document')
+                    response['Content-Disposition'] = f'attachment; filename=Приказ о перемещении.docx'
+
+                    doc_stream.seek(0)
+                    document_id = str(uuid4())
+                    document_name = f"document_{document_id}.docx"
+
+                    minio_client = Minio(MINIO_ENDPOINT,
+                                         access_key=MINIO_ACCESS_KEY,
+                                         secret_key=MINIO_SECRET_KEY,
+                                         secure=False)
+
+                    minio_client.put_object(MINIO_BUCKET_NAME, document_name, data=doc_stream,
+                                            length=len(doc_stream.getvalue()))
+                    document_url = f"{MINIO_ENDPOINT}/{MINIO_BUCKET_NAME}/{document_name}"
+                    print(document_url)
+                    decree_list_instance.minioDocName = document_name
+                    decree_list_instance.save()
+                    return response
+
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
+
 
 
 @csrf_exempt

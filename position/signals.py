@@ -16,6 +16,8 @@ def pre_save_position_info(sender, instance, **kwargs):
         original_instance = PositionInfo.objects.get(pk=instance.pk)
         if original_instance.position != instance.position or original_instance.department != instance.department:
             # Get the person associated with the PositionInfo
+            print(original_instance)
+            print(instance)
             person = Person.objects.get(positionInfo=instance)
 
             # -1 to old job place in staffing table
@@ -28,7 +30,10 @@ def pre_save_position_info(sender, instance, **kwargs):
                     staffing_entry = StaffingTable.objects.get(staffing_table_position=original_instance.position)
 
                 if staffing_entry.current_count > 0:
-                    staffing_entry.current_count -= 1
+                    initial_count = Person.objects.filter(positionInfo__position=original_instance.position,
+                                                          positionInfo__department=original_instance.department).count()
+
+                    staffing_entry.current_count = initial_count - 1
                     staffing_entry.save()
 
             except StaffingTable.DoesNotExist:
@@ -37,20 +42,21 @@ def pre_save_position_info(sender, instance, **kwargs):
 
             # +1 to new job place in staffing table
             try:
-                if original_instance.department is not None:
+                if instance.department is not None:
 
-                    staffing_entry = StaffingTable.objects.get(staffing_table_department=original_instance.department,
-                                                               staffing_table_position=original_instance.position)
+                    staffing_entry = StaffingTable.objects.get(staffing_table_department=instance.department,
+                                                               staffing_table_position=instance.position)
                 else:
-                    staffing_entry = StaffingTable.objects.get(staffing_table_position=original_instance.position)
+                    staffing_entry = StaffingTable.objects.get(staffing_table_position=instance.position)
 
                 if staffing_entry.current_count + 1 > staffing_entry.max_count:
 
                     raise ValidationError('Добавление этой должности будет превышать максимальное количество для '
                                           'департамента')
 
-                # Increment the current_count for the position in the staffing table
-                staffing_entry.current_count += 1
+                initial_count = Person.objects.filter(positionInfo__position=instance.position,
+                                                      positionInfo__department=instance.department).count()
+                staffing_entry.current_count = initial_count + 1
                 staffing_entry.save()
 
             except StaffingTable.DoesNotExist:
@@ -78,39 +84,6 @@ def pre_save_position_info(sender, instance, **kwargs):
             new_working_history.save()
 
 
-@receiver(pre_save, sender=PositionInfo)
-def position_info_pre_save(sender, instance, **kwargs):
-    # Check if the instance is being created (not updated)
-    if instance._state.adding:
-        # Get the associated department and position
-        department = instance.department
-        position = instance.position
-        try:
-            # Retrieve the staffing table entry for the department and position
-            if department is not None:
-                staffing_entry = StaffingTable.objects.get(staffing_table_department=department,
-                                                           staffing_table_position=position)
-            else:
-
-                staffing_entry = StaffingTable.objects.get(staffing_table_position=position, staffing_table_department=None)
-
-            # Check if adding a new position exceeds the max_count
-            if staffing_entry.current_count + 1 > staffing_entry.max_count:
-                raise ValidationError('Добавление этой должности будет превышать максимальное количество для '
-                                      'департамента')
-
-            # Increment the current_count for the position in the staffing table
-            staffing_entry.current_count += 1
-            staffing_entry.save()
-
-        except StaffingTable.DoesNotExist:
-            # Handle the case where there is no staffing entry for the department and position
-            raise ValidationError('Не было найдено штатного расписания с указанными должностью и департаментом')
-
-    # If the instance is being updated, the logic can be adjusted accordingly
-    # ...
-
-
 @receiver(pre_delete, sender=PositionInfo)
 def position_info_pre_delete(sender, instance, **kwargs):
     # Check if the instance being deleted is associated with a department and position
@@ -122,7 +95,9 @@ def position_info_pre_delete(sender, instance, **kwargs):
             print(staffing_entry)
             # Ensure that the current_count is greater than zero before decrementing
             if staffing_entry.current_count > 0:
-                staffing_entry.current_count -= 1
+                initial_count = Person.objects.filter(positionInfo__position=instance.position,
+                                                      positionInfo__department=instance.department).count()
+                staffing_entry.current_count = initial_count - 1
                 staffing_entry.save()
 
         except StaffingTable.DoesNotExist:
