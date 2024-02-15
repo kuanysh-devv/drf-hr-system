@@ -13,7 +13,7 @@ from rest_framework.response import Response
 
 from birth_info.models import BirthInfo
 from birth_info.serializers import BirthInfoSerializer
-from decree.models import SpecCheck, SickLeave, Investigation, DecreeList
+from decree.models import SpecCheck, SickLeave, Investigation, DecreeList, AppointmentInfo
 from decree.serializers import SpecCheckSerializer, SickLeaveSerializer, InvestigationSerializer, DecreeListSerializer
 from education.models import Education, AcademicDegree, Course, Attestation
 from education.serializers import CourseSerializer, AcademicDegreeSerializer, EducationSerializer, AttestationSerializer
