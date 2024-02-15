@@ -229,3 +229,12 @@ msgstr "Архивы командировок"
 
 msgid "Otpusk otziv date"
 msgstr "Дата отзыва отпуска"
+
+msgid "Base"
+msgstr "Основание"
+
+msgid "Bases"
+msgstr "Основания"
+
+msgid "baseName"
+msgstr "Название основания"

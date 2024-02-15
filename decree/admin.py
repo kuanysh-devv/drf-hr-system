@@ -1,8 +1,9 @@
 from django.contrib import admin
 
-from decree.models import DecreeList, SpecCheck, SickLeave, Investigation, RankUpInfo, AppointmentInfo, TransferInfo, OtpuskInfo, KomandirovkaInfo
+from decree.models import DecreeList, SpecCheck, SickLeave, Investigation, RankUpInfo, AppointmentInfo, TransferInfo, OtpuskInfo, KomandirovkaInfo, Base
 
 admin.site.register(DecreeList)
+admin.site.register(Base)
 admin.site.register(SpecCheck)
 admin.site.register(SickLeave)
 admin.site.register(Investigation)

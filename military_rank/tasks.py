@@ -8,27 +8,24 @@ from time import sleep
 
 
 @shared_task(bind=True, base=AbortableTask)
-def create_rank_info_after_months(self, month_count, decreenumber):
+def create_rank_info_after_months(self, month_count, appointmentInstanceId):
     # Calculate the receivedDate by adding the specified number of months to today's date
-    decreeInstance = None
 
     try:
-        decreeInstance = DecreeList.objects.get(decreeNumber=decreenumber)
-    except DecreeList.DoesNotExist:
-        # Handle the case when the object is not found
-        person = None
-        print("No DecreeList found for decreeNumber: {decreenumber}")
+        appointmentInstance = AppointmentInfo.objects.get(pk=appointmentInstanceId)
+    except AppointmentInfo.DoesNotExist:
+        return JsonResponse(
+            {'error': f'Нету сущности Архива назначении'}, status=400)
 
-    decreeInfo = AppointmentInfo.objects.get(decreeId=decreeInstance)
-    person = decreeInstance.personId
+    person = appointmentInstance.personId
 
-    received_date = decreeInstance.decreeDate + relativedelta(days=int(month_count) * 30 + 1)
-    if decreeInfo.appointmentType == 'Впервые принятый':
+    received_date = appointmentInstance.decreeId.decreeDate + relativedelta(days=int(month_count) * 30 + 1)
+    if appointmentInstance.appointmentType == 'Впервые принятый':
         # Create a dictionary representing the RankInfo instance
         new_rank_info_data = {
             "militaryRank": MilitaryRank.objects.get(rankTitle="Лейтенант"),
-            "receivedType": "Внеочередное",
-            "decreeNumber": decreenumber,  # Update with the actual decree number
+            "receivedType": "Очередное",
+            "decreeNumber": appointmentInstance.decreeId.decreeNumber,  # Update with the actual decree number
             "receivedDate": received_date.strftime("%Y-%m-%d"),
         }
 

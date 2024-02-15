@@ -4,6 +4,7 @@ from person.models import Person
 from location.models import Department
 from position.models import Position
 from military_rank.models import MilitaryRank
+from django.contrib.postgres.fields import ArrayField
 
 
 class DecreeList(models.Model):
@@ -11,17 +12,15 @@ class DecreeList(models.Model):
     decreeNumber = models.CharField(max_length=255, verbose_name=_("Decree Number"), null=True, blank=True)
     decreeDate = models.DateField(verbose_name=_("Decree Date"))
     isConfirmed = models.BooleanField(default=False, verbose_name=_("isConfirmed"))
-    personIds = models.ManyToManyField(Person, verbose_name=_("Persons"))
-    minioDocName = models.CharField(max_length=4048, default="None", verbose_name=_("minioDocName"))
+    minioDocName = models.CharField(max_length=4048, default="None", null=True, blank=True, verbose_name=_("minioDocName"))
+    decreeBases = models.ManyToManyField('Base', verbose_name=_("Bases"), blank=True)
 
     class Meta:
         verbose_name = _("Decree List")
         verbose_name_plural = _("Decree Lists")
 
     def __str__(self):
-        first_person = self.personIds.first()
-        person_info = str(first_person) if first_person else "No person associated"
-        return f"{self.decreeType} - {person_info} - Дата: {self.decreeDate}"
+        return "Приказ" + " - " + str(self.decreeType) + " от " + str(self.decreeDate)
 
 
 class AppointmentInfo(models.Model):
@@ -29,8 +28,8 @@ class AppointmentInfo(models.Model):
                                               verbose_name=_("Appointment Department"))
     appointmentPosition = models.ForeignKey(Position, on_delete=models.CASCADE, verbose_name=_("Appointment Position"))
     appointmentProbation = models.IntegerField(verbose_name=_("Appointment Probation"), null=True, blank=True)
-    appointmentBase = models.CharField(max_length=255, verbose_name=_("Appointment Base"))
     appointmentType = models.CharField(max_length=255, default="None", verbose_name=_("Appointment Type"))
+    personId = models.ForeignKey(Person, on_delete=models.CASCADE, default=1, verbose_name=_("Person id"))
     decreeId = models.ForeignKey(DecreeList, on_delete=models.CASCADE, default=1, verbose_name=_("Decree id"))
 
     class Meta:
@@ -38,9 +37,7 @@ class AppointmentInfo(models.Model):
         verbose_name_plural = _("AppointmentInfos")
 
     def __str__(self):
-        first_person = self.decreeId.personIds.first()
-        person_info = str(first_person) if first_person else "No person associated"
-        return f"Архив - {self.decreeId.decreeType} - {person_info} - Дата: {self.decreeId.decreeDate}"
+        return f"Архив - {self.decreeId.decreeType} - {self.personId.iin} - Дата: {self.decreeId.decreeDate}"
 
 
 class TransferInfo(models.Model):
@@ -68,7 +65,7 @@ class TransferInfo(models.Model):
         verbose_name=_("New Position"),
         related_name='new_transfer_infos'  # Add a unique related_name
     )
-    transferBase = models.CharField(max_length=255, verbose_name=_("Transfer Base"))
+    personId = models.ForeignKey(Person, on_delete=models.CASCADE, default=1, verbose_name=_("Person id"))
     decreeId = models.ForeignKey(
         DecreeList,
         on_delete=models.CASCADE,
@@ -81,9 +78,7 @@ class TransferInfo(models.Model):
         verbose_name_plural = _("TransferInfos")
 
     def __str__(self):
-        first_person = self.decreeId.personIds.first()
-        person_info = str(first_person) if first_person else "No person associated"
-        return f"Архив - {self.decreeId.decreeType} - {person_info} - Дата: {self.decreeId.decreeDate}"
+        return f"Архив - {self.decreeId.decreeType} - {self.personId.iin} - Дата: {self.decreeId.decreeDate}"
 
 
 class RankUpInfo(models.Model):
@@ -100,6 +95,7 @@ class RankUpInfo(models.Model):
         related_name='new_rank_up_infos'  # Add a unique related_name
     )
     receivedType = models.CharField(max_length=255, verbose_name=_("Received Type"))
+    personId = models.ForeignKey(Person, on_delete=models.CASCADE, default=1, verbose_name=_("Person id"))
     decreeId = models.ForeignKey(
         'DecreeList',
         on_delete=models.CASCADE,
@@ -112,9 +108,7 @@ class RankUpInfo(models.Model):
         verbose_name_plural = _("RankUpInfos")
 
     def __str__(self):
-        first_person = self.decreeId.personIds.first()
-        person_info = str(first_person) if first_person else "No person associated"
-        return f"Архив - {self.decreeId.decreeType} - {person_info} - Дата: {self.decreeId.decreeDate}"
+        return f"Архив - {self.decreeId.decreeType} - {self.personId.iin} - Дата: {self.decreeId.decreeDate}"
 
 
 class OtpuskInfo(models.Model):
@@ -127,6 +121,7 @@ class OtpuskInfo(models.Model):
     oldExperiencedDaysCount = models.IntegerField(verbose_name=_("Old experienced days"), null=True, blank=True)
     newBasicDaysCount = models.IntegerField(verbose_name=_("New basic days"), null=True, blank=True)
     newExperiencedDaysCount = models.IntegerField(verbose_name=_("New experienced days"), null=True, blank=True)
+    personId = models.ForeignKey(Person, on_delete=models.CASCADE, default=1, verbose_name=_("Person id"))
     decreeId = models.ForeignKey(
         'DecreeList',
         on_delete=models.CASCADE,
@@ -139,9 +134,7 @@ class OtpuskInfo(models.Model):
         verbose_name_plural = _("OtpuskInfos")
 
     def __str__(self):
-        first_person = self.decreeId.personIds.first()
-        person_info = str(first_person) if first_person else "No person associated"
-        return f"Архив - {self.decreeId.decreeType} - {person_info} - Дата: {self.decreeId.decreeDate}"
+        return f"Архив - {self.decreeId.decreeType} - {self.personId.iin} - Дата: {self.decreeId.decreeDate}"
 
 
 class KomandirovkaInfo(models.Model):
@@ -150,6 +143,7 @@ class KomandirovkaInfo(models.Model):
     departure = models.CharField(max_length=255, verbose_name=_("Departure"))
     travelChoice = models.CharField(max_length=255, verbose_name=_("Travel choice"))
     transport = models.CharField(max_length=255, verbose_name=_("Transport"))
+    personId = models.ForeignKey(Person, on_delete=models.CASCADE, default=1, verbose_name=_("Person id"))
     decreeId = models.ForeignKey(
         'DecreeList',
         on_delete=models.CASCADE,
@@ -162,9 +156,7 @@ class KomandirovkaInfo(models.Model):
         verbose_name_plural = _("KomandirovkaInfos")
 
     def __str__(self):
-        first_person = self.decreeId.personIds.first()
-        person_info = str(first_person) if first_person else "No person associated"
-        return f"Архив - {self.decreeId.decreeType} - {person_info} - Дата: {self.decreeId.decreeDate}"
+        return f"Архив - {self.decreeId.decreeType} - {self.personId.iin} - Дата: {self.decreeId.decreeDate}"
 
 
 class SpecCheck(models.Model):
@@ -205,3 +197,14 @@ class Investigation(models.Model):
 
     def __str__(self):
         return str(self.personId) + ' ' + self.investigation_decree_number
+
+
+class Base(models.Model):
+    baseName = models.CharField(max_length=255, verbose_name=_("baseName"))
+
+    class Meta:
+        verbose_name = _("Base")
+        verbose_name_plural = _("Bases")
+
+    def __str__(self):
+        return str(self.baseName)
