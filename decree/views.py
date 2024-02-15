@@ -47,35 +47,20 @@ class DecreeListViewSet(viewsets.ModelViewSet):
                 'decreeNumber': decree.decreeNumber,
                 'decreeDate': decree.decreeDate,
                 'decreeIsConfirmed': decree.isConfirmed,
-                'persons': [],  # Placeholder for person data
+                'persons': [],
             }
-
             # Retrieve person data for each person in personIds
-            for person in decree.personIds.all():
-                try:
-                    persons_rank_info = person.rankInfo
-                    rank_title = persons_rank_info.militaryRank.rankTitle if persons_rank_info else ''
-                except RankInfo.DoesNotExist:
-                    rank_title = ''
-
-                person_data = {
-                    'iin': person.iin,
-                    'pin': person.pin,
-                    'surname': person.surname,
-                    'firstName': person.firstName,
-                    'patronymic': person.patronymic,
-                    'positionInfo': person.positionInfo.position.positionTitle,
-                    'rankInfo': rank_title,
-                }
-
-                # Get the photo for the person
-                photo = Photo.objects.filter(personId=person).first()
-                if photo:
-                    person_data['photo'] = photo.photoBinary
-                else:
-                    person_data['photo'] = None
-
-                decree_info['persons'].append(person_data)
+            if decree.decreeType == "Назначение":
+                appointment_infos = AppointmentInfo.objects.filter(decreeId=decree)
+                for appointment_info in appointment_infos:
+                    appointment_data = {
+                        'appointmentDepartment': appointment_info.appointmentDepartment.DepartmentName,
+                        'appointmentPosition': appointment_info.appointmentPosition.positionTitle,
+                        'appointmentProbation': appointment_info.appointmentProbation,
+                        'appointmentType': appointment_info.appointmentType,
+                        'personId': appointment_info.personId.id,
+                    }
+                    decree_info['persons'].append(appointment_data)
 
             decree_data.append(decree_info)
 
