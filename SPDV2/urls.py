@@ -85,7 +85,7 @@ urlpatterns = [
     path('api/v1/get-vacation-days/', get_vacation_days, name='get_vacation_days'),
     path('api/v1/generate-rankup-decree/', generate_rankup_decree, name='generate_rankup_decree'),
     path('api/v1/generate-firing-decree/', generate_firing_decree, name='generate_firing_decree'),
-    path('api/v1/generate-komandirovka-decree/', generate_komandirovka_decree_new, name='generate_komandirovka_decree'),
+    path('api/v1/generate-komandirovka-decree/', generate_komandirovka_decree, name='generate_komandirovka_decree'),
     path('api/v1/generate-otpusk-decree/', generate_otpusk_decree, name='generate_otpusk_decree'),
     path('api/v1/generate-otpusk-otziv/', generate_otpusk_otziv_decree, name='generate_otpusk_otziv_decree'),
 
