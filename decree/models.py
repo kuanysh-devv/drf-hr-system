@@ -95,6 +95,7 @@ class RankUpInfo(models.Model):
         related_name='new_rank_up_infos'  # Add a unique related_name
     )
     receivedType = models.CharField(max_length=255, verbose_name=_("Received Type"))
+    receivedDate = models.DateField(null=True, blank=True, verbose_name=_("Received Date"))
     personId = models.ForeignKey(Person, on_delete=models.CASCADE, default=1, verbose_name=_("Person id"))
     decreeId = models.ForeignKey(
         'DecreeList',

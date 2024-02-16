@@ -47,6 +47,7 @@ class DecreeListViewSet(viewsets.ModelViewSet):
                 'decreeType': decree.decreeType,
                 'decreeNumber': decree.decreeNumber,
                 'decreeDate': decree.decreeDate,
+                'bases': [base.baseName for base in decree.decreeBases.all()],
                 'decreeIsConfirmed': decree.isConfirmed,
                 'forms': [],
             }
@@ -56,11 +57,11 @@ class DecreeListViewSet(viewsets.ModelViewSet):
                 for appointment_info in appointment_infos:
                     person_data = PersonSerializer(appointment_info.personId).data
                     appointment_data = {
-                        'appointmentDepartment': appointment_info.appointmentDepartment.DepartmentName,
-                        'appointmentPosition': appointment_info.appointmentPosition.positionTitle,
-                        'appointmentProbation': appointment_info.appointmentProbation,
-                        'appointmentType': appointment_info.appointmentType,
                         'person': person_data,
+                        'newDepartment': appointment_info.appointmentDepartment.DepartmentName,
+                        'newPosition': appointment_info.appointmentPosition.positionTitle,
+                        'probationMonthCount': appointment_info.appointmentProbation,
+                        'appointmentType': appointment_info.appointmentType,
                     }
                     decree_info['forms'].append(appointment_data)
 
@@ -81,6 +82,19 @@ class DecreeListViewSet(viewsets.ModelViewSet):
                     }
                     decree_info['forms'].append(transfer_data)
 
+            if decree.decreeType == "Присвоение звания":
+                rankup_infos = RankUpInfo.objects.filter(decreeId=decree)
+                for rankup_info in rankup_infos:
+                    person_data = PersonSerializer(rankup_info.personId).data
+                    rankup_data = {
+                        'person': person_data,
+                        'newRank': rankup_info.newRank.rankTitle,
+                        'previousRank': rankup_info.previousRank.rankTitle,
+                        'receivedType': rankup_info.receivedType,
+                        'receivedDate': rankup_info.receivedDate
+                    }
+                    decree_info['forms'].append(rankup_data)
+
             decree_data.append(decree_info)
 
         return JsonResponse({'decrees': decree_data})
@@ -94,43 +108,23 @@ class DecreeListViewSet(viewsets.ModelViewSet):
         except DecreeList.DoesNotExist:
             return JsonResponse({'error': 'Decree not found'})
         if decreeInstance.decreeType == 'Назначение':
-            persons = []
+            forms = []
             appointment_infos = AppointmentInfo.objects.filter(decreeId=decreeInstance)
             for appointmentInfo in appointment_infos:
-                try:
-                    personsRankInfo = appointmentInfo.personId.rankInfo
-                except RankInfo.DoesNotExist:
-                    personsRankInfo = None
 
-                # Check if personsRankInfo is not None before accessing its attributes
-                rank_title = personsRankInfo.militaryRank.rankTitle if personsRankInfo else ''
+                person_data = PersonSerializer(appointmentInfo.personId).data
 
                 person_data = {
-                    'iin': appointmentInfo.personId.iin,
-                    'pin': appointmentInfo.personId.pin,
-                    'surname': appointmentInfo.personId.surname,
-                    'firstName': appointmentInfo.personId.firstName,
-                    'patronymic': appointmentInfo.personId.patronymic,
-                    'positionInfo': PositionInfoSerializer(appointmentInfo.personId.positionInfo).data,
-                    'rankInfo': rank_title,  # Use the rank_title variable
-                    'newPosition': {
-                        'newDepartment': appointmentInfo.appointmentDepartment.DepartmentName,
-                        'newPosition': appointmentInfo.appointmentPosition.positionTitle,
-                        'probationMonthCount': appointmentInfo.appointmentProbation,
-                        'appointmentType': appointmentInfo.appointmentType
-                    }
+                    'person': person_data,
+                    'newDepartment': appointmentInfo.appointmentDepartment.DepartmentName,
+                    'newPosition': appointmentInfo.appointmentPosition.positionTitle,
+                    'probationMonthCount': appointmentInfo.appointmentProbation,
+                    'appointmentType': appointmentInfo.appointmentType,
                 }
 
-                # Get the photo for the person
-                photo = Photo.objects.filter(personId=appointmentInfo.personId).first()
-                if photo:
-                    person_data['photo'] = photo.photoBinary
-                else:
-                    person_data['photo'] = None
+                forms.append(person_data)
 
-                persons.append(person_data)
-
-            appointmentInfo = [{
+            appointmentInfo = {
                 'decreeInfo': {
                     'decreeId': decreeInstance.id,
                     'decreeType': decreeInstance.decreeType,
@@ -138,33 +132,21 @@ class DecreeListViewSet(viewsets.ModelViewSet):
                     'decreeDate': decreeInstance.decreeDate,
                     'document': decreeInstance.minioDocName,
                     'bases': [base.baseName for base in decreeInstance.decreeBases.all()],
-                    'person': persons,
+                    'forms': forms,
                 }
-            }]
+            }
 
             return JsonResponse({'appointmentInfo': appointmentInfo})
 
         if decreeInstance.decreeType == 'Перемещение':
-            persons = []
+            forms = []
             transfer_infos = TransferInfo.objects.filter(decreeId=decreeInstance)
             for transferInfo in transfer_infos:
 
-                try:
-                    personsRankInfo = transferInfo.personId.rankInfo
-                except RankInfo.DoesNotExist:
-                    personsRankInfo = None
-
-                # Check if personsRankInfo is not None before accessing its attributes
-                rank_title = personsRankInfo.militaryRank.rankTitle if personsRankInfo else ''
+                person_data = PersonSerializer(transferInfo.personId).data
 
                 person_data = {
-                    'iin': transferInfo.personId.iin,
-                    'pin': transferInfo.personId.pin,
-                    'surname': transferInfo.personId.surname,
-                    'firstName': transferInfo.personId.firstName,
-                    'patronymic': transferInfo.personId.patronymic,
-                    'positionInfo': PositionInfoSerializer(transferInfo.personId.positionInfo).data,
-                    'rankInfo': rank_title,  # Use the rank_title variable
+                    'person': person_data,
                     'newPosition': {
                         'newDepartment': transferInfo.newDepartment.DepartmentName,
                         'newPosition': transferInfo.newPosition.positionTitle
@@ -174,38 +156,49 @@ class DecreeListViewSet(viewsets.ModelViewSet):
                         'previousPosition': transferInfo.previousPosition.positionTitle
                     }
                 }
-                persons.append(person_data)
+                forms.append(person_data)
 
-            transfer_info = [{
+            transfer_info = {
                 'decreeInfo': {
                     'decreeId': decreeInstance.id,
                     'decreeType': decreeInstance.decreeType,
                     'decreeNumber': decreeInstance.decreeNumber,
                     'decreeDate': decreeInstance.decreeDate,
                     'document': decreeInstance.minioDocName,
-                    'person': persons,
-                },
-
-            }]
+                    'bases': [base.baseName for base in decreeInstance.decreeBases.all()],
+                    'forms': forms,
+                }
+            }
 
             return JsonResponse({'transferInfo': transfer_info})
 
         if decreeInstance.decreeType == 'Присвоение звания':
-            decreeInfo = RankUpInfo.objects.get(decreeId=decreeInstance)
+            forms = []
+            rankup_infos = RankUpInfo.objects.filter(decreeId=decreeInstance)
+            for rankupInfo in rankup_infos:
 
-            rank_up_info = [{
+                person_data = PersonSerializer(rankupInfo.personId).data
+
+                person_data = {
+                    'person': person_data,
+                    'newRank': rankupInfo.newRank.rankTitle,
+                    'previousRank': rankupInfo.previousRank.rankTitle,
+                    'receivedType': rankupInfo.receivedType,
+                    'receivedDate': rankupInfo.receivedDate
+                }
+                forms.append(person_data)
+
+            rank_up_info = {
                 'decreeInfo': {
                     'decreeId': decreeInstance.id,
                     'decreeType': decreeInstance.decreeType,
                     'decreeNumber': decreeInstance.decreeNumber,
                     'decreeDate': decreeInstance.decreeDate,
+                    'bases': [base.baseName for base in decreeInstance.decreeBases.all()],
                     'document': decreeInstance.minioDocName,
-                    'person': persons,
-                },
-                'newRank': decreeInfo.newRank.rankTitle,
-                'previousRank': decreeInfo.previousRank.rankTitle
-
-            }]
+                    'forms': forms,
+                }
+            }
 
             return JsonResponse({'rankUpInfo': rank_up_info})
         if decreeInstance.decreeType == 'Увольнение':
@@ -279,15 +272,15 @@ class DecreeListViewSet(viewsets.ModelViewSet):
             appointment_infos = AppointmentInfo.objects.filter(decreeId=decree_instance)
             for appointmentInfo in appointment_infos:
 
-                decree_instance.isConfirmed = True
-                decree_instance.save()
-
                 staffingTableInstance = StaffingTable.objects.get(
                     staffing_table_department=appointmentInfo.appointmentDepartment,
                     staffing_table_position=appointmentInfo.appointmentPosition)
 
                 Vacancy.delete(staffingTableInstance.vacancy_list.first())
                 staffingTableInstance.save()
+
+            decree_instance.isConfirmed = True
+            decree_instance.save()
 
             response_data = {'status': 'success', 'message': 'Приказ о назначении согласован'}
             response_json = json.dumps(response_data)
@@ -320,27 +313,26 @@ class DecreeListViewSet(viewsets.ModelViewSet):
                     available_date=decree_instance.decreeDate
                 )
 
-                decree_instance.isConfirmed = True
-                decree_instance.save()
-
+            decree_instance.isConfirmed = True
+            decree_instance.save()
             response_data = {'status': 'success', 'message': 'Приказ о перемещении согласован'}
             response_json = json.dumps(response_data)
             return HttpResponse(response_json, content_type='application/json')
 
         if decree_instance.decreeType == 'Присвоение звания':
-                decreeInfo = RankUpInfo.objects.get(decreeId=decree_instance)
-                personsRankInfo = RankInfo.objects.get(person=personInstance)
+            rankupinfos = RankUpInfo.objects.filter(decreeId=decree_instance)
+            for rankupinfo in rankupinfos:
+                personsRankInfo = RankInfo.objects.get(person=rankupinfo.personId)
 
-                personsRankInfo.militaryRank = decreeInfo.newRank
-                personsRankInfo.receivedDate = decree_instance.decreeDate
+                personsRankInfo.militaryRank = rankupinfo.newRank
+                personsRankInfo.receivedDate = rankupinfo.receivedDate
                 personsRankInfo.save()
 
-                decree_instance.isConfirmed = True
-                decree_instance.save()
-
-                response_data = {'status': 'success', 'message': 'Приказ о присвоении звания согласован'}
-                response_json = json.dumps(response_data)
-                return HttpResponse(response_json, content_type='application/json')
+            decree_instance.isConfirmed = True
+            decree_instance.save()
+            response_data = {'status': 'success', 'message': 'Приказ о присвоении звания согласован'}
+            response_json = json.dumps(response_data)
+            return HttpResponse(response_json, content_type='application/json')
 
         if decree_instance.decreeType == 'Увольнение':
 

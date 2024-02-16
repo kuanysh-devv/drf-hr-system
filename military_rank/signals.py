@@ -65,9 +65,8 @@ def rankInfo_pre_save(sender, instance, **kwargs):
             )
 
         try:
-            rankUpDecree = DecreeList.objects.filter(personIds=person_instance, decreeType="Присвоение звания",
-                                                     isConfirmed=False).first()
-            rankUpInfo = RankUpInfo.objects.get(decreeId=rankUpDecree)
+            rankUpInfo = RankUpInfo.objects.filter(personId=person_instance, decreeId__isConfirmed=False,
+                                                   decreeId__decreeType="Присвоение звания").first()
             print(rankUpInfo.receivedType)
             if (
                     rankUpInfo.receivedType == 'Досрочное' or rankUpInfo.receivedType == 'Внеочередное') and instance.militaryRank in non_valid_ranks:
@@ -76,7 +75,7 @@ def rankInfo_pre_save(sender, instance, **kwargs):
                 new_next_promotion_date = instance.receivedDate + timedelta(days=next_promotion_days)
                 instance.needPositionUp = False
                 instance.nextPromotionDate = new_next_promotion_date
-                instance.decreeNumber = rankUpDecree.decreeNumber
+                instance.decreeNumber = rankUpInfo.decreeId.decreeNumber
 
             else:
                 next_promotion_days = instance.militaryRank.nextPromotionDateInDays

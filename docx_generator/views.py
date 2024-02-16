@@ -369,6 +369,7 @@ def generate_appointment_decree(request):
                                     args=(int(month_count), appointmentInstance.id), eta=three_months_later)
 
                             else:
+                                decree_list_instance.delete()
                                 return JsonResponse(
                                     {'error': f'Сотрудник {personInstance.iin} уже имеет звание'}, status=400)
 
@@ -468,6 +469,11 @@ def generate_appointment_decree(request):
                                             f"____________________ департаменті "
                                             f"{changedDepartmentNameKz} {positionInstance.positionTitleKaz.lower()} лауазымына "
                                             f"тағайындалсын.")
+
+                        for i, paragraph in enumerate(document.paragraphs):
+                            if "Председатель" in paragraph.text:
+                                keyword_index = i
+                                break
 
                         new_paragraph = document.paragraphs[keyword_index].insert_paragraph_before(form_text)
                         keyword_index += 1
@@ -570,6 +576,11 @@ def generate_appointment_decree(request):
                                     f"енеді.\n\tНегіздеме: {', '.join(bases_kz)}.")
 
                     # Основание
+
+                    for i, paragraph in enumerate(document.paragraphs):
+                        if "Председатель" in paragraph.text:
+                            keyword_index = i
+                            break
 
                     new_paragraph = document.paragraphs[keyword_index].insert_paragraph_before(base_text)
                     keyword_index += 1
@@ -847,6 +858,11 @@ def generate_transfer_decree(request):
                         form_text = f"\t{index}. Назначить {personsFIO} на должность {changedPositionTitle.lower()} {changedDepartmentName} _______________________ департамента Агентства Республики Казахстан по финансовому мониторингу (далее - Агентство), освободив от занимаемой должности {changedCurrentPositionTitle.lower()} {changedCurrentDepartmentName} ______________________ департамента Агентства."
                         form_text_kz = f"\t{index}. {personsFIOKaz} атқарып отырған Қазақстан Республикасы Қаржылық мониторинг агенттігінің (бұдан әрі - Агенттік) _______________________ департаменті {changedCurrentDepartmentNameKaz} {currentPosition.positionTitleKaz.lower()} лауазымынан босатылып, Агенттіктің _____________________ департаменті {changedNewDepartmentNameKaz} {newPositionInstance.positionTitleKaz.lower()} лауазымына тағайындалсын."
 
+                        for i, paragraph in enumerate(document.paragraphs):
+                            if "Председатель" in paragraph.text:
+                                keyword_index = i
+                                break
+
                         new_paragraph = document.paragraphs[keyword_index].insert_paragraph_before(form_text)
                         keyword_index += 1
 
@@ -949,6 +965,11 @@ def generate_transfer_decree(request):
 
                     # Основание
 
+                    for i, paragraph in enumerate(document.paragraphs):
+                        if "Председатель" in paragraph.text:
+                            keyword_index = i
+                            break
+
                     new_paragraph = document.paragraphs[keyword_index].insert_paragraph_before(base_text)
                     keyword_index += 1
 
@@ -1013,6 +1034,517 @@ def generate_transfer_decree(request):
 
     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
+
+@csrf_exempt
+def generate_rankup_decree_new(request):
+    if request.method == 'POST':
+        try:
+            with transaction.atomic():
+                body = request.body.decode('utf-8')
+                data = json.loads(body)
+
+                decreeDate = data.get('decreeDate')
+
+                forms = data.get('forms', [])
+                bases = [base['base'] for base in data.get('bases', [])]
+
+                template_path = 'docx_generator/static/templates/rankup_template_example.docx'
+                document = Document(template_path)
+
+                keyword_index = -1
+                keyword_index_kz = -1
+
+                for i, paragraph in enumerate(document.paragraphs):
+                    if "Председатель" in paragraph.text:
+                        keyword_index = i
+                        break
+
+                for i, paragraph in enumerate(document.paragraphs):
+                    for run in paragraph.runs:
+                        if "Төраға" in run.text and run.bold:
+                            keyword_index_kz = i
+                            break
+
+                decree_list_instance = DecreeList.objects.create(
+                    decreeType="Присвоение звания",
+                    decreeDate=datetime.strptime(decreeDate, '%Y-%m-%d').date(),
+                    minioDocName=None
+                )
+
+                if keyword_index != -1 and keyword_index_kz != -1:
+                    last_index = None
+                    last_index_kz = None
+                    for index, form in enumerate(forms, start=1):
+                        person_id = form.get('personId')
+                        newRankTitle = form.get('newRank')
+                        rankUpDate = form.get('rankUpDate')
+                        receivedType = form.get('receivedType')
+
+                        try:
+                            personInstance = Person.objects.get(pk=person_id)
+                        except Person.DoesNotExist:
+                            decree_list_instance.delete()
+                            return JsonResponse({'error': 'Выбранного сотрудника не существует'}, status=400)
+
+                        currentPosition = PositionInfo.objects.get(person=personInstance).position
+                        currentDepartment = PositionInfo.objects.get(person=personInstance).department
+
+                        personsRankInfo = RankInfo.objects.get(person=personInstance)
+                        personsPositionInfo = PositionInfo.objects.get(person=personInstance)
+
+                        try:
+                            newRankInstance = MilitaryRank.objects.get(rankTitle=newRankTitle)
+                        except json.JSONDecodeError:
+                            return JsonResponse({'error': 'Неправильное звание'}, status=400)
+
+                        if RankUpInfo.objects.filter(personId=personInstance, decreeId__isConfirmed=False,
+                                                     decreeId__decreeType="Присвоение звания"):
+                            transaction.set_rollback(True)
+                            return JsonResponse({
+                                'error': f'У сотрудника {personInstance.iin} уже существует приказ о присвоении звания '
+                                         f'который '
+                                         f'не согласован'},
+                                status=400)
+
+                        newRankTitle = newRankInstance.rankTitle.lower()
+
+                        if personsRankInfo.militaryRank.order > newRankInstance.order:
+                            transaction.set_rollback(True)
+                            return JsonResponse({'error': 'Новое звание должно быть выше нынешного звания'}, status=400)
+
+                        if receivedType != 'Внеочередное' and personsRankInfo.militaryRank.order + 1 != newRankInstance.order:
+                            transaction.set_rollback(True)
+                            return JsonResponse(
+                                {'error': 'Новое звание должно быть следующим званием а не выше чем на 2 звания'},
+                                status=400)
+
+                        if receivedType == 'На одну ступень выше специального звания' and personsPositionInfo.position.maxRank.order < newRankInstance.order:
+                            transaction.set_rollback(True)
+                            return JsonResponse({'error': 'Новое звание превышает максимальное звание должности'},
+                                                status=400)
+
+                        changedRankTitleKaz = newRankTitle
+                        if newRankTitle == 'старший лейтенант':
+                            changedRankTitleKaz = 'аға лейтенант'
+
+                        if receivedType == 'Досрочное':
+                            time_difference = datetime.strptime(rankUpDate,
+                                                                "%Y-%m-%d").date() - personsRankInfo.receivedDate
+                            half_promotion_days = personsRankInfo.militaryRank.nextPromotionDateInDays / 2
+                            if time_difference >= timedelta(days=half_promotion_days):
+                                RankUpInfo.objects.create(
+                                    previousRank=personsRankInfo.militaryRank,
+                                    newRank=newRankInstance,
+                                    receivedType=receivedType,
+                                    receivedDate=rankUpDate,
+                                    personId=personInstance,
+                                    decreeId=decree_list_instance
+                                )
+                            else:
+                                transaction.set_rollback(True)
+                                return JsonResponse(
+                                    {'error': 'Ошибка досрочного повышения: Дата повышения не равно или не '
+                                              'превышает половины даты'
+                                              ' последующего повышения'}, status=400)
+
+                        if receivedType == 'Внеочередное':
+                            if personsRankInfo.militaryRank.rankTitle != 'Подполковник' or personsRankInfo.militaryRank.rankTitle != 'Полковник':
+                                rankUpDate_dateformat = datetime.strptime(rankUpDate, "%Y-%m-%d").date()
+                                # Checking if rankUpDate is crossed over
+                                if personsRankInfo.nextPromotionDate <= rankUpDate_dateformat:
+                                    # Taking promotion days count from current and next rank to get how many days
+                                    # needed to RankUp Внеочередное
+                                    current_promotion_days = personsRankInfo.militaryRank.nextPromotionDateInDays
+                                    next_one_step_rank = MilitaryRank.objects.get(
+                                        order=personsRankInfo.militaryRank.order + 1)
+                                    one_step_promotion_days = next_one_step_rank.nextPromotionDateInDays
+                                    oneStepRankUpDate = personsRankInfo.receivedDate + timedelta(
+                                        days=current_promotion_days + one_step_promotion_days)
+                                    # Checking if given rank is greater than one step of next rank
+                                    if next_one_step_rank.order + 1 == newRankInstance.order:
+                                        # Checking if rankUpDate with 2 ranks is allowed with given date in request
+                                        if oneStepRankUpDate <= rankUpDate_dateformat:
+
+                                            RankUpInfo.objects.create(
+                                                previousRank=personsRankInfo.militaryRank,
+                                                newRank=newRankInstance,
+                                                receivedDate=rankUpDate,
+                                                receivedType=receivedType,
+                                                personId=personInstance,
+                                                decreeId=decree_list_instance
+                                            )
+                                        else:
+                                            transaction.set_rollback(True)
+                                            return JsonResponse(
+                                                {
+                                                    'error': f'Дата внеочередного повышения должна соответствовать '
+                                                             f'требованиям:'
+                                                             f'предпологаемая дата повышения {oneStepRankUpDate}'},
+                                                status=400)
+                                    else:
+                                        transaction.set_rollback(True)
+                                        return JsonResponse(
+                                            {'error': 'Новое звание должно быть через одну ступень после '
+                                                      'нынешного звания'},
+                                            status=400)
+                                else:
+                                    transaction.set_rollback(True)
+                                    return JsonResponse(
+                                        {'error': 'Дата повышения в приказе должна быть после даты '
+                                                  'следующего'
+                                                  'повышения'},
+                                        status=400)
+                            else:
+                                transaction.set_rollback(True)
+                                return JsonResponse({'error': 'Нету доступа получения внеочередного повышения'},
+                                                    status=400)
+
+                        if receivedType == 'На одну ступень выше специального звания':
+                            if personsRankInfo.militaryRank.order + 1 == newRankInstance.order:
+                                rankUpDate_dateformat = datetime.strptime(rankUpDate, "%Y-%m-%d").date()
+                                if personsRankInfo.nextPromotionDate <= rankUpDate_dateformat:
+                                    RankUpInfo.objects.create(
+                                        previousRank=personsRankInfo.militaryRank,
+                                        newRank=newRankInstance,
+                                        receivedType=receivedType,
+                                        receivedDate=rankUpDate,
+                                        personId=personInstance,
+                                        decreeId=decree_list_instance
+                                    )
+                                else:
+                                    transaction.set_rollback(True)
+                                    return JsonResponse(
+                                        {'error': 'Данная дата не подходит с датой следующего повышения'},
+                                        status=400)
+                            else:
+                                transaction.set_rollback(True)
+                                return JsonResponse(
+                                    {'error': 'Новое звание должно быть следующим после нынешного звания'},
+                                    status=400)
+
+                        soglasnie = ['б', 'в', 'г', 'д', 'ж', 'з', 'й', 'к', 'л', 'м', 'н', 'п', 'р', 'с', 'т', 'ф',
+                                     'х', 'ц',
+                                     'ч',
+                                     'ш', 'щ']
+                        glasnie = ['а', 'е', 'ё', 'и', 'о', 'у', 'ы', 'э', 'ю', 'я']
+
+                        changedSurname = personInstance.surname
+                        changedFirstName = personInstance.firstName
+                        changedSurnameKaz = personInstance.surname
+                        changedPatronymic = personInstance.patronymic
+
+                        if personInstance.gender.genderName == 'Мужской':
+                            if personInstance.firstName[-1] in soglasnie:
+                                changedFirstName = personInstance.firstName + 'у'
+                            else:
+                                changedFirstName = personInstance.firstName
+
+                            if personInstance.surname[-2:] == 'ев' or personInstance.surname[-2:] == 'ов':
+                                changedSurname = personInstance.surname + 'у'
+                                changedSurnameKaz = personInstance.surname + 'қа'
+                            else:
+                                changedSurname = personInstance.surname
+                                changedSurnameKaz = personInstance.surname
+
+                        if personInstance.gender.genderName == 'Женский':
+                            if personInstance.firstName[-1] == 'а':
+                                changedFirstName = personInstance.firstName[:-1]
+                                changedFirstName = changedFirstName + 'е'
+                            else:
+                                changedFirstName = personInstance.firstName
+
+                            if personInstance.surname[-3:] == 'ева' or personInstance.surname[-3:] == 'ова':
+                                changedSurname = personInstance.surname[:-1]
+                                changedSurname = changedSurname + 'ой'
+                                changedSurnameKaz = personInstance.surname + 'ға'
+                            else:
+                                changedSurname = personInstance.surname
+
+                            if personInstance.patronymic[-4:] == 'евна' or personInstance.patronymic[-4:] == 'овна':
+                                changedPatronymic = personInstance.patronymic[:-1]
+                                changedPatronymic = changedPatronymic + 'е'
+                            else:
+                                changedPatronymic = personInstance.patronymic
+
+                        personsFIO = changedSurname + ' ' + changedFirstName + ' ' + changedPatronymic
+                        personsFIOKaz = personInstance.firstName + ' ' + personInstance.patronymic + ' ' + changedSurnameKaz
+
+                        changedCurrentDepartmentName = currentDepartment.DepartmentName
+                        changedCurrentDepartmentNameKaz = currentDepartment.DepartmentNameKaz
+                        changedCurrentPositionKaz = currentPosition.positionTitleKaz
+                        changedCurrentPosition = currentPosition.positionTitle
+
+                        words = currentDepartment.DepartmentName.split()
+                        if words[0] == 'Управление':
+                            words[0] = 'Управления'
+                            changedCurrentDepartmentName = ' '.join(words)
+
+                        if currentDepartment.DepartmentName == 'ЦА':
+                            changedCurrentDepartmentName = 'Управления'
+
+                        if currentDepartment.DepartmentName == 'ЦА':
+                            currentDepartment.DepartmentName = 'Управление'
+
+                        if currentDepartment.DepartmentNameKaz == 'Басқарма':
+                            changedCurrentDepartmentNameKaz = 'Басқармасының'
+                        else:
+                            changedCurrentDepartmentNameKaz = currentDepartment.DepartmentNameKaz + 'ның'
+
+                        if currentPosition.positionTitle == 'Руководитель департамента':
+                            changedCurrentPosition = 'Руководителю департамента'
+
+                        if currentPosition.positionTitle == 'Заместитель руководителя департамента':
+                            changedCurrentPosition = 'Заместителю руководителя департамента'
+
+                        if currentPosition.positionTitle == 'Руководитель управления':
+                            changedCurrentPosition = 'Руководителю управления'
+
+                        if currentPosition.positionTitle == 'Заместитель руководителя управления':
+                            changedCurrentPosition = 'Заместителю руководителя управления'
+
+                        if currentPosition.positionTitle == 'Оперуполномоченный по особо важным делам':
+                            changedCurrentPosition = 'Оперуполномоченному по особо важным делам'
+
+                        if currentPosition.positionTitle == 'Старший оперуполномоченный':
+                            changedCurrentPosition = 'Старшему оперуполномоченному'
+
+                        if currentPosition.positionTitle == 'Оперуполномоченный':
+                            changedCurrentPosition = 'Оперуполномоченному'
+
+                        if currentPosition.positionTitleKaz == 'Аға жедел уәкіл':
+                            changedCurrentPositionKaz = 'Аға жедел уәкілі'
+                        if currentPosition.positionTitleKaz == 'Жедел уәкіл':
+                            changedCurrentPositionKaz = 'Жедел уәкілі'
+                        if currentPosition.positionTitleKaz == 'Аса маңызды істер жөніндегі жедел уәкіл':
+                            changedCurrentPositionKaz = 'Аса маңызды істер жөніндегі жедел уәкілі'
+
+                        changedCurrentPosition = changedCurrentPosition.lower()
+                        changedCurrentPositionKaz = changedCurrentPositionKaz.lower()
+
+                        year, month, day = map(int, rankUpDate.split('-'))
+                        day = int(day)
+                        monthString = None
+                        monthStringKaz = None
+
+                        if month == 1:
+                            monthString = 'января'
+                            monthStringKaz = 'қантардан'
+                        if month == 2:
+                            monthString = 'февраля'
+                            monthStringKaz = 'ақпаннан'
+                        if month == 3:
+                            monthString = 'марта'
+                            monthStringKaz = 'наурыздан'
+                        if month == 4:
+                            monthString = 'апреля'
+                            monthStringKaz = 'сәуірден'
+                        if month == 5:
+                            monthString = 'мая'
+                            monthStringKaz = 'мамырдан'
+                        if month == 6:
+                            monthString = 'июня'
+                            monthStringKaz = 'маусымнан'
+                        if month == 7:
+                            monthString = 'июля'
+                            monthStringKaz = 'шілдеден'
+                        if month == 8:
+                            monthString = 'августа'
+                            monthStringKaz = 'тамыздан'
+                        if month == 9:
+                            monthString = 'сентября'
+                            monthStringKaz = 'қыркүйектен'
+                        if month == 10:
+                            monthString = 'октября'
+                            monthStringKaz = 'қазаннан'
+                        if month == 11:
+                            monthString = 'ноября'
+                            monthStringKaz = 'қарашадан'
+                        if month == 12:
+                            monthString = 'декабря'
+                            monthStringKaz = 'желтоқсаннан'
+
+                        changedDateKaz = str(year) + ' жылғы ' + str(day) + ' ' + monthStringKaz
+                        changedDate = str(day) + ' ' + monthString + ' ' + str(year) + ' ' + 'года'
+
+                        form_text = None
+                        form_text_kz = None
+
+                        form_text = f"\t{index}. Присвоить очередное специальное звание {newRankTitle} службы экономических расследований {changedCurrentPosition} {changedCurrentDepartmentName} ________________________ департамента Агентства Республики Казахстан по финансовому мониторингу {personsFIO} с {changedDate}."
+                        form_text_kz = f"\t{index}. Кезекті экономикалық тергеп-тексеру қызметінің {changedRankTitleKaz} арнаулы атағы Қазақстан Республикасы Қаржылық мониторинг агенттігінің ________________________ департаменті {changedCurrentDepartmentNameKaz} {changedCurrentPositionKaz} {personsFIOKaz} {changedDateKaz} бастап берілсін."
+
+                        for i, paragraph in enumerate(document.paragraphs):
+                            if "Председатель" in paragraph.text:
+                                keyword_index = i
+                                break
+
+                        new_paragraph = document.paragraphs[keyword_index].insert_paragraph_before(form_text)
+                        keyword_index += 1
+
+                        run = new_paragraph.runs[0]
+                        run.font.name = 'Times New Roman'
+                        run.font.size = Pt(14)
+
+                        new_paragraph.paragraph_format.line_spacing = Pt(16)
+                        new_paragraph.paragraph_format.space_after = Pt(0)
+
+                        new_paragraph.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
+
+                        last_index = index
+
+                        for i, paragraph in enumerate(document.paragraphs):
+                            for run in paragraph.runs:
+                                if "Төраға" in run.text and run.bold:
+                                    keyword_index_kz = i
+                                    break
+
+                        new_paragraph_kz = document.paragraphs[keyword_index_kz].insert_paragraph_before(form_text_kz)
+                        keyword_index_kz += 1
+
+                        run = new_paragraph_kz.runs[0]
+                        run.font.name = 'Times New Roman'
+                        run.font.size = Pt(14)
+
+                        new_paragraph_kz.paragraph_format.line_spacing = Pt(16)
+                        new_paragraph_kz.paragraph_format.space_after = Pt(0)
+
+                        new_paragraph_kz.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
+
+                        new_paragraph.paragraph_format.keep_together = True
+
+                        last_index_kz = index
+
+                    bases_kz = []
+                    for base in bases:
+                        if base == 'представление':
+                            try:
+                                predstavlenie = Base.objects.get(baseName="Представление")
+                                decree_list_instance.decreeBases.add(predstavlenie)
+                            except Base.DoesNotExist:
+                                decree_list_instance.delete()
+                                return JsonResponse({'error': 'Представление не было найдено в базе данных'},
+                                                    status=400)
+
+                            bases_kz.append('ұсыныс')
+                        elif base == 'рапорт':
+                            try:
+                                raport = Base.objects.get(baseName="Рапорт")
+                                decree_list_instance.decreeBases.add(raport)
+                            except Base.DoesNotExist:
+                                decree_list_instance.delete()
+                                return JsonResponse({'error': 'Рапорт не было найден в базе данных'}, status=400)
+
+                            bases_kz.append('баянат')
+                        elif base == 'заявление':
+                            try:
+                                zayavlenie = Base.objects.get(baseName="Заявление")
+                                decree_list_instance.decreeBases.add(zayavlenie)
+                            except Base.DoesNotExist:
+                                decree_list_instance.delete()
+                                return JsonResponse({'error': 'Заявление не было найдено в базе данных'}, status=400)
+
+                            bases_kz.append('өтініш')
+                        elif base == 'протокол':
+                            try:
+                                protocol = Base.objects.get(baseName="Протокол")
+                                decree_list_instance.decreeBases.add(protocol)
+                            except Base.DoesNotExist:
+                                decree_list_instance.delete()
+                                return JsonResponse({'error': 'Протокол не было найден в базе данных'}, status=400)
+                            bases_kz.append('хаттама')
+                    if len(forms) > 1:
+                        # Modify bases if needed
+                        modified_bases = []
+                        modified_bases_kz = []
+                        for base in bases:
+                            if base == 'представление':
+                                modified_bases.append('представления')
+                                modified_bases_kz.append('ұсыныстар')
+                            elif base == 'рапорт':
+                                modified_bases.append('рапорта')
+                                modified_bases_kz.append('баянаттар')
+                            elif base == 'заявление':
+                                modified_bases.append('заявления')
+                                modified_bases_kz.append('өтініштер')
+                            elif base == 'протокол':
+                                modified_bases.append('протокола')
+                                modified_bases_kz.append('хаттамалар')
+                        bases = modified_bases
+                        bases_kz = modified_bases_kz
+
+                    base_text = f"\t{last_index + 1}. Настоящий приказ вступает в силу со дня подписания.\n\tОснование: {', '.join(bases)}."
+                    base_text_kz = (f"\t{last_index_kz + 1}. Осы бұйрық қол қойылған күнінен бастап күшіне "
+                                    f"енеді.\n\tНегіздеме: {', '.join(bases_kz)}.")
+
+                    # Основание
+
+                    for i, paragraph in enumerate(document.paragraphs):
+                        if "Председатель" in paragraph.text:
+                            keyword_index = i
+                            break
+
+                    new_paragraph = document.paragraphs[keyword_index].insert_paragraph_before(base_text)
+                    keyword_index += 1
+
+                    run = new_paragraph.runs[0]
+                    run.font.name = 'Times New Roman'
+                    run.font.size = Pt(14)
+
+                    new_paragraph.paragraph_format.line_spacing = Pt(16)
+                    new_paragraph.paragraph_format.space_after = Pt(0)
+
+                    document.paragraphs[keyword_index].insert_paragraph_before('\n')
+
+                    # Негіздеме
+
+                    for i, paragraph in enumerate(document.paragraphs):
+                        for run in paragraph.runs:
+                            if "Төраға" in run.text and run.bold:
+                                keyword_index_kz = i
+                                break
+
+                    new_paragraph_kz = document.paragraphs[keyword_index_kz].insert_paragraph_before(base_text_kz)
+                    keyword_index_kz += 1
+
+                    run = new_paragraph_kz.runs[0]
+                    run.font.name = 'Times New Roman'
+                    run.font.size = Pt(14)
+
+                    new_paragraph_kz.paragraph_format.line_spacing = Pt(16)
+                    new_paragraph_kz.paragraph_format.space_after = Pt(0)
+
+                    document.paragraphs[keyword_index_kz].insert_paragraph_before('\n')
+
+                    doc_stream = BytesIO()
+                    document.save(doc_stream)
+                    doc_stream.seek(0)
+
+                    # Prepare the HTTP response with the modified document
+                    response = HttpResponse(doc_stream.read(),
+                                            content_type='application/vnd.openxmlformats-officedocument.wordprocessingml'
+                                                         '.document')
+                    response['Content-Disposition'] = f'attachment; filename=Приказ о присвоении звания.docx'
+
+                    doc_stream.seek(0)
+                    document_id = str(uuid4())
+                    document_name = f"document_{document_id}.docx"
+
+                    minio_client = Minio(MINIO_ENDPOINT,
+                                         access_key=MINIO_ACCESS_KEY,
+                                         secret_key=MINIO_SECRET_KEY,
+                                         secure=False)
+
+                    minio_client.put_object(MINIO_BUCKET_NAME, document_name, data=doc_stream,
+                                            length=len(doc_stream.getvalue()))
+                    document_url = f"{MINIO_ENDPOINT}/{MINIO_BUCKET_NAME}/{document_name}"
+                    print(document_url)
+                    decree_list_instance.minioDocName = document_name
+                    decree_list_instance.save()
+                    return response
+
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
 
 
 @csrf_exempt
