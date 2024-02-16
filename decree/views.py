@@ -16,7 +16,7 @@ from position.models import PositionInfo, Position
 from position.serializers import PositionSerializer, PositionInfoSerializer
 from working_history.models import WorkingHistory
 from .models import DecreeList, SpecCheck, SickLeave, Investigation, TransferInfo, RankUpInfo, AppointmentInfo, \
-    OtpuskInfo, KomandirovkaInfo
+    OtpuskInfo, KomandirovkaInfo, FiringInfo
 from .serializers import DecreeListSerializer, SpecCheckSerializer, SickLeaveSerializer, InvestigationSerializer
 from minio import Minio
 from rest_framework.decorators import action
@@ -95,6 +95,15 @@ class DecreeListViewSet(viewsets.ModelViewSet):
                     }
                     decree_info['forms'].append(rankup_data)
 
+            if decree.decreeType == "Увольнение":
+                firing_infos = FiringInfo.objects.filter(decreeId=decree)
+                for firing_info in firing_infos:
+                    person_data = PersonSerializer(firing_info.personId).data
+                    firing_data = {
+                        'person': person_data,
+                        'firingDate': firing_info.firingDate,
+                    }
+                    decree_info['forms'].append(firing_data)
             decree_data.append(decree_info)
 
         return JsonResponse({'decrees': decree_data})
@@ -202,17 +211,28 @@ class DecreeListViewSet(viewsets.ModelViewSet):
 
             return JsonResponse({'rankUpInfo': rank_up_info})
         if decreeInstance.decreeType == 'Увольнение':
+            forms = []
+            firing_infos = FiringInfo.objects.filter(decreeId=decreeInstance)
+            for firingInfo in firing_infos:
+                person_data = PersonSerializer(firingInfo.personId).data
+
+                person_data = {
+                    'person': person_data,
+                    'firingDate': firingInfo.firingDate,
+                }
+                forms.append(person_data)
+
             firing_info = {
                 'decreeInfo': {
                     'decreeId': decreeInstance.id,
                     'decreeType': decreeInstance.decreeType,
                     'decreeNumber': decreeInstance.decreeNumber,
                     'decreeDate': decreeInstance.decreeDate,
+                    'bases': [base.baseName for base in decreeInstance.decreeBases.all()],
                     'document': decreeInstance.minioDocName,
-                    'person': persons,
-                },
+                    'forms': forms,
+                }
             }
-
             return JsonResponse({'firingInfo': firing_info})
 
         if decreeInstance.decreeType == 'Отпуск':
@@ -335,25 +355,38 @@ class DecreeListViewSet(viewsets.ModelViewSet):
             return HttpResponse(response_json, content_type='application/json')
 
         if decree_instance.decreeType == 'Увольнение':
-
-                personInstance.isFired = True
-                personInstance.save()
+            firing_infos = FiringInfo.objects.filter(decreeId=decree_instance)
+            for firing_info in firing_infos:
+                firing_info.personId.isFired = True
+                firing_info.personId.save()
 
                 try:
-                    vacation = Vacation.objects.get(personId=personInstance, year=decree_instance.decreeDate.year)
-                    vacation.daysCount = 0
-                    vacation.save()
+                    basicVacation = None
+                    expVacation = None
+                    try:
+                        basicVacation = Vacation.objects.get(personId=firing_info.personId, daysType="Обычные")
+                    except Vacation.DoesNotExist:
+                        pass
+
+                    try:
+                        expVacation = Vacation.objects.get(personId=firing_info.personId, daysType="Стажные")
+                    except Vacation.DoesNotExist:
+                        pass
+
+                    if basicVacation:
+                        basicVacation.delete()
+                    if expVacation:
+                        expVacation.delete()
 
                 except Vacation.DoesNotExist:
-                    return JsonResponse({'error': 'У сотрудника не имеется объект отпускных дней'},
-                                        status=400)
+                    pass
 
-                decree_instance.isConfirmed = True
-                decree_instance.save()
+            decree_instance.isConfirmed = True
+            decree_instance.save()
 
-                response_data = {'status': 'success', 'message': 'Приказ об увольнении согласован'}
-                response_json = json.dumps(response_data)
-                return HttpResponse(response_json, content_type='application/json')
+            response_data = {'status': 'success', 'message': 'Приказ об увольнении согласован'}
+            response_json = json.dumps(response_data)
+            return HttpResponse(response_json, content_type='application/json')
 
         if decree_instance.decreeType == 'Отпуск':
 

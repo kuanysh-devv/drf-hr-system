@@ -238,3 +238,12 @@ msgstr "Основания"
 
 msgid "baseName"
 msgstr "Название основания"
+
+msgid "Firing date"
+msgstr "Дата увольнения"
+
+msgid "FiringInfo"
+msgstr "Архив увольнения"
+
+msgid "FiringInfos"
+msgstr "Архивы увольнений"

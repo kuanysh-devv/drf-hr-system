@@ -12,7 +12,8 @@ class DecreeList(models.Model):
     decreeNumber = models.CharField(max_length=255, verbose_name=_("Decree Number"), null=True, blank=True)
     decreeDate = models.DateField(verbose_name=_("Decree Date"))
     isConfirmed = models.BooleanField(default=False, verbose_name=_("isConfirmed"))
-    minioDocName = models.CharField(max_length=4048, default="None", null=True, blank=True, verbose_name=_("minioDocName"))
+    minioDocName = models.CharField(max_length=4048, default="None", null=True, blank=True,
+                                    verbose_name=_("minioDocName"))
     decreeBases = models.ManyToManyField('Base', verbose_name=_("Bases"), blank=True)
 
     class Meta:
@@ -107,6 +108,24 @@ class RankUpInfo(models.Model):
     class Meta:
         verbose_name = _("RankUpInfo")
         verbose_name_plural = _("RankUpInfos")
+
+    def __str__(self):
+        return f"Архив - {self.decreeId.decreeType} - {self.personId.iin} - Дата: {self.decreeId.decreeDate}"
+
+
+class FiringInfo(models.Model):
+    firingDate = models.DateField(verbose_name=_("Firing date"), null=True, blank=True)
+    personId = models.ForeignKey(Person, on_delete=models.CASCADE, default=1, verbose_name=_("Person id"))
+    decreeId = models.ForeignKey(
+        'DecreeList',
+        on_delete=models.CASCADE,
+        default=1,
+        verbose_name=_("Decree id")
+    )
+
+    class Meta:
+        verbose_name = _("FiringInfo")
+        verbose_name_plural = _("FiringInfos")
 
     def __str__(self):
         return f"Архив - {self.decreeId.decreeType} - {self.personId.iin} - Дата: {self.decreeId.decreeDate}"

@@ -13,7 +13,7 @@ def add_vacation_days(self, *args, **kwargs):
     # Get the current year
     current_year = datetime.now().year
     # Check if vacation instances for the current year already exis
-    people = Person.objects.all()
+    people = Person.objects.filter(isFired=False)
 
     def calculate_experience(working_histories, type):
         total_experience = timedelta()
