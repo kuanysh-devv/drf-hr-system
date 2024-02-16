@@ -104,6 +104,21 @@ class DecreeListViewSet(viewsets.ModelViewSet):
                         'firingDate': firing_info.firingDate,
                     }
                     decree_info['forms'].append(firing_data)
+
+            if decree.decreeType == "Командировка":
+                komandirovka_infos = KomandirovkaInfo.objects.filter(decreeId=decree)
+                for komandirovka_info in komandirovka_infos:
+                    person_data = PersonSerializer(komandirovka_info.personId).data
+                    komandirovka_data = {
+                        'person': person_data,
+                        'startDate': komandirovka_info.startDate,
+                        'endDate': komandirovka_info.endDate,
+                        'departure': komandirovka_info.departure,
+                        'travelChoice': komandirovka_info.travelChoice,
+                        'transport': komandirovka_info.transport
+                    }
+                    decree_info['forms'].append(komandirovka_data)
+
             decree_data.append(decree_info)
 
         return JsonResponse({'decrees': decree_data})
@@ -120,7 +135,6 @@ class DecreeListViewSet(viewsets.ModelViewSet):
             forms = []
             appointment_infos = AppointmentInfo.objects.filter(decreeId=decreeInstance)
             for appointmentInfo in appointment_infos:
-
                 person_data = PersonSerializer(appointmentInfo.personId).data
 
                 person_data = {
@@ -151,7 +165,6 @@ class DecreeListViewSet(viewsets.ModelViewSet):
             forms = []
             transfer_infos = TransferInfo.objects.filter(decreeId=decreeInstance)
             for transferInfo in transfer_infos:
-
                 person_data = PersonSerializer(transferInfo.personId).data
 
                 person_data = {
@@ -185,7 +198,6 @@ class DecreeListViewSet(viewsets.ModelViewSet):
             forms = []
             rankup_infos = RankUpInfo.objects.filter(decreeId=decreeInstance)
             for rankupInfo in rankup_infos:
-
                 person_data = PersonSerializer(rankupInfo.personId).data
 
                 person_data = {
@@ -261,23 +273,31 @@ class DecreeListViewSet(viewsets.ModelViewSet):
             return JsonResponse({'otpuskInfo': otpusk_info})
 
         if decreeInstance.decreeType == 'Командировка':
-            decreeInfo = KomandirovkaInfo.objects.get(decreeId=decreeInstance)
+            forms = []
+            komandirovka_infos = KomandirovkaInfo.objects.filter(decreeId=decreeInstance)
+            for komandirovka_info in komandirovka_infos:
+                person_data = PersonSerializer(komandirovka_info.personId).data
 
-            komandirovka_info = [{
+                person_data = {
+                    'person': person_data,
+                    'startDate': komandirovka_info.startDate,
+                    'endDate': komandirovka_info.endDate,
+                    'departure': komandirovka_info.departure,
+                    'travelChoice': komandirovka_info.travelChoice,
+                    'transport': komandirovka_info.transport
+                }
+                forms.append(person_data)
+            komandirovka_info = {
                 'decreeInfo': {
                     'decreeId': decreeInstance.id,
                     'decreeType': decreeInstance.decreeType,
                     'decreeNumber': decreeInstance.decreeNumber,
                     'decreeDate': decreeInstance.decreeDate,
+                    'bases': [base.baseName for base in decreeInstance.decreeBases.all()],
                     'document': decreeInstance.minioDocName,
-                    'person': persons,
-                },
-                'startDate': decreeInfo.startDate,
-                'endDate': decreeInfo.endDate,
-                'departure': decreeInfo.departure,
-                'travelChoice': decreeInfo.travelChoice,
-                'transport': decreeInfo.transport
-            }]
+                    'forms': forms,
+                }
+            }
 
             return JsonResponse({'komandirovka_info': komandirovka_info})
 
@@ -291,7 +311,6 @@ class DecreeListViewSet(viewsets.ModelViewSet):
 
             appointment_infos = AppointmentInfo.objects.filter(decreeId=decree_instance)
             for appointmentInfo in appointment_infos:
-
                 staffingTableInstance = StaffingTable.objects.get(
                     staffing_table_department=appointmentInfo.appointmentDepartment,
                     staffing_table_position=appointmentInfo.appointmentPosition)
@@ -315,8 +334,9 @@ class DecreeListViewSet(viewsets.ModelViewSet):
                 OldStaffingTableInstance = StaffingTable.objects.get(
                     staffing_table_department=personsPositionInfo.department,
                     staffing_table_position=personsPositionInfo.position)
-                NewStaffingTableInstance = StaffingTable.objects.get(staffing_table_department=transferInfo.newDepartment,
-                                                                     staffing_table_position=transferInfo.newPosition)
+                NewStaffingTableInstance = StaffingTable.objects.get(
+                    staffing_table_department=transferInfo.newDepartment,
+                    staffing_table_position=transferInfo.newPosition)
                 print("Old: ", OldStaffingTableInstance)
                 print("New: ", NewStaffingTableInstance)
                 Vacancy.delete(NewStaffingTableInstance.vacancy_list.first())
@@ -390,63 +410,65 @@ class DecreeListViewSet(viewsets.ModelViewSet):
 
         if decree_instance.decreeType == 'Отпуск':
 
-                decreeInfo = OtpuskInfo.objects.get(decreeId=decree_instance)
-                if decreeInfo.otpuskType == 'Отпуск':
-                    personsBasicVacation = Vacation.objects.get(personId=personInstance, year=decreeInfo.startDate.year,
-                                                                daysType="Обычные")
-                    if decreeInfo.oldExperiencedDaysCount:
-                        personsExperiencedVacation = Vacation.objects.get(personId=personInstance,
-                                                                          year=decreeInfo.startDate.year,
-                                                                          daysType="Стажные")
-                        personsExperiencedVacation.daysCount = decreeInfo.newExperiencedDaysCount
-                        personsExperiencedVacation.save()
+            decreeInfo = OtpuskInfo.objects.get(decreeId=decree_instance)
+            if decreeInfo.otpuskType == 'Отпуск':
+                personsBasicVacation = Vacation.objects.get(personId=personInstance, year=decreeInfo.startDate.year,
+                                                            daysType="Обычные")
+                if decreeInfo.oldExperiencedDaysCount:
+                    personsExperiencedVacation = Vacation.objects.get(personId=personInstance,
+                                                                      year=decreeInfo.startDate.year,
+                                                                      daysType="Стажные")
+                    personsExperiencedVacation.daysCount = decreeInfo.newExperiencedDaysCount
+                    personsExperiencedVacation.save()
 
-                    personsBasicVacation.daysCount = decreeInfo.newBasicDaysCount
-                    personsBasicVacation.save()
+                personsBasicVacation.daysCount = decreeInfo.newBasicDaysCount
+                personsBasicVacation.save()
 
-                    personInstance.inVacation = True
-                    personInstance.save()
-                    decree_instance.isConfirmed = True
-                    decree_instance.save()
-
-                    response_data = {'status': 'success', 'message': 'Приказ об отпуске согласован'}
-                    response_json = json.dumps(response_data)
-                    return HttpResponse(response_json, content_type='application/json')
-
-                if decreeInfo.otpuskType == 'Отпуск Кратко':
-                    personInstance.inVacation = True
-                    personInstance.save()
-                    decree_instance.isConfirmed = True
-                    decree_instance.save()
-
-                    response_data = {'status': 'success', 'message': 'Приказ об отпуске согласован'}
-                    response_json = json.dumps(response_data)
-                    return HttpResponse(response_json, content_type='application/json')
-                if decreeInfo.otpuskType == 'Отпуск Отзыв':
-
-                    personsBasicVacation = Vacation.objects.get(personId=personInstance, year=decreeInfo.startDate.year,
-                                                                daysType="Обычные")
-                    personsBasicVacation.daysCount = decreeInfo.newBasicDaysCount
-                    personsBasicVacation.save()
-
-                    personInstance.inVacation = False
-                    personInstance.save()
-                    decree_instance.isConfirmed = True
-                    decree_instance.save()
-
-                    response_data = {'status': 'success', 'message': 'Приказ об отзыве отпуска согласован'}
-                    response_json = json.dumps(response_data)
-                    return HttpResponse(response_json, content_type='application/json')
-
-        if decree_instance.decreeType == 'Командировка':
-                personInstance.inKomandirovka = True
+                personInstance.inVacation = True
                 personInstance.save()
                 decree_instance.isConfirmed = True
                 decree_instance.save()
 
-                response_data = {'status': 'success', 'message': 'Приказ о командировке согласован'}
+                response_data = {'status': 'success', 'message': 'Приказ об отпуске согласован'}
                 response_json = json.dumps(response_data)
                 return HttpResponse(response_json, content_type='application/json')
+
+            if decreeInfo.otpuskType == 'Отпуск Кратко':
+                personInstance.inVacation = True
+                personInstance.save()
+                decree_instance.isConfirmed = True
+                decree_instance.save()
+
+                response_data = {'status': 'success', 'message': 'Приказ об отпуске согласован'}
+                response_json = json.dumps(response_data)
+                return HttpResponse(response_json, content_type='application/json')
+            if decreeInfo.otpuskType == 'Отпуск Отзыв':
+                personsBasicVacation = Vacation.objects.get(personId=personInstance, year=decreeInfo.startDate.year,
+                                                            daysType="Обычные")
+                personsBasicVacation.daysCount = decreeInfo.newBasicDaysCount
+                personsBasicVacation.save()
+
+                personInstance.inVacation = False
+                personInstance.save()
+                decree_instance.isConfirmed = True
+                decree_instance.save()
+
+                response_data = {'status': 'success', 'message': 'Приказ об отзыве отпуска согласован'}
+                response_json = json.dumps(response_data)
+                return HttpResponse(response_json, content_type='application/json')
+
+        if decree_instance.decreeType == 'Командировка':
+            komandirovka_infos = KomandirovkaInfo.objects.filter(decreeId=decree_instance)
+            for komandirovka_info in komandirovka_infos:
+                personInstance = komandirovka_info.personId
+                personInstance.inKomandirovka = True
+                personInstance.save()
+            decree_instance.isConfirmed = True
+            decree_instance.save()
+
+            response_data = {'status': 'success', 'message': 'Приказ о командировке согласован'}
+            response_json = json.dumps(response_data)
+            return HttpResponse(response_json, content_type='application/json')
 
     @action(detail=False, methods=['get'])
     def decreeDownload(self, request, *args, **kwargs):
