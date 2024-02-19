@@ -30,7 +30,7 @@ def rankInfo_pre_save(sender, instance, **kwargs):
         max_rank = person_instance.positionInfo.position.maxRank
         rankUpInfo = None
         non_valid_ranks = MilitaryRank.objects.filter(order__gt=max_rank.order)
-        valid_ranks = MilitaryRank.objects.filter(order__lte=max_rank.order)
+        valid_ranks = MilitaryRank.objects.filter(order__lte=max_rank.order+1)
 
         try:
             # Get the original instance from the database
@@ -69,7 +69,6 @@ def rankInfo_pre_save(sender, instance, **kwargs):
                                                    decreeId__decreeType="Присвоение звания").first()
             if rankUpInfo:
                 if (rankUpInfo.receivedType == 'Досрочное' or rankUpInfo.receivedType == 'Внеочередное') and instance.militaryRank in non_valid_ranks:
-
                     next_promotion_days = instance.militaryRank.nextPromotionDateInDays
                     new_next_promotion_date = instance.receivedDate + timedelta(days=next_promotion_days)
                     instance.needPositionUp = False
@@ -81,6 +80,16 @@ def rankInfo_pre_save(sender, instance, **kwargs):
                     new_next_promotion_date = instance.receivedDate + timedelta(days=next_promotion_days)
                     instance.nextPromotionDate = new_next_promotion_date
                     instance.decreeNumber = rankUpInfo.decreeId.decreeNumber
+
+            else:
+                if instance.militaryRank not in valid_ranks:
+                    original_instance = RankInfo.objects.get(pk=instance.pk)
+                    instance.militaryRank = original_instance.militaryRank
+
+                next_promotion_days = instance.militaryRank.nextPromotionDateInDays
+                new_next_promotion_date = instance.receivedDate + timedelta(days=next_promotion_days)
+                instance.needPositionUp = False
+                instance.nextPromotionDate = new_next_promotion_date
         except (RankUpInfo.DoesNotExist, DecreeList.DoesNotExist):
 
             if instance.militaryRank not in valid_ranks:

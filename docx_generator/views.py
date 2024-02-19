@@ -1955,7 +1955,6 @@ def generate_komandirovka_decree(request):
                 for i, paragraph in enumerate(document.paragraphs):
                     for run in paragraph.runs:
                         if "Департамент" in run.text and run.bold:
-                            print(run.text)
                             keyword_index_kz = i
                             break
 
@@ -2115,7 +2114,7 @@ def generate_komandirovka_decree(request):
                         print(index)
                         for i, paragraph in enumerate(document.paragraphs):
                             for run in paragraph.runs:
-                                if "Төраға" in run.text and run.bold:
+                                if "Департамент" in run.text and run.bold:
                                     keyword_index_kz = i
                                     break
 
@@ -2197,7 +2196,7 @@ def generate_komandirovka_decree(request):
 
                         for i, paragraph in enumerate(document.paragraphs):
                             for run in paragraph.runs:
-                                if "Төраға" in run.text and run.bold:
+                                if "Департамент" in run.text and run.bold:
                                     keyword_index_kz = i
                                     break
 
