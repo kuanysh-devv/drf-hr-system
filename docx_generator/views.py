@@ -1966,9 +1966,8 @@ def generate_komandirovka_decree(request):
                 if keyword_index_kz != -1:
                     last_index = None
                     last_index_kz = None
-                    index = 1
-                    for form in forms:
-
+                    departments = []
+                    for index, form in enumerate(forms, start=1):
                         person_id = form.get('personId')
                         departure = form.get('departure')
                         startDate = form.get('startDate')
@@ -1999,7 +1998,7 @@ def generate_komandirovka_decree(request):
                                 'error': f'Командировка {personInstance.iin} в собственное управление невозможна'
                             },
                                 status=400)
-
+                        departments.append(personsPositionInfo.department)
                         if personInstance.inKomandirovka:
                             transaction.set_rollback(True)
                             return JsonResponse({
@@ -2108,10 +2107,8 @@ def generate_komandirovka_decree(request):
 
                         form_text_kz = None
 
-                        form_text_kz = f"\t{index}. Қазақстан Республикасы Қаржылық мониторинг агенттігі (бұдан әрі - Агенттік) ________________ департаменті {changedDepartmentNameKaz} {personsPositionInfo.position.positionTitleKaz.lower()} {personsFIOKaz} {changedDeparture} {dayCount} күн мерзімге, {startDate.year} жылғы {dateString} аралығында іссапарға {choice} жіберілсін.\n\tБелгіленген жерге дейін бару және қайту жолы {transport} белгіленсін.\n\t{index + 1}. Агенттіктің _________________ департаменті {personsPositionInfo.department.DepartmentNameKaz} іссапар шығындарын толық көлемде төлесін."
-                        print(index)
-                        index += 1
-                        print(index)
+                        form_text_kz = f"\t{index}. Қазақстан Республикасы Қаржылық мониторинг агенттігі (бұдан әрі - Агенттік) ________________ департаменті {changedDepartmentNameKaz} {personsPositionInfo.position.positionTitleKaz.lower()} {personsFIOKaz} {changedDeparture} {dayCount} күн мерзімге, {startDate.year} жылғы {dateString} аралығында іссапарға {choice} жіберілсін.\n\tБелгіленген жерге дейін бару және қайту жолы {transport} белгіленсін."
+
                         for i, paragraph in enumerate(document.paragraphs):
                             for run in paragraph.runs:
                                 if "Департамент" in run.text and run.bold:
@@ -2131,7 +2128,566 @@ def generate_komandirovka_decree(request):
                         new_paragraph_kz.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
 
                         last_index_kz = index
-                        index += 1
+
+                    bases_kz = []
+                    for base in bases:
+                        if base == 'представление':
+                            try:
+                                predstavlenie = Base.objects.get(baseName="Представление")
+                                decree_list_instance.decreeBases.add(predstavlenie)
+                            except Base.DoesNotExist:
+                                decree_list_instance.delete()
+                                return JsonResponse({'error': 'Представление не было найдено в базе данных'},
+                                                    status=400)
+
+                            bases_kz.append('ұсыныс')
+                        elif base == 'рапорт':
+                            try:
+                                raport = Base.objects.get(baseName="Рапорт")
+                                decree_list_instance.decreeBases.add(raport)
+                            except Base.DoesNotExist:
+                                decree_list_instance.delete()
+                                return JsonResponse({'error': 'Рапорт не было найден в базе данных'}, status=400)
+
+                            bases_kz.append('баянат')
+                        elif base == 'заявление':
+                            try:
+                                zayavlenie = Base.objects.get(baseName="Заявление")
+                                decree_list_instance.decreeBases.add(zayavlenie)
+                            except Base.DoesNotExist:
+                                decree_list_instance.delete()
+                                return JsonResponse({'error': 'Заявление не было найдено в базе данных'}, status=400)
+
+                            bases_kz.append('өтініш')
+                        elif base == 'протокол':
+                            try:
+                                protocol = Base.objects.get(baseName="Протокол")
+                                decree_list_instance.decreeBases.add(protocol)
+                            except Base.DoesNotExist:
+                                decree_list_instance.delete()
+                                return JsonResponse({'error': 'Протокол не было найден в базе данных'}, status=400)
+                            bases_kz.append('хаттама')
+                    if len(forms) > 1:
+                        # Modify bases if needed
+                        modified_bases = []
+                        modified_bases_kz = []
+                        for base in bases:
+                            if base == 'представление':
+                                modified_bases.append('представления')
+                                modified_bases_kz.append('ұсыныстар')
+                            elif base == 'рапорт':
+                                modified_bases.append('рапорта')
+                                modified_bases_kz.append('баянаттар')
+                            elif base == 'заявление':
+                                modified_bases.append('заявления')
+                                modified_bases_kz.append('өтініштер')
+                            elif base == 'протокол':
+                                modified_bases.append('протокола')
+                                modified_bases_kz.append('хаттамалар')
+                        bases = modified_bases
+                        bases_kz = modified_bases_kz
+
+                    print(departments[0].DepartmentNameKaz)
+                    department_list_text = ""
+                    if len(departments) == 1:
+                        department_list_text = departments[0].DepartmentNameKaz
+
+                    if len(departments) > 1:
+                        for index, department in enumerate(departments):
+                            department_list_text += department.DepartmentNameKaz
+
+                            if index != len(departments) - 1:  # Check if the current department is not the last one
+                                department_list_text += " және "  # Add a comma if it's not the last one
+
+                    payment_text = f"\tАгенттіктің _________________ департаменті {department_list_text} іссапар шығындарын толық көлемде төлесін."
+
+                    for i, paragraph in enumerate(document.paragraphs):
+                        for run in paragraph.runs:
+                            if "Департамент" in run.text and run.bold:
+                                keyword_index_kz = i
+                                break
+
+                    new_paragraph_kz = document.paragraphs[keyword_index_kz].insert_paragraph_before(payment_text)
+                    keyword_index_kz += 1
+
+                    run = new_paragraph_kz.runs[0]
+                    run.font.name = 'Times New Roman'
+                    run.font.size = Pt(14)
+
+                    new_paragraph_kz.paragraph_format.line_spacing = Pt(16)
+                    new_paragraph_kz.paragraph_format.space_after = Pt(0)
+
+                    new_paragraph_kz.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
+
+                    base_text_kz = (f"\t{last_index_kz + 1}. Осы бұйрық қол қойылған күнінен бастап күшіне "
+                                    f"енеді.\n\tНегіздеме: {', '.join(bases_kz)}.")
+
+                    for i, paragraph in enumerate(document.paragraphs):
+                        for run in paragraph.runs:
+                            if "Департамент" in run.text and run.bold:
+                                keyword_index_kz = i
+                                break
+
+                    new_paragraph_kz = document.paragraphs[keyword_index_kz].insert_paragraph_before(base_text_kz)
+                    keyword_index_kz += 1
+
+                    run = new_paragraph_kz.runs[0]
+                    run.font.name = 'Times New Roman'
+                    run.font.size = Pt(14)
+
+                    new_paragraph_kz.paragraph_format.line_spacing = Pt(16)
+                    new_paragraph_kz.paragraph_format.space_after = Pt(0)
+
+                    document.paragraphs[keyword_index_kz].insert_paragraph_before('\n')
+
+                    doc_stream = BytesIO()
+                    document.save(doc_stream)
+                    doc_stream.seek(0)
+
+                    # Prepare the HTTP response with the modified document
+                    response = HttpResponse(doc_stream.read(),
+                                            content_type='application/vnd.openxmlformats-officedocument.wordprocessingml'
+                                                         '.document')
+                    response['Content-Disposition'] = f'attachment; filename=Приказ о командировке.docx'
+
+                    doc_stream.seek(0)
+                    document_id = str(uuid4())
+                    document_name = f"document_{document_id}.docx"
+
+                    minio_client = Minio(MINIO_ENDPOINT,
+                                         access_key=MINIO_ACCESS_KEY,
+                                         secret_key=MINIO_SECRET_KEY,
+                                         secure=False)
+
+                    minio_client.put_object(MINIO_BUCKET_NAME, document_name, data=doc_stream,
+                                            length=len(doc_stream.getvalue()))
+                    document_url = f"{MINIO_ENDPOINT}/{MINIO_BUCKET_NAME}/{document_name}"
+                    print(document_url)
+                    decree_list_instance.minioDocName = document_name
+                    decree_list_instance.save()
+
+                    return response
+
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+
+    return JsonResponse({'error': 'Упс, что-то пошло не так'}, status=405)
+
+
+@csrf_exempt
+def generate_otpusk_decree(request):
+    if request.method == 'POST':
+        try:
+            with transaction.atomic():
+                body = request.body.decode('utf-8')
+                data = json.loads(body)
+
+                decreeDate = data.get('decreeDate')
+                forms = data.get('forms', [])
+                bases = [base['base'] for base in data.get('bases', [])]
+
+                template_path = 'docx_generator/static/templates/otpusk_template.docx'
+
+                keyword_index_kz = -1
+
+                document = Document(template_path)
+                for i, paragraph in enumerate(document.paragraphs):
+                    for run in paragraph.runs:
+                        if "Департамент" in run.text and run.bold:
+                            print(run.text)
+                            keyword_index_kz = i
+                            break
+
+                decree_list_instance = DecreeList.objects.create(
+                    decreeType="Отпуск",
+                    decreeDate=datetime.strptime(decreeDate, '%Y-%m-%d').date(),
+                    minioDocName=None
+                )
+
+                if keyword_index_kz != -1:
+                    last_index = None
+                    last_index_kz = None
+                    template_path = None
+                    for index, form in enumerate(forms, start=1):
+                        person_id = form.get('personId')
+                        startDate = form.get('startDate')
+                        endDate = form.get('endDate')
+                        otpuskType = form.get('otpuskType')
+                        benefitChoice = form.get('benefitChoice')
+                        priority = form.get('priority')
+
+                        try:
+                            personInstance = Person.objects.get(pk=person_id)
+                        except Person.DoesNotExist:
+                            decree_list_instance.delete()
+                            return JsonResponse({'error': 'Выбранного сотрудника не существует'}, status=400)
+
+                        if OtpuskInfo.objects.filter(personId=personInstance, decreeId__isConfirmed=False,
+                                                     decreeId__decreeType="Отпуск"):
+                            transaction.set_rollback(True)
+                            return JsonResponse({
+                                'error': f'У сотрудника {personInstance.iin} уже существует приказ об отпуске '
+                                         f'который '
+                                         f'не согласован'},
+                                status=400)
+
+                        personsPositionInfo = PositionInfo.objects.get(person=personInstance)
+
+                        changedDepartmentNameKaz = personsPositionInfo.department.DepartmentNameKaz
+                        wordsKaz = changedDepartmentNameKaz.split()
+                        if wordsKaz[-1] == 'басқармасы':
+                            wordsKaz[-1] = wordsKaz[-1] + 'ның'
+                            changedDepartmentNameKaz = ' '.join(wordsKaz)
+
+                        changedPositionTitle = personsPositionInfo.position.positionTitleKaz
+                        wordsKaz = changedPositionTitle.split()
+                        if wordsKaz[-1] == 'уәкіл':
+                            wordsKaz[-1] = wordsKaz[-1] + 'і'
+                            changedPositionTitle = ' '.join(wordsKaz)
+
+                        changedSurnameKaz = personInstance.surname
+
+                        if personInstance.gender.genderName == 'Мужской':
+                            if personInstance.surname[-2:] == 'ев' or personInstance.surname[-2:] == 'ов':
+                                changedSurnameKaz = personInstance.surname + 'қа'
+
+                        if personInstance.gender.genderName == 'Женский':
+                            if personInstance.surname[-3:] == 'ева' or personInstance.surname[-3:] == 'ова':
+                                changedSurnameKaz = personInstance.surname + 'ға'
+
+                        personsFIOKaz = personInstance.firstName + ' ' + personInstance.patronymic + ' ' + changedSurnameKaz
+
+                        startDate = datetime.strptime(startDate, "%Y-%m-%d")
+                        endDate = datetime.strptime(endDate, "%Y-%m-%d")
+
+                        if startDate >= endDate:
+                            return JsonResponse({'error': f'Неправильно установленные даты'}, status=400)
+
+                        otpuskYear = startDate.year
+                        dayCount = (endDate - startDate).days + 1
+
+                        holidays_between_dates = Holidays.objects.filter(
+                            holidayDate__range=[startDate, endDate]).count()
+                        dayCount = dayCount + holidays_between_dates
+                        endDate = endDate + timedelta(days=holidays_between_dates)
+
+                        print(dayCount)
+                        print(holidays_between_dates)
+                        vacationDays = None
+                        experienced = None
+
+                        try:
+                            vacationDays = Vacation.objects.get(personId=personInstance, year=otpuskYear,
+                                                                daysType="Обычные")
+                        except Vacation.DoesNotExist:
+                            print("Person doesn't have vacation days")
+
+                        try:
+                            experienced = Vacation.objects.get(personId=personInstance, year=otpuskYear,
+                                                               daysType="Стажные")
+                        except Vacation.DoesNotExist:
+                            print("Person doesn't have experienced vacation days")
+                        # DateString
+                        # (22 күнтізбелік күн,   15 күн еңбек сіңірген жылдары үшін 2 мерекелік күн)
+                        # 2023 жылғы 28 желтоқсан 2024 жылғы 4 ақпан
+
+                        dateString = None
+                        startDateMonth = None
+                        endDateMonth = None
+
+                        if startDate.month == 1:
+                            startDateMonth = 'қантар'
+                        if startDate.month == 2:
+                            startDateMonth = 'ақпан'
+                        if startDate.month == 3:
+                            startDateMonth = 'наурыз'
+                        if startDate.month == 4:
+                            startDateMonth = 'сәуір'
+                        if startDate.month == 5:
+                            startDateMonth = 'мамыр'
+                        if startDate.month == 6:
+                            startDateMonth = 'маусым'
+                        if startDate.month == 7:
+                            startDateMonth = 'шілде'
+                        if startDate.month == 8:
+                            startDateMonth = 'тамыз'
+                        if startDate.month == 9:
+                            startDateMonth = 'қыркүйек'
+                        if startDate.month == 10:
+                            startDateMonth = 'қазан'
+                        if startDate.month == 11:
+                            startDateMonth = 'қараша'
+                        if startDate.month == 12:
+                            startDateMonth = 'желтоқсан'
+
+                        if endDate.month == 1:
+                            endDateMonth = 'қантар'
+                        if endDate.month == 2:
+                            endDateMonth = 'ақпан'
+                        if endDate.month == 3:
+                            endDateMonth = 'наурыз'
+                        if endDate.month == 4:
+                            endDateMonth = 'сәуір'
+                        if endDate.month == 5:
+                            endDateMonth = 'мамыр'
+                        if endDate.month == 6:
+                            endDateMonth = 'маусым'
+                        if endDate.month == 7:
+                            endDateMonth = 'шілде'
+                        if endDate.month == 8:
+                            endDateMonth = 'тамыз'
+                        if endDate.month == 9:
+                            endDateMonth = 'қыркүйек'
+                        if endDate.month == 10:
+                            endDateMonth = 'қазан'
+                        if endDate.month == 11:
+                            endDateMonth = 'қараша'
+                        if endDate.month == 12:
+                            endDateMonth = 'желтоқсан'
+
+                        oldExperiencedDaysCount = None
+                        if experienced:
+                            oldExperiencedDaysCount = experienced.daysCount
+                        oldBasicDaysCount = vacationDays.daysCount
+                        newExperiencedDaysCount = None
+                        newBasicDaysCount = None
+
+                        if experienced and experienced.daysCount != 0:
+                            if vacationDays.daysCount >= dayCount - experienced.daysCount:
+                                if dayCount > experienced.daysCount:
+                                    if startDate.month != endDate.month:
+                                        dateString = (
+                                                "(" + str(dayCount - experienced.daysCount) + " күнтізбелік күн, " +
+                                                str(experienced.daysCount) + " күн еңбек сіңірген жылдары үшін) " +
+                                                str(otpuskYear) + " жылғы " + str(startDate.day) + " "
+                                                + startDateMonth + " және " + str(endDate.year) + " жылғы " + str(
+                                            endDate.day) +
+                                                " " + endDateMonth)
+                                    else:
+                                        dateString = (
+                                                "(" + str(dayCount - experienced.daysCount) + " күнтізбелік күн, " +
+                                                str(experienced.daysCount) + " күн еңбек сіңірген жылдары үшін) " +
+                                                str(otpuskYear) + " жылғы " + str(startDate.day) + "-" + str(
+                                            endDate.day) + " "
+                                                + startDateMonth)
+                                    newExperiencedDaysCount = 0
+                                    newBasicDaysCount = oldBasicDaysCount - (dayCount - experienced.daysCount)
+                                else:
+                                    if priority == "Отпускные дни за выслуги лет":
+                                        if startDate.month != endDate.month:
+                                            dateString = ("(" + str(dayCount) + " күн еңбек сіңірген жылдары үшін) " +
+                                                          str(otpuskYear) + " жылғы " + str(startDate.day) + " "
+                                                          + startDateMonth + " және " + str(
+                                                        endDate.year) + " жылғы " + str(
+                                                        endDate.day) +
+                                                          " " + endDateMonth)
+                                        else:
+                                            dateString = ("(" + str(dayCount) + " күн еңбек сіңірген жылдары үшін) " +
+                                                          str(otpuskYear) + " жылғы " + str(
+                                                        startDate.day) + "-" + str(endDate.day)
+                                                          + " " + startDateMonth)
+                                        newExperiencedDaysCount = oldExperiencedDaysCount - dayCount
+                                        newBasicDaysCount = oldBasicDaysCount
+
+                                    if priority == "Календарные дни":
+                                        if vacationDays.daysCount >= dayCount:
+                                            if startDate.month != endDate.month:
+                                                dateString = ("(" + str(dayCount) + " күнтізбелік күн) " +
+                                                              str(otpuskYear) + " жылғы " + str(startDate.day) + " "
+                                                              + startDateMonth + " және " + str(
+                                                            endDate.year) + " жылғы " + str(
+                                                            endDate.day) +
+                                                              " " + endDateMonth)
+                                            else:
+                                                dateString = ("(" + str(dayCount) + " күнтізбелік күн) " +
+                                                              str(otpuskYear) + " жылғы " + str(
+                                                            startDate.day) + "-" + str(endDate.day)
+                                                              + " " + startDateMonth)
+                                            newExperiencedDaysCount = oldExperiencedDaysCount
+                                            newBasicDaysCount = oldBasicDaysCount - dayCount
+                                        else:
+                                            return JsonResponse(
+                                                {
+                                                    'error': f'У сотрудника {personInstance.iin} недостаточно календарных '
+                                                             f'отпускных дней на {otpuskYear} '},
+                                                status=400)
+
+                            else:
+                                return JsonResponse(
+                                    {
+                                        'error': f'У сотрудника {personInstance.iin} недостаточно отпускных дней на {otpuskYear} '
+                                                 f'год, осталось обычных {vacationDays.daysCount}, '
+                                                 f'стажных {experienced.daysCount}'},
+                                    status=400)
+                            if holidays_between_dates > 0:
+                                if dayCount >= experienced.daysCount:
+                                    if startDate.month != endDate.month:
+                                        dateString = ("(" + str(
+                                            dayCount - experienced.daysCount - holidays_between_dates) + " күнтізбелік күн, " +
+                                                      str(experienced.daysCount) + " күн еңбек сіңірген жылдары үшін, " +
+                                                      str(holidays_between_dates) + " мерекелік күн) " +
+                                                      str(otpuskYear) + " жылғы " + str(startDate.day) + " "
+                                                      + startDateMonth + " және " + str(endDate.year) + " жылғы " + str(
+                                                    endDate.day) +
+                                                      " " + endDateMonth)
+                                    else:
+                                        dateString = ("(" + str(
+                                            dayCount - experienced.daysCount - holidays_between_dates) + " күнтізбелік күн, " +
+                                                      str(experienced.daysCount) + " күн еңбек сіңірген жылдары үшін, " +
+                                                      str(holidays_between_dates) + " мерекелік күн) " +
+                                                      str(otpuskYear) + " жылғы " + str(
+                                                    startDate.day) + "-" + str(endDate.day)
+                                                      + " " + startDateMonth)
+                                    newBasicDaysCount = oldBasicDaysCount - (
+                                            (dayCount - oldExperiencedDaysCount) - holidays_between_dates)
+                                    newExperiencedDaysCount = 0
+                                else:
+                                    if priority == "Отпускные дни за выслуги лет":
+                                        if startDate.month != endDate.month:
+                                            dateString = ("(" +
+                                                          str(dayCount - holidays_between_dates) + "күн еңбек сіңірген жылдары "
+                                                                                                   "үшін, " +
+                                                          str(holidays_between_dates) + " мерекелік күн) " +
+                                                          str(otpuskYear) + " жылғы " + str(startDate.day) + " "
+                                                          + startDateMonth + " және " + str(
+                                                        endDate.year) + " жылғы " + str(
+                                                        endDate.day) +
+                                                          " " + endDateMonth)
+                                        else:
+                                            dateString = ("(" +
+                                                          str(dayCount - holidays_between_dates) + "күн еңбек сіңірген жылдары "
+                                                                                                   "үшін, " +
+                                                          str(holidays_between_dates) + " мерекелік күн) " +
+                                                          str(otpuskYear) + " жылғы " + str(
+                                                        startDate.day) + "-" + str(endDate.day)
+                                                          + " " + startDateMonth)
+                                        newExperiencedDaysCount = oldExperiencedDaysCount - (
+                                                dayCount - holidays_between_dates)
+                                    if priority == "Календарные дни":
+                                        if vacationDays.daysCount >= dayCount:
+                                            if startDate.month != endDate.month:
+                                                dateString = ("(" +
+                                                              str(dayCount - holidays_between_dates) + " күнтізбелік күн, " +
+                                                              str(holidays_between_dates) + " мерекелік күн) " +
+                                                              str(otpuskYear) + " жылғы " + str(startDate.day) + " "
+                                                              + startDateMonth + " және " + str(
+                                                            endDate.year) + " жылғы " + str(
+                                                            endDate.day) +
+                                                              " " + endDateMonth)
+                                            else:
+                                                dateString = ("(" +
+                                                              str(dayCount - holidays_between_dates) + " күнтізбелік күн, " +
+                                                              str(holidays_between_dates) + " мерекелік күн) " +
+                                                              str(otpuskYear) + " жылғы " + str(
+                                                            startDate.day) + "-" + str(endDate.day)
+                                                              + " " + startDateMonth)
+                                            newBasicDaysCount = oldBasicDaysCount - (dayCount - holidays_between_dates)
+
+                                        else:
+                                            return JsonResponse(
+                                                {
+                                                    'error': f'У сотрудника {personInstance.iin} недостаточно календарных отпускных дней на {otpuskYear} '},
+                                                status=400)
+
+                        else:
+                            if vacationDays.daysCount >= dayCount:
+                                if startDate.month != endDate.month:
+                                    dateString = ("(" + str(dayCount) + " күнтізбелік күн) " +
+                                                  str(otpuskYear) + " жылғы " + str(startDate.day) + " "
+                                                  + startDateMonth + " және " + str(endDate.year) + " жылғы " + str(
+                                                endDate.day) +
+                                                  " " + endDateMonth)
+                                else:
+                                    dateString = ("(" + str(dayCount) + " күнтізбелік күн) " +
+                                                  str(otpuskYear) + " жылғы " + str(startDate.day) + "-"
+                                                  + str(endDate.day) + " " + str(startDateMonth))
+                                newBasicDaysCount = oldBasicDaysCount - dayCount
+                                newExperiencedDaysCount = oldExperiencedDaysCount
+
+                            else:
+                                return JsonResponse(
+                                    {
+                                        'error': f'У сотрудника {personInstance.iin} недостаточно отпускных дней на {otpuskYear} '
+                                                 f'год, осталось обычных {vacationDays.daysCount}'}, status=400)
+                            if holidays_between_dates > 0:
+                                if startDate.month != endDate.month:
+                                    dateString = ("(" + str(dayCount - holidays_between_dates) + " күнтізбелік күн, " +
+                                                  str(holidays_between_dates) + " мерекелік күн) " +
+                                                  str(otpuskYear) + " жылғы " + str(startDate.day) + " "
+                                                  + startDateMonth + " және " + str(endDate.year) + " жылғы " + str(
+                                                endDate.day) +
+                                                  " " + endDateMonth)
+                                else:
+                                    dateString = ("(" + str(dayCount - holidays_between_dates) + " күнтізбелік күн, " +
+                                                  str(holidays_between_dates) + " мерекелік күн) " +
+                                                  str(otpuskYear) + " жылғы " + str(startDate.day) + "-"
+                                                  + str(endDate.day) + " " + str(startDateMonth))
+                                newBasicDaysCount = oldBasicDaysCount - (dayCount - holidays_between_dates)
+                                newExperiencedDaysCount = oldExperiencedDaysCount
+
+                        print("oldBasicDaysCount: ", oldBasicDaysCount)
+                        print("newBasicDaysCount: ", newBasicDaysCount)
+
+                        print("oldExperiencedDaysCount: ", oldExperiencedDaysCount)
+                        print("newExperiencedDaysCount: ", newExperiencedDaysCount)
+
+                        print(dateString)
+
+                        form_text_kz = None
+
+                        if otpuskType == 'Отпуск Кратко':
+
+                            newBasicDaysCount = oldBasicDaysCount
+                            newExperiencedDaysCount = oldExperiencedDaysCount
+
+                            if startDate.month == endDate.month:
+                                dateString = str(otpuskYear) + " жылғы " + str(startDate.day) + "-" + str(
+                                    endDate.day) + " " + startDateMonth
+                            else:
+                                dateString = str(otpuskYear) + " жылғы " + str(
+                                    startDate.day) + " " + startDateMonth + " " + str(endDate.year) + " жылғы " + str(
+                                    endDate.day) + " " + endDateMonth
+
+                            form_text_kz = f"\t{index}. Қазақстан Республикасы Қаржылық мониторинг агенттігі _____________________ департаменті {changedDepartmentNameKaz} {changedPositionTitle.lower()} {personsFIOKaz} қысқа мерзімді ақылы демалысы {dayCount} күн мерзімінде, {dateString} аралығында берілсін."
+
+                        OtpuskInfo.objects.create(
+                            startDate=startDate,
+                            endDate=endDate,
+                            otpuskType=otpuskType,
+                            benefitChoice=benefitChoice,
+                            oldBasicDaysCount=oldBasicDaysCount,
+                            newBasicDaysCount=newBasicDaysCount,
+                            oldExperiencedDaysCount=oldExperiencedDaysCount,
+                            newExperiencedDaysCount=newExperiencedDaysCount,
+                            personId=personInstance,
+                            decreeId=decree_list_instance
+                        )
+
+                        if benefitChoice == "Без пособия":
+                            form_text_kz = f"\t{index}. Қазақстан Республикасы Қаржылық мониторинг агенттігінің (бұдан әрі - Агенттік) __________________ департаменті {changedDepartmentNameKaz} {changedPositionTitle.lower()} {personsFIOKaz} {startDate.year} жылғы жыл сайынғы еңбек демалысының пайдаланбаған күндері {dayCount} күн мерзімінде, {dateString} аралығында берілсін."
+
+                        if benefitChoice == "С пособием":
+                            form_text_kz = f"\t{index}. Қазақстан Республикасы Қаржылық мониторинг агенттігінің (бұдан әрі - Агенттік) __________________ департаменті {changedDepartmentNameKaz} {changedPositionTitle.lower()} {personsFIOKaz} {startDate.year} жылғы жыл сайынғы еңбек демалысының пайдаланбаған күндері {dayCount} күн мерзімінде, {dateString} аралығында, сауықтыруға екі лауазымдық айлықақы мөлшерінде жәрдемақы төлене отырып берілсін."
+
+                        for i, paragraph in enumerate(document.paragraphs):
+                            for run in paragraph.runs:
+                                if "Департамент" in run.text and run.bold:
+                                    keyword_index_kz = i
+                                    break
+
+                        new_paragraph_kz = document.paragraphs[keyword_index_kz].insert_paragraph_before(form_text_kz)
+                        keyword_index_kz += 1
+
+                        run = new_paragraph_kz.runs[0]
+                        run.font.name = 'Times New Roman'
+                        run.font.size = Pt(14)
+
+                        new_paragraph_kz.paragraph_format.line_spacing = Pt(16)
+                        new_paragraph_kz.paragraph_format.space_after = Pt(0)
+
+                        new_paragraph_kz.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
+
+                        last_index_kz = index
 
                     bases_kz = []
                     for base in bases:
@@ -2192,7 +2748,7 @@ def generate_komandirovka_decree(request):
                         bases_kz = modified_bases_kz
 
                     base_text_kz = (f"\t{last_index_kz + 1}. Осы бұйрық қол қойылған күнінен бастап күшіне "
-                                        f"енеді.\n\tНегіздеме: {', '.join(bases_kz)}.")
+                                    f"енеді.\n\tНегіздеме: {', '.join(bases_kz)}.")
 
                     for i, paragraph in enumerate(document.paragraphs):
                         for run in paragraph.runs:
@@ -2219,17 +2775,17 @@ def generate_komandirovka_decree(request):
                     # Prepare the HTTP response with the modified document
                     response = HttpResponse(doc_stream.read(),
                                             content_type='application/vnd.openxmlformats-officedocument.wordprocessingml'
-                                                            '.document')
-                    response['Content-Disposition'] = f'attachment; filename=Приказ о командировке.docx'
+                                                         '.document')
+                    response['Content-Disposition'] = f'attachment; filename=Приказ об отпуске.docx'
 
                     doc_stream.seek(0)
                     document_id = str(uuid4())
                     document_name = f"document_{document_id}.docx"
 
                     minio_client = Minio(MINIO_ENDPOINT,
-                                            access_key=MINIO_ACCESS_KEY,
-                                            secret_key=MINIO_SECRET_KEY,
-                                            secure=False)
+                                         access_key=MINIO_ACCESS_KEY,
+                                         secret_key=MINIO_SECRET_KEY,
+                                         secure=False)
 
                     minio_client.put_object(MINIO_BUCKET_NAME, document_name, data=doc_stream,
                                             length=len(doc_stream.getvalue()))
@@ -2239,15 +2795,13 @@ def generate_komandirovka_decree(request):
                     decree_list_instance.save()
 
                     return response
-
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
-
     return JsonResponse({'error': 'Упс, что-то пошло не так'}, status=405)
 
 
 @csrf_exempt
-def generate_otpusk_decree_new(request):
+def generate_otpusk_otziv_decree(request):
     if request.method == 'POST':
         try:
             with transaction.atomic():
@@ -2258,11 +2812,11 @@ def generate_otpusk_decree_new(request):
                 forms = data.get('forms', [])
                 bases = [base['base'] for base in data.get('bases', [])]
 
-                template_path = 'docx_generator/static/templates/otpusk_template_example.docx'
-                document = Document(template_path)
+                template_path = 'docx_generator/static/templates/otpusk_otziv_template.docx'
 
                 keyword_index_kz = -1
 
+                document = Document(template_path)
                 for i, paragraph in enumerate(document.paragraphs):
                     for run in paragraph.runs:
                         if "Департамент" in run.text and run.bold:
@@ -2276,569 +2830,280 @@ def generate_otpusk_decree_new(request):
                     minioDocName=None
                 )
 
+                if keyword_index_kz != -1:
+                    last_index = None
+                    last_index_kz = None
+                    for index, form in enumerate(forms, start=1):
+                        person_id = form.get('personId')
+                        otpuskType = form.get('otpuskType')
+                        otzivDate = form.get('otzivDate')
+
+                        try:
+                            personInstance = Person.objects.get(pk=person_id)
+                        except Person.DoesNotExist:
+                            decree_list_instance.delete()
+                            return JsonResponse({'error': 'Выбранного сотрудника не существует'}, status=400)
+
+                        if OtpuskInfo.objects.filter(personId=personInstance, decreeId__isConfirmed=False,
+                                                     decreeId__decreeType="Отпуск"):
+                            transaction.set_rollback(True)
+                            return JsonResponse({
+                                'error': f'У сотрудника {personInstance.iin} уже существует приказ об отпуске '
+                                         f'который '
+                                         f'не согласован'},
+                                status=400)
+
+                        personsPositionInfo = PositionInfo.objects.get(person=personInstance)
+
+                        changedDepartmentNameKaz = personsPositionInfo.department.DepartmentNameKaz
+                        wordsKaz = changedDepartmentNameKaz.split()
+                        if wordsKaz[-1] == 'басқармасы':
+                            wordsKaz[-1] = wordsKaz[-1] + 'ның'
+                            changedDepartmentNameKaz = ' '.join(wordsKaz)
+
+                        changedPositionTitle = personsPositionInfo.position.positionTitleKaz
+                        wordsKaz = changedPositionTitle.split()
+                        if wordsKaz[-1] == 'уәкіл':
+                            wordsKaz[-1] = wordsKaz[-1] + 'і'
+                            changedPositionTitle = ' '.join(wordsKaz)
+
+                        changedSurnameKaz = personInstance.surname
+
+                        if personInstance.gender.genderName == 'Мужской':
+                            if personInstance.surname[-2:] == 'ев' or personInstance.surname[-2:] == 'ов':
+                                changedSurnameKaz = personInstance.surname
+
+                        if personInstance.gender.genderName == 'Женский':
+                            if personInstance.surname[-3:] == 'ева' or personInstance.surname[-3:] == 'ова':
+                                changedSurnameKaz = personInstance.surname
+
+                        personsFIOKaz = personInstance.firstName + ' ' + personInstance.patronymic + ' ' + changedSurnameKaz
+
+                        if not personInstance.inVacation:
+                            transaction.set_rollback(True)
+                            return JsonResponse({'error': f'Сотрудник {personInstance.iin} не находится в отпуске'},
+                                                status=400)
+
+                        otpuskInfo = OtpuskInfo.objects.filter(decreeId__decreeType="Отпуск", personId=personInstance,
+                                                               decreeId__isConfirmed=True).last()
+
+                        if not otpuskInfo:
+                            transaction.set_rollback(True)
+                            return JsonResponse({'error': f'У сотрудника {personInstance.iin} нету приказа об отпуске'},
+                                                status=400)
+
+                        otzivDate = datetime.strptime(otzivDate, "%Y-%m-%d").date()
+                        print(otpuskInfo.startDate)
+                        print(otpuskInfo.endDate)
+                        print(otzivDate)
+                        if otzivDate < otpuskInfo.startDate or otzivDate > otpuskInfo.endDate:
+                            transaction.set_rollback(True)
+                            return JsonResponse({'error': f'Неправильно введенная дата отзыва'},
+                                                status=400)
+
+
+                        vacationDays = None
+                        experienced = None
+
+                        try:
+                            vacationDays = Vacation.objects.get(personId=personInstance, year=otpuskInfo.startDate.year,
+                                                                daysType="Обычные")
+                        except Vacation.DoesNotExist:
+                            transaction.set_rollback(True)
+                            return JsonResponse(
+                                {'error': f'Нету сущности отпускные дни для сотрудника {personInstance.iin}'},
+                                status=400)
+
+                        try:
+                            experienced = Vacation.objects.get(personId=personInstance, year=otpuskInfo.startDate.year,
+                                                               daysType="Стажные")
+                        except Vacation.DoesNotExist:
+                            print("Person doesn't have experienced vacation days")
+
+                        monthStringKaz = None
+
+                        if otzivDate.month == 1:
+                            monthStringKaz = 'қантардан'
+                        if otzivDate.month == 2:
+                            monthStringKaz = 'ақпаннан'
+                        if otzivDate.month == 3:
+                            monthStringKaz = 'наурыздан'
+                        if otzivDate.month == 4:
+                            monthStringKaz = 'сәуірден'
+                        if otzivDate.month == 5:
+                            monthStringKaz = 'мамырдан'
+                        if otzivDate.month == 6:
+                            monthStringKaz = 'маусымнан'
+                        if otzivDate.month == 7:
+                            monthStringKaz = 'шілдеден'
+                        if otzivDate.month == 8:
+                            monthStringKaz = 'тамыздан'
+                        if otzivDate.month == 9:
+                            monthStringKaz = 'қыркүйектен'
+                        if otzivDate.month == 10:
+                            monthStringKaz = 'қазаннан'
+                        if otzivDate.month == 11:
+                            monthStringKaz = 'қарашадан'
+                        if otzivDate.month == 12:
+                            monthStringKaz = 'желтоқсаннан'
+
+                        dateString = str(otzivDate.year) + " жылғы " + str(otzivDate.day) + " " + monthStringKaz
+
+                        oldBasicDaysCount = None
+                        if vacationDays is not None:
+                            oldBasicDaysCount = vacationDays.daysCount
+
+                        oldExperiencedDaysCount = None
+                        if experienced is not None:
+                            oldExperiencedDaysCount = experienced.daysCount
+
+                        newBasicDaysCount = oldBasicDaysCount + (otpuskInfo.endDate - otzivDate).days + 1
+                        newExperiencedDaysCount = oldExperiencedDaysCount
+
+                        OtpuskInfo.objects.create(
+                            startDate=otpuskInfo.startDate,
+                            endDate=otpuskInfo.endDate,
+                            otpuskType=otpuskType,
+                            benefitChoice=None,
+                            otzivDate=otzivDate,
+                            oldBasicDaysCount=oldBasicDaysCount,
+                            newBasicDaysCount=newBasicDaysCount,
+                            oldExperiencedDaysCount=oldExperiencedDaysCount,
+                            newExperiencedDaysCount=newExperiencedDaysCount,
+                            personId=personInstance,
+                            decreeId=decree_list_instance
+                        )
+
+                        form_text_kz = f"\t{index}. Қазақстан Республикасы Қаржылық мониторинг агенттігінің (бұдан әрі - Агенттік) __________________ департаменті {changedDepartmentNameKaz} {changedPositionTitle.lower()} {personsFIOKaz} жыл сайынғы еңбек демалысынан {dateString} бастап шақыртылсын."
+
+                        for i, paragraph in enumerate(document.paragraphs):
+                            for run in paragraph.runs:
+                                if "Департамент" in run.text and run.bold:
+                                    keyword_index_kz = i
+                                    break
+
+                        new_paragraph_kz = document.paragraphs[keyword_index_kz].insert_paragraph_before(form_text_kz)
+                        keyword_index_kz += 1
+
+                        run = new_paragraph_kz.runs[0]
+                        run.font.name = 'Times New Roman'
+                        run.font.size = Pt(14)
+
+                        new_paragraph_kz.paragraph_format.line_spacing = Pt(16)
+                        new_paragraph_kz.paragraph_format.space_after = Pt(0)
+
+                        new_paragraph_kz.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
+
+                        last_index_kz = index
+
+                    bases_kz = []
+                    for base in bases:
+                        if base == 'представление':
+                            try:
+                                predstavlenie = Base.objects.get(baseName="Представление")
+                                decree_list_instance.decreeBases.add(predstavlenie)
+                            except Base.DoesNotExist:
+                                decree_list_instance.delete()
+                                return JsonResponse({'error': 'Представление не было найдено в базе данных'},
+                                                    status=400)
+
+                            bases_kz.append('ұсыныс')
+                        elif base == 'рапорт':
+                            try:
+                                raport = Base.objects.get(baseName="Рапорт")
+                                decree_list_instance.decreeBases.add(raport)
+                            except Base.DoesNotExist:
+                                decree_list_instance.delete()
+                                return JsonResponse({'error': 'Рапорт не было найден в базе данных'}, status=400)
+
+                            bases_kz.append('баянат')
+                        elif base == 'заявление':
+                            try:
+                                zayavlenie = Base.objects.get(baseName="Заявление")
+                                decree_list_instance.decreeBases.add(zayavlenie)
+                            except Base.DoesNotExist:
+                                decree_list_instance.delete()
+                                return JsonResponse({'error': 'Заявление не было найдено в базе данных'}, status=400)
+
+                            bases_kz.append('өтініш')
+                        elif base == 'протокол':
+                            try:
+                                protocol = Base.objects.get(baseName="Протокол")
+                                decree_list_instance.decreeBases.add(protocol)
+                            except Base.DoesNotExist:
+                                decree_list_instance.delete()
+                                return JsonResponse({'error': 'Протокол не было найден в базе данных'}, status=400)
+                            bases_kz.append('хаттама')
+                    if len(forms) > 1:
+                        # Modify bases if needed
+                        modified_bases = []
+                        modified_bases_kz = []
+                        for base in bases:
+                            if base == 'представление':
+                                modified_bases.append('представления')
+                                modified_bases_kz.append('ұсыныстар')
+                            elif base == 'рапорт':
+                                modified_bases.append('рапорта')
+                                modified_bases_kz.append('баянаттар')
+                            elif base == 'заявление':
+                                modified_bases.append('заявления')
+                                modified_bases_kz.append('өтініштер')
+                            elif base == 'протокол':
+                                modified_bases.append('протокола')
+                                modified_bases_kz.append('хаттамалар')
+                        bases = modified_bases
+                        bases_kz = modified_bases_kz
+
+                    base_text_kz = (f"\t{last_index_kz + 1}. Осы бұйрық қол қойылған күнінен бастап күшіне "
+                                    f"енеді.\n\tНегіздеме: {', '.join(bases_kz)}.")
+
+                    for i, paragraph in enumerate(document.paragraphs):
+                        for run in paragraph.runs:
+                            if "Департамент" in run.text and run.bold:
+                                keyword_index_kz = i
+                                break
+
+                    new_paragraph_kz = document.paragraphs[keyword_index_kz].insert_paragraph_before(base_text_kz)
+                    keyword_index_kz += 1
+
+                    run = new_paragraph_kz.runs[0]
+                    run.font.name = 'Times New Roman'
+                    run.font.size = Pt(14)
+
+                    new_paragraph_kz.paragraph_format.line_spacing = Pt(16)
+                    new_paragraph_kz.paragraph_format.space_after = Pt(0)
+
+                    document.paragraphs[keyword_index_kz].insert_paragraph_before('\n')
+
+                    doc_stream = BytesIO()
+                    document.save(doc_stream)
+                    doc_stream.seek(0)
+
+                    # Prepare the HTTP response with the modified document
+                    response = HttpResponse(doc_stream.read(),
+                                            content_type='application/vnd.openxmlformats-officedocument.wordprocessingml'
+                                                         '.document')
+                    response['Content-Disposition'] = f'attachment; filename=Приказ об отпуске отзыве.docx'
+
+                    doc_stream.seek(0)
+                    document_id = str(uuid4())
+                    document_name = f"document_{document_id}.docx"
+
+                    minio_client = Minio(MINIO_ENDPOINT,
+                                         access_key=MINIO_ACCESS_KEY,
+                                         secret_key=MINIO_SECRET_KEY,
+                                         secure=False)
+
+                    minio_client.put_object(MINIO_BUCKET_NAME, document_name, data=doc_stream,
+                                            length=len(doc_stream.getvalue()))
+                    document_url = f"{MINIO_ENDPOINT}/{MINIO_BUCKET_NAME}/{document_name}"
+                    print(document_url)
+                    decree_list_instance.minioDocName = document_name
+                    decree_list_instance.save()
+
+                    return response
 
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
     return JsonResponse({'error': 'Упс, что-то пошло не так'}, status=405)
 
-
-@csrf_exempt
-def generate_otpusk_decree(request):
-    if request.method == 'POST':
-        try:
-            body = request.body.decode('utf-8')
-            data = json.loads(body)
-
-            persons = data.get('persons', [])
-
-            # Extract personIds from the list of persons
-            person_ids = [person.get('personId') for person in persons]
-
-            decreeDate = data.get('decreeDate')
-            startDate = data.get('startDate')
-            endDate = data.get('endDate')
-            otpuskType = data.get('otpuskType')
-            benefitChoice = data.get('benefitChoice')
-            priority = data.get('priority')
-
-            person_instances = Person.objects.filter(pk__in=person_ids)
-            for personInstance in person_instances:
-                personsPositionInfo = PositionInfo.objects.get(person=personInstance)
-
-                changedDepartmentNameKaz = personsPositionInfo.department.DepartmentNameKaz
-                wordsKaz = changedDepartmentNameKaz.split()
-                if wordsKaz[-1] == 'басқармасы':
-                    wordsKaz[-1] = wordsKaz[-1] + 'ның'
-                    changedDepartmentNameKaz = ' '.join(wordsKaz)
-
-                changedPositionTitle = personsPositionInfo.position.positionTitleKaz
-                wordsKaz = changedPositionTitle.split()
-                if wordsKaz[-1] == 'уәкіл':
-                    wordsKaz[-1] = wordsKaz[-1] + 'і'
-                    changedPositionTitle = ' '.join(wordsKaz)
-
-                changedSurnameKaz = personInstance.surname
-
-                if personInstance.gender.genderName == 'Мужской':
-                    if personInstance.surname[-2:] == 'ев' or personInstance.surname[-2:] == 'ов':
-                        changedSurnameKaz = personInstance.surname + 'қа'
-
-                if personInstance.gender.genderName == 'Женский':
-                    if personInstance.surname[-3:] == 'ева' or personInstance.surname[-3:] == 'ова':
-                        changedSurnameKaz = personInstance.surname + 'ға'
-
-                personsFIOKaz = personInstance.firstName + ' ' + personInstance.patronymic + ' ' + changedSurnameKaz
-
-                startDate = datetime.strptime(startDate, "%Y-%m-%d")
-                endDate = datetime.strptime(endDate, "%Y-%m-%d")
-
-                if startDate >= endDate:
-                    return JsonResponse({'error': f'Неправильно установленные даты'}, status=400)
-
-                otpuskYear = startDate.year
-                dayCount = (endDate - startDate).days + 1
-
-                holidays_between_dates = Holidays.objects.filter(holidayDate__range=[startDate, endDate]).count()
-                dayCount = dayCount + holidays_between_dates
-                endDate = endDate + timedelta(days=holidays_between_dates)
-
-                print(dayCount)
-                print(holidays_between_dates)
-                vacationDays = None
-                experienced = None
-
-                try:
-                    vacationDays = Vacation.objects.get(personId=personInstance, year=otpuskYear, daysType="Обычные")
-                except Vacation.DoesNotExist:
-                    print("Person doesn't have vacation days")
-
-                try:
-                    experienced = Vacation.objects.get(personId=personInstance, year=otpuskYear, daysType="Стажные")
-                except Vacation.DoesNotExist:
-                    print("Person doesn't have experienced vacation days")
-                # DateString
-                # (22 күнтізбелік күн,   15 күн еңбек сіңірген жылдары үшін 2 мерекелік күн)
-                # 2023 жылғы 28 желтоқсан 2024 жылғы 4 ақпан
-
-                dateString = None
-                startDateMonth = None
-                endDateMonth = None
-
-                if startDate.month == 1:
-                    startDateMonth = 'қантар'
-                if startDate.month == 2:
-                    startDateMonth = 'ақпан'
-                if startDate.month == 3:
-                    startDateMonth = 'наурыз'
-                if startDate.month == 4:
-                    startDateMonth = 'сәуір'
-                if startDate.month == 5:
-                    startDateMonth = 'мамыр'
-                if startDate.month == 6:
-                    startDateMonth = 'маусым'
-                if startDate.month == 7:
-                    startDateMonth = 'шілде'
-                if startDate.month == 8:
-                    startDateMonth = 'тамыз'
-                if startDate.month == 9:
-                    startDateMonth = 'қыркүйек'
-                if startDate.month == 10:
-                    startDateMonth = 'қазан'
-                if startDate.month == 11:
-                    startDateMonth = 'қараша'
-                if startDate.month == 12:
-                    startDateMonth = 'желтоқсан'
-
-                if endDate.month == 1:
-                    endDateMonth = 'қантар'
-                if endDate.month == 2:
-                    endDateMonth = 'ақпан'
-                if endDate.month == 3:
-                    endDateMonth = 'наурыз'
-                if endDate.month == 4:
-                    endDateMonth = 'сәуір'
-                if endDate.month == 5:
-                    endDateMonth = 'мамыр'
-                if endDate.month == 6:
-                    endDateMonth = 'маусым'
-                if endDate.month == 7:
-                    endDateMonth = 'шілде'
-                if endDate.month == 8:
-                    endDateMonth = 'тамыз'
-                if endDate.month == 9:
-                    endDateMonth = 'қыркүйек'
-                if endDate.month == 10:
-                    endDateMonth = 'қазан'
-                if endDate.month == 11:
-                    endDateMonth = 'қараша'
-                if endDate.month == 12:
-                    endDateMonth = 'желтоқсан'
-
-                oldExperiencedDaysCount = None
-                if experienced:
-                    oldExperiencedDaysCount = experienced.daysCount
-                oldBasicDaysCount = vacationDays.daysCount
-                newExperiencedDaysCount = None
-                newBasicDaysCount = None
-
-                if experienced and experienced.daysCount != 0:
-                    if vacationDays.daysCount >= dayCount - experienced.daysCount:
-                        if dayCount >= experienced.daysCount:
-                            dateString = ("(" + str(dayCount - experienced.daysCount) + " күнтізбелік күн, " +
-                                          str(experienced.daysCount) + " күн еңбек сіңірген жылдары үшін) " +
-                                          str(otpuskYear) + " жылғы " + str(startDate.day) + " "
-                                          + startDateMonth + " " + str(endDate.year) + " жылғы " + str(endDate.day) +
-                                          " " + endDateMonth)
-                            newExperiencedDaysCount = 0
-                            newBasicDaysCount = oldBasicDaysCount - (dayCount - experienced.daysCount)
-                        else:
-                            if priority == "Отпускные дни за выслуги лет":
-                                dateString = ("(" + str(dayCount) + " күн еңбек сіңірген жылдары үшін) " +
-                                              str(otpuskYear) + " жылғы " + str(startDate.day) + " "
-                                              + startDateMonth + " " + str(endDate.year) + " жылғы " + str(
-                                            endDate.day) +
-                                              " " + endDateMonth)
-                                newExperiencedDaysCount = oldExperiencedDaysCount - dayCount
-                                newBasicDaysCount = oldBasicDaysCount
-
-                            if priority == "Календарные дни":
-                                if vacationDays.daysCount >= dayCount:
-                                    dateString = ("(" + str(dayCount) + " күнтізбелік күн) " +
-                                                  str(otpuskYear) + " жылғы " + str(startDate.day) + " "
-                                                  + startDateMonth + " " + str(endDate.year) + " жылғы " + str(
-                                                endDate.day) +
-                                                  " " + endDateMonth)
-                                    newExperiencedDaysCount = oldExperiencedDaysCount
-                                    newBasicDaysCount = oldBasicDaysCount - dayCount
-                                else:
-                                    return JsonResponse(
-                                        {
-                                            'error': f'У сотрудника {personInstance.iin} недостаточно календарных '
-                                                     f'отпускных дней на {otpuskYear} '},
-                                        status=400)
-
-                    else:
-                        return JsonResponse(
-                            {'error': f'У сотрудника {personInstance.iin} недостаточно отпускных дней на {otpuskYear} '
-                                      f'год, осталось обычных {vacationDays.daysCount}, '
-                                      f'стажных {experienced.daysCount}'},
-                            status=400)
-                    if holidays_between_dates > 0:
-                        if dayCount >= experienced.daysCount:
-                            dateString = ("(" + str(
-                                dayCount - experienced.daysCount - holidays_between_dates) + " күнтізбелік күн, " +
-                                          str(experienced.daysCount) + " күн еңбек сіңірген жылдары үшін, " +
-                                          str(holidays_between_dates) + " мерекелік күн) " +
-                                          str(otpuskYear) + " жылғы " + str(startDate.day) + " "
-                                          + startDateMonth + " " + str(endDate.year) + " жылғы " + str(endDate.day) +
-                                          " " + endDateMonth)
-                            newBasicDaysCount = oldBasicDaysCount - (
-                                    (dayCount - oldExperiencedDaysCount) - holidays_between_dates)
-                            newExperiencedDaysCount = 0
-                        else:
-                            if priority == "Отпускные дни за выслуги лет":
-                                dateString = ("(" +
-                                              str(dayCount - holidays_between_dates) + "күн еңбек сіңірген жылдары "
-                                                                                       "үшін, " +
-                                              str(holidays_between_dates) + " мерекелік күн) " +
-                                              str(otpuskYear) + " жылғы " + str(startDate.day) + " "
-                                              + startDateMonth + " " + str(endDate.year) + " жылғы " + str(
-                                            endDate.day) +
-                                              " " + endDateMonth)
-                                newExperiencedDaysCount = oldExperiencedDaysCount - (dayCount - holidays_between_dates)
-                            if priority == "Календарные дни":
-                                if vacationDays.daysCount >= dayCount:
-                                    dateString = ("(" +
-                                                  str(dayCount - holidays_between_dates) + " күнтізбелік күн, " +
-                                                  str(holidays_between_dates) + " мерекелік күн) " +
-                                                  str(otpuskYear) + " жылғы " + str(startDate.day) + " "
-                                                  + startDateMonth + " " + str(endDate.year) + " жылғы " + str(
-                                                endDate.day) +
-                                                  " " + endDateMonth)
-                                    newBasicDaysCount = oldBasicDaysCount - (dayCount - holidays_between_dates)
-
-                                else:
-                                    return JsonResponse(
-                                        {
-                                            'error': f'У сотрудника {personInstance.iin} недостаточно календарных отпускных дней на {otpuskYear} '},
-                                        status=400)
-
-                else:
-                    if vacationDays.daysCount >= dayCount:
-                        dateString = ("(" + str(dayCount) + " күнтізбелік күн)" +
-                                      str(otpuskYear) + " жылғы " + str(startDate.day) + " "
-                                      + startDateMonth + " " + str(endDate.year) + " жылғы " + str(endDate.day) +
-                                      " " + endDateMonth)
-                        newBasicDaysCount = oldBasicDaysCount - dayCount
-                        newExperiencedDaysCount = oldExperiencedDaysCount
-
-                    else:
-                        return JsonResponse(
-                            {'error': f'У сотрудника {personInstance.iin} недостаточно отпускных дней на {otpuskYear} '
-                                      f'год, осталось обычных {vacationDays.daysCount}'}, status=400)
-                    if holidays_between_dates > 0:
-                        dateString = ("(" + str(
-                            dayCount - holidays_between_dates) + " күнтізбелік күн, " +
-                                      str(holidays_between_dates) + " мерекелік күн) " +
-                                      str(otpuskYear) + " жылғы " + str(startDate.day) + " "
-                                      + startDateMonth + " " + str(endDate.year) + " жылғы " + str(endDate.day) +
-                                      " " + endDateMonth)
-                        newBasicDaysCount = oldBasicDaysCount - (dayCount - holidays_between_dates)
-                        newExperiencedDaysCount = oldExperiencedDaysCount
-
-                print("oldBasicDaysCount: ", oldBasicDaysCount)
-                print("newBasicDaysCount: ", newBasicDaysCount)
-
-                print("oldExperiencedDaysCount: ", oldExperiencedDaysCount)
-                print("newExperiencedDaysCount: ", newExperiencedDaysCount)
-
-                print(dateString)
-
-                template_path = None
-                if len(person_instances) == 1:
-                    if otpuskType == 'Отпуск':
-                        template_path = 'docx_generator/static/templates/otpusk_basic_template.docx'
-                    if otpuskType == 'Отпуск Кратко':
-                        template_path = 'docx_generator/static/templates/otpusk_kratko_template.docx'
-
-                        newBasicDaysCount = oldBasicDaysCount
-                        newExperiencedDaysCount = oldExperiencedDaysCount
-
-                        if startDate.month == endDate.month:
-                            dateString = str(otpuskYear) + " жылғы " + str(startDate.day) + "-" + str(
-                                endDate.day) + " " + startDateMonth
-                        else:
-                            dateString = str(otpuskYear) + " жылғы " + str(
-                                startDate.day) + " " + startDateMonth + " " + str(endDate.year) + " жылғы " + str(
-                                endDate.day) + " " + endDateMonth
-
-                if len(person_instances) > 1:
-                    return JsonResponse(
-                        {'error': 'Приказы с несколькими сотрудниками в разработке'},
-                        status=400)
-                document = Document(template_path)
-
-                def replace_placeholder(placeholder, replacement):
-                    for paragraph1 in document.paragraphs:
-                        if placeholder in paragraph1.text:
-
-                            for run1 in paragraph1.runs:
-                                if placeholder in run1.text:
-                                    run1.text = run1.text.replace(placeholder, replacement)
-                                    run1.font.size = Pt(14)  # Adjust the font size if needed
-                                    run1.font.name = 'Times New Roman'
-
-                if len(person_instances) == 1:
-                    if otpuskType == 'Отпуск':
-                        replace_placeholder('CHANGEDDEPARTMENTNAME', f"{changedDepartmentNameKaz}")
-                        replace_placeholder('CHANGEDPOSITIONTITLE', f"{changedPositionTitle.lower()}")
-                        replace_placeholder('PERSONSFIO', f"{personsFIOKaz}")
-                        replace_placeholder('YEAR', f"{startDate.year}")
-                        replace_placeholder('DAYCOUNT', f"{dayCount}")
-                        replace_placeholder('DATESTRING', f"{dateString}")
-                    if otpuskType == 'Отпуск Кратко':
-                        replace_placeholder('CHANGEDDEPARTMENTNAME', f"{changedDepartmentNameKaz}")
-                        replace_placeholder('CHANGEDPOSITIONTITLE', f"{changedPositionTitle.lower()}")
-                        replace_placeholder('PERSONSFIO', f"{personsFIOKaz}")
-                        replace_placeholder('DAYCOUNT', f"{dayCount}")
-                        replace_placeholder('DATESTRING', f"{dateString}")
-
-                # if len(person_ids) > 1:
-
-                doc_stream = BytesIO()
-                document.save(doc_stream)
-                doc_stream.seek(0)
-
-                # Prepare the HTTP response with the modified document
-                response = HttpResponse(doc_stream.read(),
-                                        content_type='application/vnd.openxmlformats-officedocument.wordprocessingml'
-                                                     '.document')
-                response['Content-Disposition'] = f'attachment; filename=Приказ об отпуске.docx'
-
-                # Need to create decreeList object and also decreeInfo
-                if not DecreeList.objects.filter(personIds=personInstance, decreeType="Отпуск",
-                                                 isConfirmed=False).first():
-                    doc_stream.seek(0)
-                    document_id = str(uuid4())
-                    document_name = f"document_{document_id}.docx"
-
-                    minio_client = Minio(MINIO_ENDPOINT,
-                                         access_key=MINIO_ACCESS_KEY,
-                                         secret_key=MINIO_SECRET_KEY,
-                                         secure=False)
-
-                    minio_client.put_object(MINIO_BUCKET_NAME, document_name, data=doc_stream,
-                                            length=len(doc_stream.getvalue()))
-                    document_url = f"{MINIO_ENDPOINT}/{MINIO_BUCKET_NAME}/{document_name}"
-                    print(document_url)
-
-                    decree_list_instance = DecreeList.objects.create(
-                        decreeType="Отпуск",
-                        decreeDate=datetime.strptime(decreeDate, '%Y-%m-%d').date(),
-                        minioDocName=document_name
-                    )
-                    decree_list_instance.personIds.add(personInstance)
-
-                    OtpuskInfo.objects.create(
-                        startDate=startDate,
-                        endDate=endDate,
-                        otpuskType=otpuskType,
-                        benefitChoice=benefitChoice,
-                        oldBasicDaysCount=oldBasicDaysCount,
-                        newBasicDaysCount=newBasicDaysCount,
-                        oldExperiencedDaysCount=oldExperiencedDaysCount,
-                        newExperiencedDaysCount=newExperiencedDaysCount,
-                        decreeId=decree_list_instance
-                    )
-
-                    return response
-                else:
-                    return JsonResponse({'error': f'У сотрудника {personInstance.iin} уже имеется приказ об отпуске '
-                                                  f'который не согласован'},
-                                        status=400)
-
-        except json.JSONDecodeError:
-            return JsonResponse({'error': 'Invalid JSON data'}, status=400)
-
-
-@csrf_exempt
-def generate_otpusk_otziv_decree(request):
-    if request.method == 'POST':
-        try:
-            body = request.body.decode('utf-8')
-            data = json.loads(body)
-
-            persons = data.get('persons', [])
-
-            # Extract personIds from the list of persons
-            person_ids = [person.get('personId') for person in persons]
-
-            decreeDate = data.get('decreeDate')
-            otpuskType = data.get('otpuskType')
-            otzivDate = data.get('otzivDate')
-
-            person_instances = Person.objects.filter(pk__in=person_ids)
-            for personInstance in person_instances:
-                personsPositionInfo = PositionInfo.objects.get(person=personInstance)
-
-                changedDepartmentNameKaz = personsPositionInfo.department.DepartmentNameKaz
-                wordsKaz = changedDepartmentNameKaz.split()
-                if wordsKaz[-1] == 'басқармасы':
-                    wordsKaz[-1] = wordsKaz[-1] + 'ның'
-                    changedDepartmentNameKaz = ' '.join(wordsKaz)
-
-                changedPositionTitle = personsPositionInfo.position.positionTitleKaz
-                wordsKaz = changedPositionTitle.split()
-                if wordsKaz[-1] == 'уәкіл':
-                    wordsKaz[-1] = wordsKaz[-1] + 'і'
-                    changedPositionTitle = ' '.join(wordsKaz)
-
-                changedSurnameKaz = personInstance.surname
-
-                if personInstance.gender.genderName == 'Мужской':
-                    if personInstance.surname[-2:] == 'ев' or personInstance.surname[-2:] == 'ов':
-                        changedSurnameKaz = personInstance.surname
-
-                if personInstance.gender.genderName == 'Женский':
-                    if personInstance.surname[-3:] == 'ева' or personInstance.surname[-3:] == 'ова':
-                        changedSurnameKaz = personInstance.surname
-
-                personsFIOKaz = personInstance.firstName + ' ' + personInstance.patronymic + ' ' + changedSurnameKaz
-
-                if len(person_instances) > 1:
-                    return JsonResponse({'error': f'Отзыв отпуска с несколькими сотрудниками не поддерживается'},
-                                        status=400)
-
-                if not personInstance.inVacation:
-                    return JsonResponse({'error': f'Сотрудник {personInstance.iin} не находится в отпуске'}, status=400)
-
-                decree_instance = DecreeList.objects.filter(personIds=personInstance, decreeType="Отпуск",
-                                                            isConfirmed=True).last()
-
-                if decree_instance:
-                    otpuskInfo = OtpuskInfo.objects.get(decreeId=decree_instance)
-                else:
-                    return JsonResponse({'error': f'У сотрудника {personInstance.iin} нету приказа об отпуске'},
-                                        status=400)
-
-                otzivDate = datetime.strptime(otzivDate, "%Y-%m-%d").date()
-                # startDate = 2023-03-22
-                # endDate = 2023-03-30
-                # OtzivDate = 2023-03-27
-                if otpuskInfo.startDate > otzivDate > otpuskInfo.endDate:
-                    return JsonResponse({'error': f'Неправильно введенная дата отзыва'},
-                                        status=400)
-
-                vacationDays = None
-                experienced = None
-
-                try:
-                    vacationDays = Vacation.objects.get(personId=personInstance, year=otpuskInfo.startDate.year,
-                                                        daysType="Обычные")
-                except Vacation.DoesNotExist:
-                    return JsonResponse({'error': f'Нету сущности отпускные дни для сотрудника {personInstance.iin}'},
-                                        status=400)
-
-                try:
-                    experienced = Vacation.objects.get(personId=personInstance, year=otpuskInfo.startDate.year,
-                                                       daysType="Стажные")
-                except Vacation.DoesNotExist:
-                    print("Person doesn't have experienced vacation days")
-
-                monthStringKaz = None
-
-                if otzivDate.month == 1:
-                    monthStringKaz = 'қантардан'
-                if otzivDate.month == 2:
-                    monthStringKaz = 'ақпаннан'
-                if otzivDate.month == 3:
-                    monthStringKaz = 'наурыздан'
-                if otzivDate.month == 4:
-                    monthStringKaz = 'сәуірден'
-                if otzivDate.month == 5:
-                    monthStringKaz = 'мамырдан'
-                if otzivDate.month == 6:
-                    monthStringKaz = 'маусымнан'
-                if otzivDate.month == 7:
-                    monthStringKaz = 'шілдеден'
-                if otzivDate.month == 8:
-                    monthStringKaz = 'тамыздан'
-                if otzivDate.month == 9:
-                    monthStringKaz = 'қыркүйектен'
-                if otzivDate.month == 10:
-                    monthStringKaz = 'қазаннан'
-                if otzivDate.month == 11:
-                    monthStringKaz = 'қарашадан'
-                if otzivDate.month == 12:
-                    monthStringKaz = 'желтоқсаннан'
-
-                dateString = str(otzivDate.year) + " жылғы " + str(otzivDate.day) + " " + monthStringKaz
-                template_path = 'docx_generator/static/templates/otpusk_otziv_template.docx'
-                document = Document(template_path)
-
-                def replace_placeholder(placeholder, replacement):
-                    for paragraph1 in document.paragraphs:
-                        if placeholder in paragraph1.text:
-
-                            for run1 in paragraph1.runs:
-                                if placeholder in run1.text:
-                                    run1.text = run1.text.replace(placeholder, replacement)
-                                    run1.font.size = Pt(14)  # Adjust the font size if needed
-                                    run1.font.name = 'Times New Roman'
-
-                if otpuskType == 'Отпуск Отзыв':
-
-                    replace_placeholder('CHANGEDDEPARTMENTNAME', f"{changedDepartmentNameKaz}")
-                    replace_placeholder('CHANGEDPOSITIONTITLE', f"{changedPositionTitle.lower()}")
-                    replace_placeholder('PERSONSFIO', f"{personsFIOKaz}")
-                    replace_placeholder('DATESTRING', f"{dateString}")
-                else:
-                    return JsonResponse({'error': f'Неправильно введенный тип приказа об отпуске'},
-                                        status=400)
-
-                doc_stream = BytesIO()
-                document.save(doc_stream)
-                doc_stream.seek(0)
-
-                # Prepare the HTTP response with the modified document
-                response = HttpResponse(doc_stream.read(),
-                                        content_type='application/vnd.openxmlformats-officedocument.wordprocessingml'
-                                                     '.document')
-                response['Content-Disposition'] = f'attachment; filename=Приказ об отпуске отзыве.docx'
-
-                # Need to create decreeList object and also decreeInfo
-                if not DecreeList.objects.filter(personIds=personInstance, decreeType="Отпуск",
-                                                 isConfirmed=False).first():
-                    doc_stream.seek(0)
-                    document_id = str(uuid4())
-                    document_name = f"document_{document_id}.docx"
-
-                    minio_client = Minio(MINIO_ENDPOINT,
-                                         access_key=MINIO_ACCESS_KEY,
-                                         secret_key=MINIO_SECRET_KEY,
-                                         secure=False)
-
-                    minio_client.put_object(MINIO_BUCKET_NAME, document_name, data=doc_stream,
-                                            length=len(doc_stream.getvalue()))
-                    document_url = f"{MINIO_ENDPOINT}/{MINIO_BUCKET_NAME}/{document_name}"
-                    print(document_url)
-
-                    decree_list_instance = DecreeList.objects.create(
-                        decreeType="Отпуск",
-                        decreeDate=datetime.strptime(decreeDate, '%Y-%m-%d').date(),
-                        minioDocName=document_name
-                    )
-                    decree_list_instance.personIds.add(personInstance)
-
-                    oldBasicDaysCount = None
-                    if vacationDays is not None:
-                        oldBasicDaysCount = vacationDays.daysCount
-
-                    oldExperiencedDaysCount = None
-                    if experienced is not None:
-                        oldExperiencedDaysCount = experienced.daysCount
-
-                    newBasicDaysCount = oldBasicDaysCount + (otpuskInfo.endDate - otzivDate).days
-                    newExperiencedDaysCount = oldExperiencedDaysCount
-
-                    OtpuskInfo.objects.create(
-                        startDate=otpuskInfo.startDate,
-                        endDate=otpuskInfo.endDate,
-                        otpuskType=otpuskType,
-                        benefitChoice=None,
-                        otzivDate=otzivDate,
-                        oldBasicDaysCount=oldBasicDaysCount,
-                        newBasicDaysCount=newBasicDaysCount,
-                        oldExperiencedDaysCount=oldExperiencedDaysCount,
-                        newExperiencedDaysCount=newExperiencedDaysCount,
-                        decreeId=decree_list_instance
-                    )
-
-                    return response
-                else:
-                    return JsonResponse({'error': f'У сотрудника {personInstance.iin} уже имеется приказ об отпуске '
-                                                  f'который не согласован'},
-                                        status=400)
-
-        except json.JSONDecodeError:
-            return JsonResponse({'error': 'Invalid JSON data'}, status=400)
