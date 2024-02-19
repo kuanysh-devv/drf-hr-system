@@ -2191,54 +2191,54 @@ def generate_komandirovka_decree(request):
                         bases = modified_bases
                         bases_kz = modified_bases_kz
 
-                        base_text_kz = (f"\t{last_index_kz + 1}. Осы бұйрық қол қойылған күнінен бастап күшіне "
+                    base_text_kz = (f"\t{last_index_kz + 1}. Осы бұйрық қол қойылған күнінен бастап күшіне "
                                         f"енеді.\n\tНегіздеме: {', '.join(bases_kz)}.")
 
-                        for i, paragraph in enumerate(document.paragraphs):
-                            for run in paragraph.runs:
-                                if "Департамент" in run.text and run.bold:
-                                    keyword_index_kz = i
-                                    break
+                    for i, paragraph in enumerate(document.paragraphs):
+                        for run in paragraph.runs:
+                            if "Департамент" in run.text and run.bold:
+                                keyword_index_kz = i
+                                break
 
-                        new_paragraph_kz = document.paragraphs[keyword_index_kz].insert_paragraph_before(base_text_kz)
-                        keyword_index_kz += 1
+                    new_paragraph_kz = document.paragraphs[keyword_index_kz].insert_paragraph_before(base_text_kz)
+                    keyword_index_kz += 1
 
-                        run = new_paragraph_kz.runs[0]
-                        run.font.name = 'Times New Roman'
-                        run.font.size = Pt(14)
+                    run = new_paragraph_kz.runs[0]
+                    run.font.name = 'Times New Roman'
+                    run.font.size = Pt(14)
 
-                        new_paragraph_kz.paragraph_format.line_spacing = Pt(16)
-                        new_paragraph_kz.paragraph_format.space_after = Pt(0)
+                    new_paragraph_kz.paragraph_format.line_spacing = Pt(16)
+                    new_paragraph_kz.paragraph_format.space_after = Pt(0)
 
-                        document.paragraphs[keyword_index_kz].insert_paragraph_before('\n')
+                    document.paragraphs[keyword_index_kz].insert_paragraph_before('\n')
 
-                        doc_stream = BytesIO()
-                        document.save(doc_stream)
-                        doc_stream.seek(0)
+                    doc_stream = BytesIO()
+                    document.save(doc_stream)
+                    doc_stream.seek(0)
 
-                        # Prepare the HTTP response with the modified document
-                        response = HttpResponse(doc_stream.read(),
-                                                content_type='application/vnd.openxmlformats-officedocument.wordprocessingml'
-                                                             '.document')
-                        response['Content-Disposition'] = f'attachment; filename=Приказ о командировке.docx'
+                    # Prepare the HTTP response with the modified document
+                    response = HttpResponse(doc_stream.read(),
+                                            content_type='application/vnd.openxmlformats-officedocument.wordprocessingml'
+                                                            '.document')
+                    response['Content-Disposition'] = f'attachment; filename=Приказ о командировке.docx'
 
-                        doc_stream.seek(0)
-                        document_id = str(uuid4())
-                        document_name = f"document_{document_id}.docx"
+                    doc_stream.seek(0)
+                    document_id = str(uuid4())
+                    document_name = f"document_{document_id}.docx"
 
-                        minio_client = Minio(MINIO_ENDPOINT,
-                                             access_key=MINIO_ACCESS_KEY,
-                                             secret_key=MINIO_SECRET_KEY,
-                                             secure=False)
+                    minio_client = Minio(MINIO_ENDPOINT,
+                                            access_key=MINIO_ACCESS_KEY,
+                                            secret_key=MINIO_SECRET_KEY,
+                                            secure=False)
 
-                        minio_client.put_object(MINIO_BUCKET_NAME, document_name, data=doc_stream,
-                                                length=len(doc_stream.getvalue()))
-                        document_url = f"{MINIO_ENDPOINT}/{MINIO_BUCKET_NAME}/{document_name}"
-                        print(document_url)
-                        decree_list_instance.minioDocName = document_name
-                        decree_list_instance.save()
+                    minio_client.put_object(MINIO_BUCKET_NAME, document_name, data=doc_stream,
+                                            length=len(doc_stream.getvalue()))
+                    document_url = f"{MINIO_ENDPOINT}/{MINIO_BUCKET_NAME}/{document_name}"
+                    print(document_url)
+                    decree_list_instance.minioDocName = document_name
+                    decree_list_instance.save()
 
-                        return response
+                    return response
 
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
