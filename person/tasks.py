@@ -119,20 +119,18 @@ def check_vacation_komandirovka_status(self, *args, **kwargs):
     persons_on_vacation = Person.objects.filter(inVacation=True)
     persons_in_komandirovka = Person.objects.filter(inKomandirovka=True)
     for person in persons_on_vacation:
-        decree_instance = DecreeList.objects.filter(personIds=person, decreeType="Отпуск", isConfirmed=True).last()
-        if decree_instance:
-            otpuskInfo = OtpuskInfo.objects.get(decreeId=decree_instance)
-            end_date = otpuskInfo.endDate
+        decree_info_instance = OtpuskInfo.objects.filter(personId=person, decreeId__decreeType="Отпуск", decreeId__isConfirmed=True).last()
+        if decree_info_instance:
+            end_date = decree_info_instance.endDate
             if today == end_date + timedelta(days=1):
                 person.inVacation = False
                 person.save()
                 print(f"Сотрудник {person.iin} вышел с отпуска")
 
     for person in persons_in_komandirovka:
-        decree_instance = DecreeList.objects.filter(personIds=person, decreeType="Командировка", isConfirmed=True).last()
-        if decree_instance:
-            komandirovkaInfo = KomandirovkaInfo.objects.get(decreeId=decree_instance)
-            end_date = komandirovkaInfo.endDate
+        decree_info_instance = KomandirovkaInfo.objects.filter(personId=person, decreeId__decreeType="Командировка", decreeId__isConfirmed=True).last()
+        if decree_info_instance:
+            end_date = decree_info_instance.endDate
             if today == end_date + timedelta(days=1):
                 person.inKomandirovka = False
                 person.save()

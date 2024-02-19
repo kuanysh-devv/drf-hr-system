@@ -600,9 +600,7 @@ def generate_appointment_decree(request):
                     for i, paragraph in enumerate(document.paragraphs):
                         for run in paragraph.runs:
                             if "Төраға" in run.text and run.bold:
-                                print("helloooo")
                                 keyword_index_kz = i
-                                print(keyword_index_kz)
                                 break
 
                     new_paragraph_kz = document.paragraphs[keyword_index_kz].insert_paragraph_before(base_text_kz)
@@ -647,7 +645,7 @@ def generate_appointment_decree(request):
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
 
-    return JsonResponse({'error': 'Invalid request method'}, status=405)
+    return JsonResponse({'error': 'Упс, что-то пошло не так'}, status=405)
 
 
 @csrf_exempt
@@ -1033,7 +1031,7 @@ def generate_transfer_decree(request):
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
 
-    return JsonResponse({'error': 'Invalid request method'}, status=405)
+    return JsonResponse({'error': 'Упс, что-то пошло не так'}, status=405)
 
 
 @csrf_exempt
@@ -1546,7 +1544,7 @@ def generate_rankup_decree(request):
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
 
-    return JsonResponse({'error': 'Invalid request method'}, status=405)
+    return JsonResponse({'error': 'Упс, что-то пошло не так'}, status=405)
 
 
 @csrf_exempt
@@ -1934,7 +1932,7 @@ def generate_firing_decree(request):
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
 
-    return JsonResponse({'error': 'Invalid request method'}, status=405)
+    return JsonResponse({'error': 'Упс, что-то пошло не так'}, status=405)
 
 
 @csrf_exempt
@@ -1985,7 +1983,7 @@ def generate_komandirovka_decree(request):
                             return JsonResponse({'error': 'Выбранного сотрудника не существует'}, status=400)
 
                         if KomandirovkaInfo.objects.filter(personId=personInstance, decreeId__isConfirmed=False,
-                                                     decreeId__decreeType="Командировка"):
+                                                           decreeId__decreeType="Командировка"):
                             transaction.set_rollback(True)
                             return JsonResponse({
                                 'error': f'У сотрудника {personInstance.iin} уже существует приказ о командировке '
@@ -2000,7 +1998,7 @@ def generate_komandirovka_decree(request):
                             transaction.set_rollback(True)
                             return JsonResponse({
                                 'error': f'Командировка {personInstance.iin} в собственное управление невозможна'
-                                         },
+                            },
                                 status=400)
 
                         if personInstance.inKomandirovka:
@@ -2111,7 +2109,7 @@ def generate_komandirovka_decree(request):
 
                         form_text_kz = None
 
-                        form_text_kz = f"\t{index}. Қазақстан Республикасы Қаржылық мониторинг агенттігі (бұдан әрі - Агенттік) ________________ департаменті {changedDepartmentNameKaz} {personsPositionInfo.position.positionTitleKaz.lower()} {personsFIOKaz} {changedDeparture} {dayCount} күн мерзімге, {startDate.year} жылғы {dateString} аралығында іссапарға {choice} жіберілсін.\n\tБелгіленген жерге дейін бару және қайту жолы {transport} белгіленсін.\n\t{index+1}. Агенттіктің _________________ департаменті {personsPositionInfo.department.DepartmentNameKaz} іссапар шығындарын толық көлемде төлесін."
+                        form_text_kz = f"\t{index}. Қазақстан Республикасы Қаржылық мониторинг агенттігі (бұдан әрі - Агенттік) ________________ департаменті {changedDepartmentNameKaz} {personsPositionInfo.position.positionTitleKaz.lower()} {personsFIOKaz} {changedDeparture} {dayCount} күн мерзімге, {startDate.year} жылғы {dateString} аралығында іссапарға {choice} жіберілсін.\n\tБелгіленген жерге дейін бару және қайту жолы {transport} белгіленсін.\n\t{index + 1}. Агенттіктің _________________ департаменті {personsPositionInfo.department.DepartmentNameKaz} іссапар шығындарын толық көлемде төлесін."
                         print(index)
                         index += 1
                         print(index)
@@ -2132,7 +2130,6 @@ def generate_komandirovka_decree(request):
                         new_paragraph_kz.paragraph_format.space_after = Pt(0)
 
                         new_paragraph_kz.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
-
 
                         last_index_kz = index
                         index += 1
@@ -2247,8 +2244,43 @@ def generate_komandirovka_decree(request):
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
 
-    return JsonResponse({'error': 'Invalid request method'}, status=405)
+    return JsonResponse({'error': 'Упс, что-то пошло не так'}, status=405)
 
+
+@csrf_exempt
+def generate_otpusk_decree_new(request):
+    if request.method == 'POST':
+        try:
+            with transaction.atomic():
+                body = request.body.decode('utf-8')
+                data = json.loads(body)
+
+                decreeDate = data.get('decreeDate')
+                forms = data.get('forms', [])
+                bases = [base['base'] for base in data.get('bases', [])]
+
+                template_path = 'docx_generator/static/templates/otpusk_template_example.docx'
+                document = Document(template_path)
+
+                keyword_index_kz = -1
+
+                for i, paragraph in enumerate(document.paragraphs):
+                    for run in paragraph.runs:
+                        if "Департамент" in run.text and run.bold:
+                            print(run.text)
+                            keyword_index_kz = i
+                            break
+
+                decree_list_instance = DecreeList.objects.create(
+                    decreeType="Отпуск",
+                    decreeDate=datetime.strptime(decreeDate, '%Y-%m-%d').date(),
+                    minioDocName=None
+                )
+
+
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+    return JsonResponse({'error': 'Упс, что-то пошло не так'}, status=405)
 
 
 @csrf_exempt
