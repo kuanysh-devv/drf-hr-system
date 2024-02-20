@@ -38,7 +38,7 @@ class AppointmentInfo(models.Model):
         verbose_name_plural = _("AppointmentInfos")
 
     def __str__(self):
-        return f"Архив - {self.decreeId.decreeType} - {self.personId.iin} - Дата: {self.decreeId.decreeDate}"
+        return f"Архив - {self.decreeId.decreeType} - {self.personId.pin} - Дата: {self.decreeId.decreeDate}"
 
 
 class TransferInfo(models.Model):
@@ -79,7 +79,7 @@ class TransferInfo(models.Model):
         verbose_name_plural = _("TransferInfos")
 
     def __str__(self):
-        return f"Архив - {self.decreeId.decreeType} - {self.personId.iin} - Дата: {self.decreeId.decreeDate}"
+        return f"Архив - {self.decreeId.decreeType} - {self.personId.pin} - Дата: {self.decreeId.decreeDate}"
 
 
 class RankUpInfo(models.Model):
@@ -110,7 +110,7 @@ class RankUpInfo(models.Model):
         verbose_name_plural = _("RankUpInfos")
 
     def __str__(self):
-        return f"Архив - {self.decreeId.decreeType} - {self.personId.iin} - Дата: {self.decreeId.decreeDate}"
+        return f"Архив - {self.decreeId.decreeType} - {self.personId.pin} - Дата: {self.decreeId.decreeDate}"
 
 
 class FiringInfo(models.Model):
@@ -128,7 +128,7 @@ class FiringInfo(models.Model):
         verbose_name_plural = _("FiringInfos")
 
     def __str__(self):
-        return f"Архив - {self.decreeId.decreeType} - {self.personId.iin} - Дата: {self.decreeId.decreeDate}"
+        return f"Архив - {self.decreeId.decreeType} - {self.personId.pin} - Дата: {self.decreeId.decreeDate}"
 
 
 class OtpuskInfo(models.Model):
@@ -154,7 +154,7 @@ class OtpuskInfo(models.Model):
         verbose_name_plural = _("OtpuskInfos")
 
     def __str__(self):
-        return f"Архив - {self.decreeId.decreeType} - {self.personId.iin} - Дата: {self.decreeId.decreeDate}"
+        return f"Архив - {self.decreeId.decreeType} - {self.personId.pin} - Дата: {self.decreeId.decreeDate}"
 
 
 class KomandirovkaInfo(models.Model):
@@ -176,7 +176,7 @@ class KomandirovkaInfo(models.Model):
         verbose_name_plural = _("KomandirovkaInfos")
 
     def __str__(self):
-        return f"Архив - {self.decreeId.decreeType} - {self.personId.iin} - Дата: {self.decreeId.decreeDate}"
+        return f"Архив - {self.decreeId.decreeType} - {self.personId.pin} - Дата: {self.decreeId.decreeDate}"
 
 
 class SpecCheck(models.Model):

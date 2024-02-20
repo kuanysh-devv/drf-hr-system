@@ -326,7 +326,7 @@ def generate_appointment_decree(request):
                                                           decreeId__decreeType="Назначение"):
                             transaction.set_rollback(True)
                             return JsonResponse({
-                                'error': f'У сотрудника {personInstance.iin} уже существует приказ о назначении который '
+                                'error': f'У сотрудника {personInstance.pin} уже существует приказ о назначении который '
                                          f'не согласован'},
                                 status=400)
 
@@ -372,7 +372,7 @@ def generate_appointment_decree(request):
                             else:
                                 decree_list_instance.delete()
                                 return JsonResponse(
-                                    {'error': f'Сотрудник {personInstance.iin} уже имеет звание'}, status=400)
+                                    {'error': f'Сотрудник {personInstance.pin} уже имеет звание'}, status=400)
 
                         if appointmentType == "Вновь принятый":
                             AppointmentInfo.objects.create(
@@ -707,7 +707,7 @@ def generate_transfer_decree(request):
                                                        decreeId__decreeType="Перемещение"):
                             transaction.set_rollback(True)
                             return JsonResponse({
-                                'error': f'У сотрудника {personInstance.iin} уже существует приказ о перемещении '
+                                'error': f'У сотрудника {personInstance.pin} уже существует приказ о перемещении '
                                          f'который '
                                          f'не согласован'},
                                 status=400)
@@ -715,7 +715,7 @@ def generate_transfer_decree(request):
                         if newDepartmentInstance == currentDepartment and newPositionInstance == currentPosition:
                             transaction.set_rollback(True)
                             return JsonResponse({
-                                'error': f'Сотрудник {personInstance.iin} уже находится на этой позиции'},
+                                'error': f'Сотрудник {personInstance.pin} уже находится на этой позиции'},
                                 status=400)
 
                         try:
@@ -1101,7 +1101,7 @@ def generate_rankup_decree(request):
                                                      decreeId__decreeType="Присвоение звания"):
                             transaction.set_rollback(True)
                             return JsonResponse({
-                                'error': f'У сотрудника {personInstance.iin} уже существует приказ о присвоении звания '
+                                'error': f'У сотрудника {personInstance.pin} уже существует приказ о присвоении звания '
                                          f'который '
                                          f'не согласован'},
                                 status=400)
@@ -1630,7 +1630,7 @@ def generate_firing_decree(request):
                                                      decreeId__decreeType="Увольнение"):
                             transaction.set_rollback(True)
                             return JsonResponse({
-                                'error': f'У сотрудника {personInstance.iin} уже существует приказ об увольнении '
+                                'error': f'У сотрудника {personInstance.pin} уже существует приказ об увольнении '
                                          f'который '
                                          f'не согласован'},
                                 status=400)
@@ -1638,7 +1638,7 @@ def generate_firing_decree(request):
                         if personInstance.isFired:
                             transaction.set_rollback(True)
                             return JsonResponse(
-                                {'error': f'Сотрудник {personInstance.iin} уже уволен'},
+                                {'error': f'Сотрудник {personInstance.pin} уже уволен'},
                                 status=400)
 
                         FiringInfo.objects.create(
@@ -1984,7 +1984,7 @@ def generate_komandirovka_decree(request):
                                                            decreeId__decreeType="Командировка"):
                             transaction.set_rollback(True)
                             return JsonResponse({
-                                'error': f'У сотрудника {personInstance.iin} уже существует приказ о командировке '
+                                'error': f'У сотрудника {personInstance.pin} уже существует приказ о командировке '
                                          f'который '
                                          f'не согласован'},
                                 status=400)
@@ -1995,14 +1995,14 @@ def generate_komandirovka_decree(request):
                         if departureDeparment == personsPositionInfo.department:
                             transaction.set_rollback(True)
                             return JsonResponse({
-                                'error': f'Командировка {personInstance.iin} в собственное управление невозможна'
+                                'error': f'Командировка {personInstance.pin} в собственное управление невозможна'
                             },
                                 status=400)
                         departments.append(personsPositionInfo.department)
                         if personInstance.inKomandirovka:
                             transaction.set_rollback(True)
                             return JsonResponse({
-                                'error': f'Сотрудник {personInstance.iin} уже находится в командировке'
+                                'error': f'Сотрудник {personInstance.pin} уже находится в командировке'
                             },
                                 status=400)
 
@@ -2326,7 +2326,7 @@ def generate_otpusk_decree(request):
                                                      decreeId__decreeType="Отпуск"):
                             transaction.set_rollback(True)
                             return JsonResponse({
-                                'error': f'У сотрудника {personInstance.iin} уже существует приказ об отпуске '
+                                'error': f'У сотрудника {personInstance.pin} уже существует приказ об отпуске '
                                          f'который '
                                          f'не согласован'},
                                 status=400)
@@ -2382,7 +2382,7 @@ def generate_otpusk_decree(request):
                                                                 daysType="Обычные")
                         except Vacation.DoesNotExist:
                             transaction.set_rollback(True)
-                            return JsonResponse({'error': f'Сотрудник {personInstance.iin} не имеет отпускных дней'}, status=400)
+                            return JsonResponse({'error': f'Сотрудник {personInstance.pin} не имеет отпускных дней'}, status=400)
 
                         try:
                             experienced = Vacation.objects.get(personId=personInstance, year=otpuskYear,
@@ -2510,14 +2510,14 @@ def generate_otpusk_decree(request):
                                         else:
                                             return JsonResponse(
                                                 {
-                                                    'error': f'У сотрудника {personInstance.iin} недостаточно календарных '
+                                                    'error': f'У сотрудника {personInstance.pin} недостаточно календарных '
                                                              f'отпускных дней на {otpuskYear} '},
                                                 status=400)
 
                             else:
                                 return JsonResponse(
                                     {
-                                        'error': f'У сотрудника {personInstance.iin} недостаточно отпускных дней на {otpuskYear} '
+                                        'error': f'У сотрудника {personInstance.pin} недостаточно отпускных дней на {otpuskYear} '
                                                  f'год, осталось обычных {vacationDays.daysCount}, '
                                                  f'стажных {experienced.daysCount}'},
                                     status=400)
@@ -2588,7 +2588,7 @@ def generate_otpusk_decree(request):
                                         else:
                                             return JsonResponse(
                                                 {
-                                                    'error': f'У сотрудника {personInstance.iin} недостаточно календарных отпускных дней на {otpuskYear} '},
+                                                    'error': f'У сотрудника {personInstance.pin} недостаточно календарных отпускных дней на {otpuskYear} '},
                                                 status=400)
 
                         else:
@@ -2609,7 +2609,7 @@ def generate_otpusk_decree(request):
                             else:
                                 return JsonResponse(
                                     {
-                                        'error': f'У сотрудника {personInstance.iin} недостаточно отпускных дней на {otpuskYear} '
+                                        'error': f'У сотрудника {personInstance.pin} недостаточно отпускных дней на {otpuskYear} '
                                                  f'год, осталось обычных {vacationDays.daysCount}'}, status=400)
                             if holidays_between_dates > 0:
                                 if startDate.month != endDate.month:
@@ -2850,7 +2850,7 @@ def generate_otpusk_otziv_decree(request):
                                                      decreeId__decreeType="Отпуск"):
                             transaction.set_rollback(True)
                             return JsonResponse({
-                                'error': f'У сотрудника {personInstance.iin} уже существует приказ об отпуске '
+                                'error': f'У сотрудника {personInstance.pin} уже существует приказ об отпуске '
                                          f'который '
                                          f'не согласован'},
                                 status=400)
@@ -2883,7 +2883,7 @@ def generate_otpusk_otziv_decree(request):
 
                         if not personInstance.inVacation:
                             transaction.set_rollback(True)
-                            return JsonResponse({'error': f'Сотрудник {personInstance.iin} не находится в отпуске'},
+                            return JsonResponse({'error': f'Сотрудник {personInstance.pin} не находится в отпуске'},
                                                 status=400)
 
                         otpuskInfo = OtpuskInfo.objects.filter(decreeId__decreeType="Отпуск", personId=personInstance,
@@ -2891,7 +2891,7 @@ def generate_otpusk_otziv_decree(request):
 
                         if not otpuskInfo:
                             transaction.set_rollback(True)
-                            return JsonResponse({'error': f'У сотрудника {personInstance.iin} нету приказа об отпуске'},
+                            return JsonResponse({'error': f'У сотрудника {personInstance.pin} нету приказа об отпуске'},
                                                 status=400)
 
                         otzivDate = datetime.strptime(otzivDate, "%Y-%m-%d").date()
@@ -2913,7 +2913,7 @@ def generate_otpusk_otziv_decree(request):
                         except Vacation.DoesNotExist:
                             transaction.set_rollback(True)
                             return JsonResponse(
-                                {'error': f'Нету сущности отпускные дни для сотрудника {personInstance.iin}'},
+                                {'error': f'Нету сущности отпускные дни для сотрудника {personInstance.pin}'},
                                 status=400)
 
                         try:

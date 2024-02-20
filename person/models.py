@@ -31,7 +31,7 @@ class Person(models.Model):
             return None
 
     def __str__(self):
-        return self.iin
+        return self.pin
 
     class Meta:
         verbose_name = _("Person")
