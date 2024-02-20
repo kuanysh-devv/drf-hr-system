@@ -2361,6 +2361,7 @@ def generate_otpusk_decree(request):
                         endDate = datetime.strptime(endDate, "%Y-%m-%d")
 
                         if startDate >= endDate:
+                            transaction.set_rollback(True)
                             return JsonResponse({'error': f'Неправильно установленные даты'}, status=400)
 
                         otpuskYear = startDate.year
@@ -2380,7 +2381,8 @@ def generate_otpusk_decree(request):
                             vacationDays = Vacation.objects.get(personId=personInstance, year=otpuskYear,
                                                                 daysType="Обычные")
                         except Vacation.DoesNotExist:
-                            print("Person doesn't have vacation days")
+                            transaction.set_rollback(True)
+                            return JsonResponse({'error': f'Сотрудник {personInstance.iin} не имеет отпускных дней'}, status=400)
 
                         try:
                             experienced = Vacation.objects.get(personId=personInstance, year=otpuskYear,
