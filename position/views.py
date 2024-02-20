@@ -31,6 +31,7 @@ def positions_by_department(request, department_id):
         # Use StaffingTable to get positions in the department
         staffing_info = StaffingTable.objects.filter(staffing_table_department=department)
         serialized_positions = []
+        staffing_info = staffing_info.order_by('-staffing_table_position__order')
         for staffing_entry in staffing_info:
             position = staffing_entry.staffing_table_position
 

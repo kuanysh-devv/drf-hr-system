@@ -43,8 +43,15 @@ def departments_persons(request, *args, **kwargs):
     try:
 
         department = request.GET.get('departmentId', None)
-        department = Department.objects.get(pk=department)
-        persons = Person.objects.filter(positionInfo__department=department)
+        if department == "Руководство":
+            persons = Person.objects.filter(
+                Q(positionInfo__position__positionTitle="Руководитель департамента") |
+                Q(positionInfo__position__positionTitle="Заместитель руководителя департамента"),
+                isFired=False
+            ).order_by('-positionInfo__position__order')
+        else:
+            department = Department.objects.get(pk=department)
+            persons = Person.objects.filter(positionInfo__department=department, isFired=False).order_by('-positionInfo__position__order')
 
         serializer = PersonSerializer(persons, many=True)
 
