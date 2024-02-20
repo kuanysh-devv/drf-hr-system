@@ -31,7 +31,7 @@ class Person(models.Model):
             return None
 
     def __str__(self):
-        return self.pin
+        return self.pin + " " + self.surname + " " + self.firstName + " " + self.patronymic
 
     class Meta:
         verbose_name = _("Person")
