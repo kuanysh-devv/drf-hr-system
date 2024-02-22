@@ -392,6 +392,7 @@ class DecreeListViewSet(viewsets.ModelViewSet):
 
                 personsRankInfo.militaryRank = rankupinfo.newRank
                 personsRankInfo.receivedDate = rankupinfo.receivedDate
+                personsRankInfo.receivedType = rankupinfo.receivedType
                 personsRankInfo.save()
 
             decree_instance.isConfirmed = True

@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 import pytz
 from django.db import transaction, IntegrityError
 from minio import Minio
+from django.db.models import Q
 from io import BytesIO
 from dotenv import load_dotenv
 from django.http import HttpResponse, JsonResponse
@@ -1111,6 +1112,19 @@ def generate_rankup_decree(request):
                         if personsRankInfo.militaryRank.order > newRankInstance.order:
                             transaction.set_rollback(True)
                             return JsonResponse({'error': 'Новое звание должно быть выше нынешного звания'}, status=400)
+
+                        if receivedType == 'Внеочередное' or receivedType == 'Досрочное' or receivedType == 'На одну ступень выше специального звания':
+                            # check if pooshrenie count != 2
+                            count = RankUpInfo.objects.filter(
+                                Q(personId=personInstance) &
+                                Q(decreeId__isConfirmed=True) &
+                                (Q(receivedType='Внеочередное') | Q(receivedType='Досрочное') | Q(
+                                    receivedType='На одну ступень выше специального звания'))
+                            ).count()
+                            if count == 2:
+                                transaction.set_rollback(True)
+                                return JsonResponse({'error': f'У сотрудника {personInstance.pin} уже имеется 2 вида присвоения в виде поощрения'},
+                                                    status=400)
 
                         if receivedType != 'Внеочередное' and personsRankInfo.militaryRank.order + 1 != newRankInstance.order:
                             transaction.set_rollback(True)
