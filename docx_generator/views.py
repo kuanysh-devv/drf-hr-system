@@ -1118,7 +1118,7 @@ def generate_rankup_decree(request):
                                 {'error': 'Новое звание должно быть следующим званием а не выше чем на 2 звания'},
                                 status=400)
 
-                        if receivedType == 'На одну ступень выше специального звания' and personsPositionInfo.position.maxRank.order < newRankInstance.order:
+                        if receivedType == 'Очередное' and personsPositionInfo.position.maxRank.order < newRankInstance.order:
                             transaction.set_rollback(True)
                             return JsonResponse({'error': 'Новое звание превышает максимальное звание должности'},
                                                 status=400)
@@ -1159,7 +1159,7 @@ def generate_rankup_decree(request):
                                         order=personsRankInfo.militaryRank.order + 1)
                                     one_step_promotion_days = next_one_step_rank.nextPromotionDateInDays
                                     oneStepRankUpDate = personsRankInfo.receivedDate + timedelta(
-                                        days=current_promotion_days + one_step_promotion_days)
+                                        days=current_promotion_days)
                                     # Checking if given rank is greater than one step of next rank
                                     if next_one_step_rank.order + 1 == newRankInstance.order:
                                         # Checking if rankUpDate with 2 ranks is allowed with given date in request
@@ -1190,9 +1190,7 @@ def generate_rankup_decree(request):
                                 else:
                                     transaction.set_rollback(True)
                                     return JsonResponse(
-                                        {'error': 'Дата повышения в приказе должна быть после даты '
-                                                  'следующего'
-                                                  'повышения'},
+                                        {'error': 'Дата повышения в приказе не подходит для повышения '},
                                         status=400)
                             else:
                                 transaction.set_rollback(True)
@@ -1220,6 +1218,28 @@ def generate_rankup_decree(request):
                                 transaction.set_rollback(True)
                                 return JsonResponse(
                                     {'error': 'Новое звание должно быть следующим после нынешного звания'},
+                                    status=400)
+                        if receivedType == 'Очередное':
+                            if personsRankInfo.militaryRank.order + 1 == newRankInstance.order:
+                                rankUpDate_dateformat = datetime.strptime(rankUpDate, "%Y-%m-%d").date()
+                                if personsRankInfo.nextPromotionDate <= rankUpDate_dateformat:
+                                    RankUpInfo.objects.create(
+                                        previousRank=personsRankInfo.militaryRank,
+                                        newRank=newRankInstance,
+                                        receivedType=receivedType,
+                                        receivedDate=rankUpDate,
+                                        personId=personInstance,
+                                        decreeId=decree_list_instance
+                                    )
+                                else:
+                                    transaction.set_rollback(True)
+                                    return JsonResponse(
+                                        {'error': 'Данная дата не подходит с датой следующего повышения'},
+                                        status=400)
+                            else:
+                                transaction.set_rollback(True)
+                                return JsonResponse(
+                                    {'error': 'Новое звание должно быть следующим званием'},
                                     status=400)
 
                         soglasnie = ['б', 'в', 'г', 'д', 'ж', 'з', 'й', 'к', 'л', 'м', 'н', 'п', 'р', 'с', 'т', 'ф',
@@ -2030,16 +2050,15 @@ def generate_komandirovka_decree(request):
                         personsFIOKaz = personInstance.firstName + ' ' + personInstance.patronymic + ' ' + personInstance.surname
 
                         departureDeparment = Department.objects.get(DepartmentNameKaz=departure)
-                        changedDeparture = departureDeparment.DepartmentNameKaz
+                        changedDeparture = departureDeparment.Location.LocationName
 
                         splittedChangedDeparture = changedDeparture.split()
-                        if splittedChangedDeparture[-1] == 'басқармасы':
-                            changedDeparture = changedDeparture + 'на'
+                        changedDeparture = changedDeparture + ' қаласына'
 
                         startDate = datetime.strptime(startDate, "%Y-%m-%d")
                         endDate = datetime.strptime(endDate, "%Y-%m-%d")
 
-                        dayCount = (endDate - startDate).days
+                        dayCount = (endDate - startDate).days + 1
 
                         if startDate > endDate:
                             transaction.set_rollback(True)
@@ -2106,8 +2125,10 @@ def generate_komandirovka_decree(request):
                                 endDate.day) + " " + endDateMonth
 
                         form_text_kz = None
-
-                        form_text_kz = f"\t{index}. Қазақстан Республикасы Қаржылық мониторинг агенттігі (бұдан әрі - Агенттік) ________________ департаменті {changedDepartmentNameKaz} {personsPositionInfo.position.positionTitleKaz.lower()} {personsFIOKaz} {changedDeparture} {dayCount} күн мерзімге, {startDate.year} жылғы {dateString} аралығында іссапарға {choice} жіберілсін.\n\tБелгіленген жерге дейін бару және қайту жолы {transport} белгіленсін."
+                        if index == 1:
+                            form_text_kz = f"\t{index}. Қазақстан Республикасы Қаржылық мониторинг агенттігі (бұдан әрі - Агенттік) ________________ департаменті {changedDepartmentNameKaz} {personsPositionInfo.position.positionTitleKaz.lower()} {personsFIOKaz} {changedDeparture} {dayCount} күн мерзімге, {startDate.year} жылғы {dateString} аралығында іссапарға {choice} жіберілсін.\n\tБелгіленген жерге дейін бару және қайту жолы {transport} белгіленсін."
+                        else:
+                            form_text_kz = f"\t{index}. Агенттіктің ________________ департаменті {changedDepartmentNameKaz} {personsPositionInfo.position.positionTitleKaz.lower()} {personsFIOKaz} {changedDeparture} {dayCount} күн мерзімге, {startDate.year} жылғы {dateString} аралығында іссапарға {choice} жіберілсін.\n\tБелгіленген жерге дейін бару және қайту жолы {transport} белгіленсін."
 
                         for i, paragraph in enumerate(document.paragraphs):
                             for run in paragraph.runs:
@@ -2199,7 +2220,7 @@ def generate_komandirovka_decree(request):
                             if index != len(departments) - 1:  # Check if the current department is not the last one
                                 department_list_text += " және "  # Add a comma if it's not the last one
 
-                    payment_text = f"\tАгенттіктің _________________ департаменті {department_list_text} іссапар шығындарын толық көлемде төлесін."
+                    payment_text = f"\t{last_index_kz+1}. Агенттіктің _________________ департаменті {department_list_text} іссапар шығындарын толық көлемде төлесін."
 
                     for i, paragraph in enumerate(document.paragraphs):
                         for run in paragraph.runs:
@@ -2219,7 +2240,7 @@ def generate_komandirovka_decree(request):
 
                     new_paragraph_kz.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
 
-                    base_text_kz = (f"\t{last_index_kz + 1}. Осы бұйрық қол қойылған күнінен бастап күшіне "
+                    base_text_kz = (f"\t{last_index_kz + 2}. Осы бұйрық қол қойылған күнінен бастап күшіне "
                                     f"енеді.\n\tНегіздеме: {', '.join(bases_kz)}.")
 
                     for i, paragraph in enumerate(document.paragraphs):

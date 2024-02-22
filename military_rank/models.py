@@ -25,7 +25,11 @@ class RankInfo(models.Model):
     needPositionUp = models.BooleanField(default=False, verbose_name=_("Need Position Up"))
 
     def __str__(self):
-        return str(self.militaryRank.rankTitle) + ' ' + str(self.id)
+        try:
+            person = self.person_set.get()
+            return f"{self.militaryRank.rankTitle} - {person.pin} - {person.surname} {person.firstName} {person.patronymic}"
+        except Exception as e:
+            return str(e)
 
     class Meta:
         verbose_name = _("Rank Info")

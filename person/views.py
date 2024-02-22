@@ -3,6 +3,7 @@ import json
 from datetime import datetime, timedelta, date
 
 from django.db.models import Q
+from django.db.models import F
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET
@@ -1070,7 +1071,8 @@ def get_rank_up_info(request):
     # Get persons who need to rank up, ordered by the closest nextPromotionDate
     persons_to_rank_up = Person.objects.filter(
         rankInfo__nextPromotionDate__lte=test_date + timedelta(days=30),
-        isFired=False
+        isFired=False,
+        rankInfo__militaryRank__lt=F('positionInfo__position__maxRank')
     ).order_by('rankInfo__nextPromotionDate')
 
     # Extract relevant information for response
