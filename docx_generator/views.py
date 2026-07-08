@@ -42,6 +42,42 @@ MINIO_SECURE = os.getenv('MINIO_SECURE') == 'True'
 MINIO_BUCKET_NAME = os.getenv('MINIO_BUCKET_NAME')
 
 
+def safe_text(value):
+    return "" if value is None else str(value)
+
+
+def join_non_empty(*parts):
+    return " ".join(part.strip() for part in map(safe_text, parts) if part.strip())
+
+
+def upload_document_to_minio(doc_stream, document_name):
+    missing_settings = [
+        name for name, value in {
+            "MINIO_ENDPOINT": MINIO_ENDPOINT,
+            "MINIO_ACCESS_KEY": MINIO_ACCESS_KEY,
+            "MINIO_SECRET_KEY": MINIO_SECRET_KEY,
+            "MINIO_BUCKET_NAME": MINIO_BUCKET_NAME,
+        }.items()
+        if not value
+    ]
+    if missing_settings:
+        raise ValueError(f"Missing MinIO configuration: {', '.join(missing_settings)}")
+
+    minio_client = Minio(
+        MINIO_ENDPOINT,
+        access_key=MINIO_ACCESS_KEY,
+        secret_key=MINIO_SECRET_KEY,
+        secure=MINIO_SECURE,
+    )
+    minio_client.put_object(
+        MINIO_BUCKET_NAME,
+        document_name,
+        data=doc_stream,
+        length=len(doc_stream.getvalue()),
+    )
+    return f"{MINIO_ENDPOINT}/{MINIO_BUCKET_NAME}/{document_name}"
+
+
 @csrf_exempt
 def generate_work_reference(request, person_id):
     # Fetch the necessary data
@@ -279,7 +315,11 @@ def generate_appointment_decree(request):
 
                 decreeDate = data.get('decreeDate')
                 forms = data.get('forms', [])
-                bases = [base['base'] for base in data.get('bases', [])]
+                bases = [
+                    safe_text(base.get('base') if isinstance(base, dict) else base)
+                    for base in data.get('bases', [])
+                    if safe_text(base.get('base') if isinstance(base, dict) else base)
+                ]
                 # Create a Document object
                 template_path = 'docx_generator/static/templates/appointment_template.docx'
                 document = Document(template_path)
@@ -630,14 +670,7 @@ def generate_appointment_decree(request):
                     document_id = str(uuid4())
                     document_name = f"document_{document_id}.docx"
 
-                    minio_client = Minio(MINIO_ENDPOINT,
-                                         access_key=MINIO_ACCESS_KEY,
-                                         secret_key=MINIO_SECRET_KEY,
-                                         secure=False)
-
-                    minio_client.put_object(MINIO_BUCKET_NAME, document_name, data=doc_stream,
-                                            length=len(doc_stream.getvalue()))
-                    document_url = f"{MINIO_ENDPOINT}/{MINIO_BUCKET_NAME}/{document_name}"
+                    document_url = upload_document_to_minio(doc_stream, document_name)
                     print(document_url)
                     decree_list_instance.minioDocName = document_name
                     decree_list_instance.save()
@@ -659,7 +692,11 @@ def generate_transfer_decree(request):
 
                 decreeDate = data.get('decreeDate')
                 forms = data.get('forms', [])
-                bases = [base['base'] for base in data.get('bases', [])]
+                bases = [
+                    safe_text(base.get('base') if isinstance(base, dict) else base)
+                    for base in data.get('bases', [])
+                    if safe_text(base.get('base') if isinstance(base, dict) else base)
+                ]
 
                 template_path = 'docx_generator/static/templates/transfer_template.docx'
                 document = Document(template_path)
@@ -1016,14 +1053,7 @@ def generate_transfer_decree(request):
                     document_id = str(uuid4())
                     document_name = f"document_{document_id}.docx"
 
-                    minio_client = Minio(MINIO_ENDPOINT,
-                                         access_key=MINIO_ACCESS_KEY,
-                                         secret_key=MINIO_SECRET_KEY,
-                                         secure=False)
-
-                    minio_client.put_object(MINIO_BUCKET_NAME, document_name, data=doc_stream,
-                                            length=len(doc_stream.getvalue()))
-                    document_url = f"{MINIO_ENDPOINT}/{MINIO_BUCKET_NAME}/{document_name}"
+                    document_url = upload_document_to_minio(doc_stream, document_name)
                     print(document_url)
                     decree_list_instance.minioDocName = document_name
                     decree_list_instance.save()
@@ -1562,14 +1592,7 @@ def generate_rankup_decree(request):
                     document_id = str(uuid4())
                     document_name = f"document_{document_id}.docx"
 
-                    minio_client = Minio(MINIO_ENDPOINT,
-                                         access_key=MINIO_ACCESS_KEY,
-                                         secret_key=MINIO_SECRET_KEY,
-                                         secure=False)
-
-                    minio_client.put_object(MINIO_BUCKET_NAME, document_name, data=doc_stream,
-                                            length=len(doc_stream.getvalue()))
-                    document_url = f"{MINIO_ENDPOINT}/{MINIO_BUCKET_NAME}/{document_name}"
+                    document_url = upload_document_to_minio(doc_stream, document_name)
                     print(document_url)
                     decree_list_instance.minioDocName = document_name
                     decree_list_instance.save()
@@ -1592,7 +1615,11 @@ def generate_firing_decree(request):
                 decreeDate = data.get('decreeDate')
 
                 forms = data.get('forms', [])
-                bases = [base['base'] for base in data.get('bases', [])]
+                bases = [
+                    safe_text(base.get('base') if isinstance(base, dict) else base)
+                    for base in data.get('bases', [])
+                    if safe_text(base.get('base') if isinstance(base, dict) else base)
+                ]
 
                 template_path = 'docx_generator/static/templates/firing_template.docx'
                 document = Document(template_path)
@@ -1631,8 +1658,10 @@ def generate_firing_decree(request):
 
                         personsPositionInfo = PositionInfo.objects.get(person=personInstance)
 
-                        positionTitle = personsPositionInfo.position.positionTitle
-                        departmentName = personsPositionInfo.department.DepartmentName
+                        positionTitle = safe_text(personsPositionInfo.position.positionTitle)
+                        positionTitleKaz = safe_text(personsPositionInfo.position.positionTitleKaz)
+                        departmentName = safe_text(personsPositionInfo.department.DepartmentName)
+                        departmentNameKaz = safe_text(personsPositionInfo.department.DepartmentNameKaz)
 
                         date_object = datetime.strptime(decreeDate, "%Y-%m-%d")
 
@@ -1688,54 +1717,55 @@ def generate_firing_decree(request):
                         glasnie = ['а', 'е', 'ё', 'и', 'о', 'у', 'ы', 'э', 'ю', 'я']
 
                         # Kassymbayeva Kuanysh Akhatuly
-                        changedSurname = personInstance.surname
-                        changedFirstName = personInstance.firstName
-                        changedPatronymic = personInstance.patronymic
+                        changedSurname = safe_text(personInstance.surname)
+                        changedFirstName = safe_text(personInstance.firstName)
+                        changedPatronymic = safe_text(personInstance.patronymic)
 
                         # Kassymbayevu Kuanyshu Akhatuly
-                        changedSurname2 = personInstance.surname
-                        changedFirstName2 = personInstance.firstName
-                        changedPatronymic2 = personInstance.patronymic
+                        changedSurname2 = changedSurname
+                        changedFirstName2 = changedFirstName
+                        changedPatronymic2 = changedPatronymic
 
-                        if personInstance.gender.genderName == 'Мужской':
-                            if personInstance.firstName[-1] in soglasnie:
-                                changedFirstName = personInstance.firstName + 'а'
-                                changedFirstName2 = personInstance.firstName + 'у'
+                        genderName = safe_text(personInstance.gender.genderName)
+                        if genderName == 'Мужской':
+                            if changedFirstName and changedFirstName[-1] in soglasnie:
+                                changedFirstName = changedFirstName + 'а'
+                                changedFirstName2 = changedFirstName2 + 'у'
 
-                            if personInstance.surname[-2:] == 'ев' or personInstance.surname[-2:] == 'ов':
-                                changedSurname = personInstance.surname + 'а'
-                                changedSurname2 = personInstance.surname + 'у'
+                            if changedSurname[-2:] == 'ев' or changedSurname[-2:] == 'ов':
+                                changedSurname = changedSurname + 'а'
+                                changedSurname2 = changedSurname2 + 'у'
 
-                            if personInstance.patronymic[-3:] == 'вич':
-                                changedPatronymic = personInstance.patronymic + 'а'
-                                changedPatronymic2 = personInstance.patronymic + 'у'
+                            if changedPatronymic[-3:] == 'вич':
+                                changedPatronymic = changedPatronymic + 'а'
+                                changedPatronymic2 = changedPatronymic2 + 'у'
 
-                        if personInstance.gender.genderName == 'Женский':
-                            if personInstance.firstName[-1] == 'а' and personInstance.firstName[-2] in soglasnie:
-                                changedFirstName = personInstance.firstName[:-1]
-                                changedFirstName2 = personInstance.firstName[:-1]
+                        if genderName == 'Женский':
+                            if len(changedFirstName) > 1 and changedFirstName[-1] == 'а' and changedFirstName[-2] in soglasnie:
+                                changedFirstName = changedFirstName[:-1]
+                                changedFirstName2 = changedFirstName2[:-1]
 
                                 changedFirstName = changedFirstName + 'у'
                                 changedFirstName2 = changedFirstName2 + 'е'
 
-                            if personInstance.surname[-3:] == 'ева' or personInstance.surname[-3:] == 'ова':
-                                changedSurname = personInstance.surname[:-1]
-                                changedSurname2 = personInstance.surname[:-1]
+                            if changedSurname[-3:] == 'ева' or changedSurname[-3:] == 'ова':
+                                changedSurname = changedSurname[:-1]
+                                changedSurname2 = changedSurname2[:-1]
 
                                 changedSurname = changedSurname + 'у'
                                 changedSurname2 = changedSurname2 + 'е'
 
-                            if personInstance.patronymic[-4:] == 'овна' or personInstance.patronymic[-4:] == 'евна':
-                                changedPatronymic = personInstance.patronymic[:-1]
-                                changedPatronymic2 = personInstance.patronymic[:-1]
+                            if changedPatronymic[-4:] == 'овна' or changedPatronymic[-4:] == 'евна':
+                                changedPatronymic = changedPatronymic[:-1]
+                                changedPatronymic2 = changedPatronymic2[:-1]
 
                                 changedPatronymic = changedPatronymic + 'у'
                                 changedPatronymic2 = changedPatronymic2 + 'е'
 
-                        personsFIO = changedSurname + ' ' + changedFirstName + ' ' + changedPatronymic
-                        personsFIOKaz = personInstance.firstName + ' ' + personInstance.patronymic + ' ' + personInstance.surname
+                        personsFIO = join_non_empty(changedSurname, changedFirstName, changedPatronymic)
+                        personsFIOKaz = join_non_empty(personInstance.firstName, personInstance.patronymic, personInstance.surname)
 
-                        personsFIO2 = changedSurname2 + ' ' + changedFirstName2 + ' ' + changedPatronymic2
+                        personsFIO2 = join_non_empty(changedSurname2, changedFirstName2, changedPatronymic2)
 
                         changedPositionTitle = positionTitle
                         if positionTitle == 'Руководитель департамента':
@@ -1754,10 +1784,10 @@ def generate_firing_decree(request):
                             changedPositionTitle = 'Оперуполномоченного'
 
                         changedDepartmentName = departmentName
-                        changedDepartmentNameKaz = personsPositionInfo.department.DepartmentNameKaz
+                        changedDepartmentNameKaz = departmentNameKaz
                         words = departmentName.split()
                         wordsKaz = changedDepartmentNameKaz.split()
-                        if words[0] == 'Управление':
+                        if words and words[0] == 'Управление':
                             words[0] = 'управления'
                             changedDepartmentName = ' '.join(words)
                         if departmentName == 'ЦА':
@@ -1767,7 +1797,7 @@ def generate_firing_decree(request):
 
                         changedDepartmentName2 = departmentName
                         words = departmentName.split()
-                        if words[0] == 'Управление':
+                        if words and words[0] == 'Управление':
                             words[0] = 'Управлению'
                             changedDepartmentName2 = ' '.join(words)
                         if departmentName == 'ЦА':
@@ -1775,10 +1805,10 @@ def generate_firing_decree(request):
                         if departmentName == 'ЦА':
                             departmentName = 'Управление'
 
-                        if wordsKaz[-1] == 'басқармасы':
+                        if wordsKaz and wordsKaz[-1] == 'басқармасы':
                             wordsKaz[-1] = wordsKaz[-1] + 'ның'
                             changedDepartmentNameKaz = ' '.join(wordsKaz)
-                        if wordsKaz[0] == 'Басқарма':
+                        if wordsKaz and wordsKaz[0] == 'Басқарма':
                             wordsKaz[0] = 'басқармасы' + 'ның'
                             changedDepartmentNameKaz = ' '.join(wordsKaz)
 
@@ -1787,10 +1817,10 @@ def generate_firing_decree(request):
 
                         if dayCount == 0:
                             form_text = f"\t{index}. Освободить {personsFIO} от занимаемой должности {changedPositionTitle.lower()} {changedDepartmentName} ___________________ департамента Агентства, уволить и исключить из кадров правоохранительного органа – службы экономических расследований органов по финансовому мониторингу по собственному желанию."
-                            form_text_kz = f"\t{index}. {personsFIOKaz} атқарып отырған Агенттіктің ___________________ департаменті {changedDepartmentNameKaz} {personsPositionInfo.position.positionTitleKaz.lower()} лауазымынан босатылсын, құқық қорғау органы – қаржылық мониторинг органдарының экономикалық тергеп-тексеру қызметінен және кадрынан өз қалауы бойынша шығарылсын."
+                            form_text_kz = f"\t{index}. {personsFIOKaz} атқарып отырған Агенттіктің ___________________ департаменті {changedDepartmentNameKaz} {positionTitleKaz.lower()} лауазымынан босатылсын, құқық қорғау органы – қаржылық мониторинг органдарының экономикалық тергеп-тексеру қызметінен және кадрынан өз қалауы бойынша шығарылсын."
                         if dayCount > 0:
                             form_text = f"\t{index}. 1.	Освободить {personsFIO} от занимаемой должности {changedPositionTitle.lower()} {changedDepartmentName} ___________________ департамента Агентства, уволить и исключить из кадров правоохранительного органа – службы экономических расследований органов по финансовому мониторингу по собственному желанию. \n\t{changedDepartmentName2} ______________________ департамента Агентства произвести {personsFIO2} выплату за неиспользованные {dayCount} дней отпуска за {date_object.year} год."
-                            form_text_kz = f"\t{index}. {personsFIOKaz} атқарып отырған Агенттіктің ___________________ департаменті {changedDepartmentNameKaz} {personsPositionInfo.position.positionTitleKaz.lower()} лауазымынан босатылсын, құқық қорғау органы – қаржылық мониторинг органдарының экономикалық тергеп-тексеру қызметінен және кадрынан өз қалауы бойынша шығарылсын. \n\tАгенттіктің ______________________ департаментінің {personsPositionInfo.department.DepartmentNameKaz} {personsFIOKaz} {date_object.year} жылғы пайдаланбаған {dayCount} күн еңбек демалысына төлем жүргізсін."
+                            form_text_kz = f"\t{index}. {personsFIOKaz} атқарып отырған Агенттіктің ___________________ департаменті {changedDepartmentNameKaz} {positionTitleKaz.lower()} лауазымынан босатылсын, құқық қорғау органы – қаржылық мониторинг органдарының экономикалық тергеп-тексеру қызметінен және кадрынан өз қалауы бойынша шығарылсын. \n\tАгенттіктің ______________________ департаментінің {departmentNameKaz} {personsFIOKaz} {date_object.year} жылғы пайдаланбаған {dayCount} күн еңбек демалысына төлем жүргізсін."
 
                         for i, paragraph in enumerate(document.paragraphs):
                             if "Председатель" in paragraph.text:
@@ -1948,14 +1978,7 @@ def generate_firing_decree(request):
                     document_id = str(uuid4())
                     document_name = f"document_{document_id}.docx"
 
-                    minio_client = Minio(MINIO_ENDPOINT,
-                                         access_key=MINIO_ACCESS_KEY,
-                                         secret_key=MINIO_SECRET_KEY,
-                                         secure=False)
-
-                    minio_client.put_object(MINIO_BUCKET_NAME, document_name, data=doc_stream,
-                                            length=len(doc_stream.getvalue()))
-                    document_url = f"{MINIO_ENDPOINT}/{MINIO_BUCKET_NAME}/{document_name}"
+                    document_url = upload_document_to_minio(doc_stream, document_name)
                     print(document_url)
                     decree_list_instance.minioDocName = document_name
                     decree_list_instance.save()

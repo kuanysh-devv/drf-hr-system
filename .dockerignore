@@ -1,0 +1,14 @@
+.git
+.idea
+.venv
+venv
+__pycache__
+*.py[cod]
+*.sqlite3
+db.sqlite3
+.env
+.env.*
+!.env.docker.example
+celerybeat-schedule.*
+staticfiles
+media
